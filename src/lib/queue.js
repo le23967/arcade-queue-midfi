@@ -34,6 +34,7 @@ export function venueGame(arcade, gameId) {
     name: arcade.name,
     short: arcade.short,
     suburb: arcade.suburb,
+    address: arcade.address,
     distanceKm: arcade.distanceKm,
     gameId,
     game: gameLabel(gameId),

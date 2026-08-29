@@ -7,7 +7,7 @@ import {
   StaleBadge,
   Info,
 } from '../components/ui.jsx'
-import { Users, User, Clock, Refresh, Chevron } from '../components/Icons.jsx'
+import { Users, User, Clock, Refresh, Chevron, Pin } from '../components/Icons.jsx'
 import { presentAt } from '../lib/social.js'
 import {
   estimateWaitMin,
@@ -25,7 +25,7 @@ import {
    action, because staleness is the failure mode the current workaround has:
    asking the group chat takes "thirty or forty five minutes" to answer, if it
    answers at all. */
-export default function Detail({ arcade, otherGames, onBack, onCheckIn, onReport, onFriends, onPickGame }) {
+export default function Detail({ arcade, otherGames, onBack, onCheckIn, onReport, onFriends, onPickGame, onDirections }) {
   const stale = isStale(arcade)
   const friendsHere = presentAt(arcade.id)
 
@@ -38,13 +38,29 @@ export default function Detail({ arcade, otherGames, onBack, onCheckIn, onReport
       />
 
       <Body>
-        <div className="border-b border-gray-300 px-4 py-3">
-          <p className="text-sm text-gray-900">{arcade.name}</p>
-          <p className="text-xs text-gray-600">
-            {arcade.suburb} &middot; {arcade.distanceKm.toFixed(1)} km &middot;{' '}
-            {arcade.cabinets} {arcade.cabinets === 1 ? 'cabinet' : 'cabinets'}
-          </p>
-        </div>
+        {/* Tapping the address hands off to the phone's own maps app. We say
+            which arcade to go to; routing, transit and traffic are not ours to
+            rebuild. */}
+        <button
+          type="button"
+          onClick={onDirections}
+          className="flex w-full items-center gap-3 border-b border-gray-300 px-4 py-3 text-left"
+        >
+          <span className="text-gray-700">
+            <Pin size={18} />
+          </span>
+          <span className="flex-1">
+            <span className="block text-sm text-gray-900">{arcade.name}</span>
+            <span className="block text-xs text-gray-600">
+              {arcade.address}
+            </span>
+            <span className="block text-xs tabular-nums text-gray-600">
+              {arcade.distanceKm.toFixed(1)} km &middot; {arcade.cabinets}{' '}
+              {arcade.cabinets === 1 ? 'cabinet' : 'cabinets'}
+            </span>
+          </span>
+          <Chevron size={16} />
+        </button>
 
         <dl>
           <Stat Icon={Users} label="Queue" value={`${arcade.queue} waiting`}>

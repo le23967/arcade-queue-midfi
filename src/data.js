@@ -1,23 +1,27 @@
 /* ---------------------------------------------------------------------------
    Seed data.
 
+   VENUES AND CABINET COUNTS ARE REAL, checked August 2026 against the SEGA
+   maimai DX International location finder, the Timezone venue pages, and the
+   community machine lists on Zenius-i-vanisher. Sources are listed in README.
+   Arcade line-ups change often, so treat the counts as a snapshot.
+
+   Two corrections came out of that check:
+
+   - "Timezone George St" does not exist. The Timezone at 505 George Street
+     closed. The George Street rhythm arcade is KOKO Amusement Town Hall at
+     614 George Street, and it is the biggest of the three by a wide margin.
+
+   - Central Park runs neither GITADORA nor Dance Dance Revolution, so it
+     genuinely drops out of those two filters.
+
    Queues belong to a GAME, not to a venue. Every interview is about a specific
    cabinet's queue - the Sound Voltex player queues for Sound Voltex, the
    maimai players queue for maimai - so a venue carries one queue record per
-   game it runs, and no venue runs all six.
+   game it runs.
 
-   Within each record, two fields go beyond the lo-fi sketch:
-
-   - `cabinets`   how many machines the venue runs for that game. Players pick
-                  on throughput: "I'll go mostly to [the emptier one] just
-                  because there's more cabs, so it can move more quickly ...
-                  even if it is comparatively bad, it's the moving cost."
-                  (21 Aug, arcade)
-
-   - `updatedMinsAgo`  how old the report is. Today a player finds this out by
-                  messaging the group chat an hour before they travel and
-                  waiting "thirty or forty five minutes" for a reply, if one
-                  comes at all. (21 Aug, arcade)
+   Queue counts and wait times are invented; only the venues, the games and the
+   cabinet counts are real.
 --------------------------------------------------------------------------- */
 
 /* Order matters: this is the order the filter chips appear in. */
@@ -36,7 +40,9 @@ export function gameLabel(id) {
   return GAMES.find((g) => g.id === id)?.label ?? id
 }
 
-/* queue = parties waiting, solo = how many of those are a single player. */
+/* cabinets = real count. queue = parties waiting, solo = how many of those are
+   a single player. Distances are walking distance from UTS Broadway, since the
+   interviews were run by students based there. */
 const q = (cabinets, queue, solo, updatedMinsAgo, updatedAt) => ({
   cabinets,
   queue,
@@ -48,42 +54,49 @@ const q = (cabinets, queue, solo, updatedMinsAgo, updatedAt) => ({
 export const ARCADES = [
   {
     id: 'central-park',
-    name: 'Central Park Mall',
+    name: 'Timezone Central Park',
     short: 'Central Park',
     suburb: 'Chippendale',
-    distanceKm: 1.8,
+    address: 'Level 2, Central Park Mall, 28 Broadway, Chippendale NSW 2008',
+    distanceKm: 0.3,
     games: {
-      maimai: q(1, 3, 1, 2, '12:38 PM'),
-      chunithm: q(1, 1, 1, 9, '12:31 PM'),
+      maimai: q(2, 7, 2, 2, '12:38 PM'),
+      chunithm: q(1, 2, 1, 9, '12:31 PM'),
       sdvx: q(1, 2, 2, 4, '12:36 PM'),
-      taiko: q(1, 0, 0, 12, '12:28 PM'),
-    },
-  },
-  {
-    id: 'timezone',
-    name: 'Timezone George St',
-    short: 'Timezone',
-    suburb: 'Haymarket',
-    distanceKm: 2.4,
-    games: {
-      maimai: q(4, 8, 3, 6, '12:34 PM'),
-      chunithm: q(2, 4, 2, 7, '12:33 PM'),
-      taiko: q(2, 5, 2, 3, '12:37 PM'),
-      sdvx: q(1, 1, 1, 22, '12:18 PM'),
-      ddr: q(2, 3, 3, 18, '12:22 PM'),
+      taiko: q(2, 0, 0, 12, '12:28 PM'),
+      /* No GITADORA and no DDR here - confirmed absent. */
     },
   },
   {
     id: 'market-city',
-    name: 'Market City',
+    name: 'Timezone Haymarket',
     short: 'Market City',
     suburb: 'Haymarket',
-    distanceKm: 3.8,
+    address: 'Level 3, Market City, 9-13 Hay Street, Haymarket NSW 2000',
+    distanceKm: 0.7,
     games: {
       maimai: q(2, 11, 2, 41, '11:59 AM'),
-      sdvx: q(2, 3, 1, 5, '12:35 PM'),
-      gitadora: q(1, 0, 0, 8, '12:32 PM'),
-      ddr: q(1, 2, 2, 31, '12:09 PM'),
+      chunithm: q(2, 4, 2, 7, '12:33 PM'),
+      sdvx: q(1, 3, 1, 5, '12:35 PM'),
+      gitadora: q(2, 0, 0, 8, '12:32 PM'),
+      taiko: q(1, 4, 2, 3, '12:37 PM'),
+      ddr: q(2, 2, 2, 31, '12:09 PM'),
+    },
+  },
+  {
+    id: 'koko-town-hall',
+    name: 'KOKO Amusement Town Hall',
+    short: 'KOKO Town Hall',
+    suburb: 'Sydney CBD',
+    address: '614 George Street, Sydney NSW 2000',
+    distanceKm: 1.4,
+    games: {
+      maimai: q(5, 10, 4, 6, '12:34 PM'),
+      chunithm: q(3, 5, 3, 4, '12:36 PM'),
+      sdvx: q(2, 2, 2, 26, '12:14 PM'),
+      gitadora: q(1, 1, 1, 11, '12:29 PM'),
+      taiko: q(5, 6, 3, 3, '12:37 PM'),
+      ddr: q(2, 3, 3, 18, '12:22 PM'),
     },
   },
 ]

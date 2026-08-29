@@ -1,4 +1,4 @@
-import { Bars, Pin, User, Users, Play } from './Icons.jsx'
+import { Bars, User, Users, Play } from './Icons.jsx'
 
 /* Device shell. The sketch draws a signal glyph in the corner of every screen,
    so the status bar is reproduced - flat, not chrome. */
@@ -7,11 +7,8 @@ export function Frame({ children, caption }) {
     <div className="flex min-h-screen flex-col items-center gap-4 bg-gray-100 px-4 py-8">
       <header className="w-full max-w-[390px]">
         <h1 className="text-sm font-semibold text-gray-900">
-          Arcade Queue &mdash; mid-fi prototype
+          Arcade Comparison &mdash; mid-fi prototype
         </h1>
-        <p className="text-xs text-gray-600">
-          Black / white / gray, one accent colour, no motion.
-        </p>
       </header>
 
       <div className="relative h-[calc(100vh-180px)] max-h-[720px] min-h-[560px] w-full max-w-[390px] overflow-hidden rounded-md border border-gray-400 bg-white">
@@ -45,7 +42,6 @@ function StatusBar() {
 const TABS = [
   { id: 'arcades', label: 'Arcades', Icon: Bars },
   { id: 'watch', label: 'Watch', Icon: Play },
-  { id: 'maps', label: 'Maps', Icon: Pin },
   { id: 'friends', label: 'Friends', Icon: Users },
   { id: 'me', label: 'Me', Icon: User },
 ]
@@ -54,7 +50,7 @@ export function TabBar({ active, onSelect, banner }) {
   return (
     <div className="border-t border-gray-300 bg-white">
       {banner}
-      <nav className="grid grid-cols-5">
+      <nav className="grid grid-cols-4">
         {TABS.map(({ id, label, Icon }) => {
           const on = active === id
           return (

@@ -1,6 +1,6 @@
-# Arcade Queue — mid-fi prototype
+# Arcade Comparison — mid-fi prototype
 
-A functional medium-fidelity web prototype of an arcade queue app for rhythm-game
+A functional medium-fidelity web prototype of an arcade comparison app for rhythm-game
 players, built from the lo-fi workflow in `Fig3_LoFi_Prototype_Workflow.jpg` and
 from three field interviews conducted at Sydney arcades.
 
@@ -34,10 +34,11 @@ rather than quietly trusted.
 move more quickly ... even if it is comparatively bad, it's the moving cost."*
 
 **In the UI:** wait is derived from queue load divided by machine count, and the
-"best option" marker is computed from wait. On the seed data this inverts the
-obvious answer: Timezone wins with 8 parties queued while Central Park loses
-with 3, because Timezone runs four cabinets to Central Park's one. The compare
-table exists to make that inversion visible.
+"best option" marker is computed from wait. On real cabinet counts this inverts
+the obvious answer: on maimai, KOKO Town Hall wins with **10** parties queued
+while Timezone Central Park loses with **7**, because KOKO runs five cabinets to
+Central Park's two. KOKO is also the furthest away. The compare table exists to
+make that trade-off visible.
 
 ### 3. Nobody can tell whose turn it is
 
@@ -89,9 +90,9 @@ This also makes the seed data carry more than one lesson:
 
 | Game | What it demonstrates |
 | --- | --- |
-| maimai DX | Throughput beats queue length — Timezone wins with 8 waiting against Central Park's 3, on four cabinets to one |
-| Sound Voltex | Timezone is fastest at 4 min but 22 min stale, so Central Park wins on freshness |
-| GITADORA | One venue of three — the filter narrowing to a real answer |
+| maimai DX | Throughput beats queue length — KOKO wins with 10 waiting against Central Park's 7, on five cabinets to two, despite being furthest away |
+| Sound Voltex | KOKO is fastest at 4 min but 26 min stale, so Central Park wins on freshness |
+| GITADORA | Two venues of three — Central Park genuinely does not have it |
 | DDR | Both venues stale, exercising the fallback when nothing is fresh |
 
 ### Privacy
@@ -209,6 +210,39 @@ The venue-level crowd count gives partial value without the surveillance.
 
 ---
 
+## Venue data
+
+Venues, games and **cabinet counts are real**, checked August 2026. Queue
+counts and wait times are invented; everything else is not.
+
+| Venue | Address | maimai | CHUNITHM | SDVX | GITADORA | Taiko | DDR |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Timezone Central Park | Level 2, Central Park Mall, 28 Broadway, Chippendale | 2 | 1 | 1 | — | 2 | — |
+| Timezone Haymarket | Level 3, Market City, 9–13 Hay St, Haymarket | 2 | 2 | 1 | 2 | 1 | 2 |
+| KOKO Amusement Town Hall | 614 George Street, Sydney | 5 | 3 | 2 | 1 | 5 | 2 |
+
+Two corrections came out of the check:
+
+- **Timezone George St does not exist.** The Timezone at 505 George Street is
+  permanently closed. The George Street rhythm arcade is **KOKO Amusement Town
+  Hall** at 614 George Street, and it is by far the largest of the three — five
+  maimai cabinets and five Taiko cabinets.
+- **Central Park has neither GITADORA nor DDR**, so it drops out of those two
+  filters for real.
+
+Distances are walking distance from UTS Broadway, since the interviews were run
+by students based there.
+
+Arcade line-ups change often — re-check before relying on this.
+
+Sources: [SEGA maimai DX International location finder](https://location.am-all.net/alm/location?gm=98&lang=en&ct=1012) ·
+[Timezone Central Park](https://www.timezonegames.com/en-au/venues/nsw/timezone-central-park/) ·
+[Zenius-i-vanisher: Timezone Central Park](https://zenius-i-vanisher.com/v5.2/arcade.php?id=4598) ·
+[Zenius-i-vanisher: Timezone Haymarket](https://zenius-i-vanisher.com/v5.2/arcade.php?id=4114) ·
+[Zenius-i-vanisher: KOKO Amusement Town Hall](https://zenius-i-vanisher.com/v5.2/arcade.php?id=5910)
+
+---
+
 ## Screens
 
 | Screen | Route | Notes |
@@ -226,14 +260,23 @@ The venue-level crowd count gives partial value without the surveillance.
 | Friends — Scores | tab | Uncapped per-song leaderboard with the official site's 20-favourite line drawn on it. |
 | Player profile | `player` | Games, favourite songs, shared items, scores. No message button. |
 | Followers / Following | `follows` | Roster with the direction of each relationship, reachable from Me. |
-| Maps / Me | tabs | Gray map placeholder; profile, visibility toggle and privacy statement. |
+| Directions | modal | Hands off to Apple Maps or Google Maps from the venue address. |
+| Me | tab | Profile, follower counts, visibility toggle and privacy statement. |
 
 The current screen number is printed under the device frame so the prototype can
 be reviewed alongside the lo-fi sheet.
 
-The tab bar is **Arcades · Watch · Maps · Friends · Me**. The lo-fi sheet had
-Home, Compare, Maps and Me; Home and Compare merged into Arcades, and Watch and
-Friends were added for the social layer.
+The tab bar is **Arcades · Watch · Friends · Me**. The lo-fi sheet had Home,
+Compare, Maps and Me. Home and Compare merged into Arcades; Watch and Friends
+were added for the social layer; Maps was removed.
+
+**Why Maps went.** It showed the same three venues with the same wait times
+plotted on a gray rectangle — it duplicated the list and answered nothing the
+list did not. Handing off is also the better product decision: players choose a
+venue while already moving — *"usually just when I get on the bus"*, *"as I'm on
+the way to the city"* — so at the moment they want directions they want live
+transit and traffic, which the phone's own maps app does properly. Deciding
+**which** arcade is this app's job; getting there is not ours to rebuild.
 
 ---
 

@@ -15,7 +15,7 @@ import Scan from './screens/Scan.jsx'
 import Report from './screens/Report.jsx'
 import CheckedIn from './screens/CheckedIn.jsx'
 import Summary from './screens/Summary.jsx'
-import MapsTab from './screens/MapsTab.jsx'
+import Directions from './screens/Directions.jsx'
 import MeTab from './screens/MeTab.jsx'
 import Friends from './screens/Friends.jsx'
 import Watch from './screens/Watch.jsx'
@@ -36,13 +36,13 @@ const CAPTIONS = {
   friends: 'Friends tab',
   follows: 'Followers / Following',
   player: 'Player profile',
-  maps: 'Maps tab',
   me: 'Me tab',
 }
 
 const MODAL_CAPTIONS = {
   report: 'Screen 4B — Report',
   checkout: 'Screen 7 — Check out confirmation',
+  directions: 'Directions — hand-off to the phone’s maps app',
 }
 
 /* The summary is only interesting if a session has some length to it, and a
@@ -166,7 +166,7 @@ export default function App() {
   }
 
   const caption = modal ? MODAL_CAPTIONS[modal] : CAPTIONS[view]
-  const showTabs = ['arcades', 'watch', 'maps', 'friends', 'me', 'detail'].includes(view)
+  const showTabs = ['arcades', 'watch', 'friends', 'me', 'detail'].includes(view)
   const sessionArcade = session
     ? venueGame(
         arcades.find((a) => a.id === session.arcadeId),
@@ -221,8 +221,6 @@ export default function App() {
             />
           )}
 
-          {view === 'maps' && <MapsTab arcades={rows} onOpen={openArcade} />}
-
           {view === 'friends' && (
             <Friends
               arcades={arcades}
@@ -261,6 +259,7 @@ export default function App() {
               arcade={arcade}
               otherGames={otherGamesAt(rawArcade, game)}
               onPickGame={pickGame}
+              onDirections={() => setModal('directions')}
               onBack={() => setView(tab)}
               onCheckIn={() => setView('checkin')}
               onReport={() => setModal('report')}
@@ -361,6 +360,10 @@ export default function App() {
               setReports((n) => n + 1)
             }}
           />
+        )}
+
+        {modal === 'directions' && arcade && (
+          <Directions arcade={arcade} onCancel={() => setModal(null)} />
         )}
 
         {modal === 'checkout' && sessionArcade && (
