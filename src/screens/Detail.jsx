@@ -10,6 +10,8 @@ import {
 import { Users, User, Clock, Refresh, Chevron, Pin } from '../components/Icons.jsx'
 import { presentAt } from '../lib/social.js'
 import {
+  queueRoster,
+  rosterKnownCount,
   estimateWaitMin,
   isStale,
   freshnessLabel,
@@ -25,7 +27,19 @@ import {
    action, because staleness is the failure mode the current workaround has:
    asking the group chat takes "thirty or forty five minutes" to answer, if it
    answers at all. */
-export default function Detail({ arcade, otherGames, onBack, onCheckIn, onReport, onFriends, onPickGame, onDirections }) {
+export default function Detail({
+  arcade,
+  otherGames,
+  onBack,
+  onCheckIn,
+  onReport,
+  onFriends,
+  onPickGame,
+  onDirections,
+  queueOpen,
+  onToggleQueue,
+  mePosition,
+}) {
   const stale = isStale(arcade)
   const friendsHere = presentAt(arcade.id)
 
@@ -63,10 +77,15 @@ export default function Detail({ arcade, otherGames, onBack, onCheckIn, onReport
         </button>
 
         <dl>
-          <Stat Icon={Users} label="Queue" value={`${arcade.queue} waiting`}>
-            {pairsOf(arcade)} pair{pairsOf(arcade) === 1 ? '' : 's'} &middot;{' '}
-            {arcade.solo} solo
-          </Stat>
+          {/* The count on its own says how long the line is but not who is in
+              it. Expanding names the parties that checked in through the app
+              and leaves the rest as guests, which is the honest split. */}
+          <QueueStat
+            arcade={arcade}
+            open={queueOpen}
+            onToggle={onToggleQueue}
+            mePosition={mePosition}
+          />
           <Stat Icon={User} label="Solo" value={String(arcade.solo)}>
             Single players, queued on their own
           </Stat>
@@ -152,6 +171,97 @@ export default function Detail({ arcade, otherGames, onBack, onCheckIn, onReport
         <SecondaryButton onClick={onReport}>Report queue</SecondaryButton>
       </div>
     </Screen>
+  )
+}
+
+function QueueStat({ arcade, open, onToggle, mePosition }) {
+  const rows = queueRoster(arcade, { mePosition })
+  const known = rosterKnownCount(arcade, mePosition)
+
+  return (
+    <div className="border-b border-gray-300">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full items-start gap-3 px-4 py-3 text-left"
+      >
+        <span className="mt-0.5 text-gray-700">
+          <Users size={18} />
+        </span>
+        <span className="flex-1">
+          <span className="block text-xs uppercase tracking-wide text-gray-600">
+            Queue
+          </span>
+          <span className="block text-lg font-semibold tabular-nums text-gray-900">
+            {arcade.queue} waiting
+          </span>
+          <span className="block text-xs text-gray-600">
+            {pairsOf(arcade)} pair{pairsOf(arcade) === 1 ? '' : 's'} &middot;{' '}
+            {arcade.solo} solo
+          </span>
+        </span>
+        <span className={`mt-1 text-gray-700 ${open ? '-rotate-90' : 'rotate-90'}`}>
+          <Chevron size={18} />
+        </span>
+      </button>
+
+      {open && (
+        <>
+          <ol className="border-t border-gray-300">
+            {rows.map((r) => (
+              <li
+                key={r.position}
+                className={`flex items-start gap-3 border-b border-gray-300 px-4 py-2 last:border-b-0 ${
+                  r.you ? 'bg-gray-100' : ''
+                }`}
+              >
+                <span className="w-4 pt-0.5 text-xs tabular-nums text-gray-600">
+                  {r.position}
+                </span>
+
+                <span className="min-w-0 flex-1">
+                  <span
+                    className={`block text-sm ${
+                      r.app || r.you
+                        ? 'font-semibold text-gray-900'
+                        : 'text-gray-600'
+                    }`}
+                  >
+                    {r.you
+                      ? 'You'
+                      : r.app
+                        ? `${r.handle}${r.plus ? ` +${r.plus}` : ''}`
+                        : `+${(r.plus ?? 0) + 1} guest${r.plus ? 's' : ''}`}
+                  </span>
+                  {r.helps && (
+                    <span className="mt-0.5 inline-block rounded-md border border-gray-400 px-1.5 py-0.5 text-[10px] font-medium text-gray-700">
+                      Happy to help beginners
+                    </span>
+                  )}
+                </span>
+
+                <span className="pt-0.5 text-xs text-gray-600">{r.state}</span>
+              </li>
+            ))}
+          </ol>
+
+          <p className="flex items-start gap-1.5 px-4 py-2 text-xs text-gray-600">
+            <span>
+              <span className="tabular-nums">{known}</span> of{' '}
+              <span className="tabular-nums">{arcade.queue}</span> checked in
+              through the app.
+            </span>
+            <Info>
+              The queue count comes from reports, so it includes people who are
+              not running this app. They are held as guests rather than guessed
+              at. A venue where nobody checks in is also a venue whose number
+              goes stale.
+            </Info>
+          </p>
+        </>
+      )}
+    </div>
   )
 }
 

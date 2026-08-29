@@ -94,3 +94,47 @@ export function sortArcades(list, mode) {
   }
   return copy.sort((a, b) => a.distanceKm - b.distanceKm)
 }
+
+/* ---------------------------------------------------------------------------
+   Queue roster.
+
+   Expands a queue count into the actual line. Named parties come from the
+   venue's roster - the people who checked in through the app. Everyone else is
+   a guest: counted in the number, but not identified, because they are not
+   running this. Showing that split honestly is the point. A venue where nobody
+   uses the app shows an all-guest line, which is also why its number goes
+   stale.
+
+   Party sizes are reconciled against `solo` so the derived guests carry the
+   same solo/pair split the report described.
+--------------------------------------------------------------------------- */
+export function queueRoster(a, { mePosition = null } = {}) {
+  const known = (a.roster ?? []).slice(0, a.queue)
+  const knownPairs = known.filter((k) => Boolean(k.plus)).length
+
+  let guestPairs = Math.max(0, pairsOf(a) - knownPairs)
+  const rows = known.map((k) => ({ ...k, app: true }))
+
+  /* Unaccounted pairs are placed first; whatever is left over is solo by
+     construction, since queue = pairs + solo. */
+  while (rows.length < a.queue) {
+    const isPair = guestPairs > 0
+    if (isPair) guestPairs -= 1
+    rows.push(isPair ? { app: false, plus: 1 } : { app: false })
+  }
+
+  return rows.map((r, i) => ({
+    ...r,
+    position: i + 1,
+    /* Every cabinet is busy, so the parties at the front are playing, not
+       waiting. */
+    state:
+      i < a.cabinets ? 'Playing now' : i === a.cabinets ? 'Next' : 'Waiting',
+    you: mePosition === i + 1,
+  }))
+}
+
+export function rosterKnownCount(a, mePosition = null) {
+  const named = Math.min((a.roster ?? []).length, a.queue)
+  return mePosition ? named + 1 : named
+}

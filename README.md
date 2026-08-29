@@ -104,6 +104,32 @@ This also makes the seed data carry more than one lesson:
 | GITADORA | Two venues of three — Central Park genuinely does not have it |
 | DDR | Both venues stale, exercising the fallback when nothing is fresh |
 
+### 7. The queue count is not the same as the queue
+
+A count says how long the line is. It does not say who is in it, and it quietly
+implies the app knows. It does not: the number comes from a report, and most
+people in a physical arcade queue are not running this.
+
+**In the UI:** the Queue stat on the detail screen expands into the line
+itself. Parties that checked in through the app are named; everyone else is
+held as a **guest** placeholder rather than guessed at, and a footer says how
+many of the total actually checked in. Central Park reads *3 of 7*. Market City
+reads *0 of 11* — which is also why its number is 41 minutes stale. The two
+facts explain each other.
+
+Parties that came together show as one slot (`kzt +1`, `+2 guests`), because
+that is how they hold a machine, and the first rows read *Playing now* rather
+than *Waiting* for as many cabinets as the venue actually runs.
+
+A player can flag **Happy to help beginners** from Me, which then shows beside
+their name in the line. The six-year veteran got into the community because
+*"someone talked to me first ... 'do you wanna play together?'"* The flag does
+not make anyone approach anyone; it removes the guess about whether it would be
+welcome, which is the part the team said an app cannot force.
+
+> Rendered as a gray bordered chip, not the green in the sketch: the palette
+> has one accent colour and it is reserved for primary actions.
+
 ### Privacy
 
 Check-in is recorded against a venue, never a coordinate, and reports are

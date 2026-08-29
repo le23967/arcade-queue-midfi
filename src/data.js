@@ -42,13 +42,23 @@ export function gameLabel(id) {
 
 /* cabinets = real count. queue = parties waiting, solo = how many of those are
    a single player. Distances are walking distance from UTS Broadway, since the
-   interviews were run by students based there. */
-const q = (cabinets, queue, solo, updatedMinsAgo, updatedAt) => ({
+   interviews were run by students based there.
+
+   `roster` is the front of the queue in order, naming only the parties that
+   checked in through the app. It is deliberately shorter than `queue`: the
+   count comes from reports, and most people in a physical arcade queue are not
+   running this app. The rest of the list is filled with unnamed guests, which
+   is the honest picture rather than a flattering one.
+
+   `plus: 1` marks a party of two - they hold one machine between them.
+   `helps: true` is a player who has opted in to being approachable, from Me. */
+const q = (cabinets, queue, solo, updatedMinsAgo, updatedAt, roster = []) => ({
   cabinets,
   queue,
   solo,
   updatedMinsAgo,
   updatedAt,
+  roster,
 })
 
 export const ARCADES = [
@@ -60,9 +70,13 @@ export const ARCADES = [
     address: 'Level 2, Central Park Mall, 28 Broadway, Chippendale NSW 2008',
     distanceKm: 0.3,
     games: {
-      maimai: q(2, 7, 2, 2, '12:38 PM'),
-      chunithm: q(1, 2, 1, 9, '12:31 PM'),
-      sdvx: q(1, 2, 2, 4, '12:36 PM'),
+      maimai: q(2, 7, 2, 2, '12:38 PM', [
+        { handle: 'rin_9', helps: true },
+        { handle: 'kzt', plus: 1 },
+        { handle: 'nori', plus: 1 },
+      ]),
+      chunithm: q(1, 2, 1, 9, '12:31 PM', [{ handle: 'yuzu_' }]),
+      sdvx: q(1, 2, 2, 4, '12:36 PM', [{ handle: 'rvn_', helps: true }]),
       taiko: q(2, 0, 0, 12, '12:28 PM'),
       /* No GITADORA and no DDR here - confirmed absent. */
     },
@@ -75,6 +89,8 @@ export const ARCADES = [
     address: 'Level 3, Market City, 9-13 Hay Street, Haymarket NSW 2000',
     distanceKm: 0.7,
     games: {
+      /* Nobody here is on the app, which is exactly why this venue's number is
+         41 minutes old. */
       maimai: q(2, 11, 2, 41, '11:59 AM'),
       chunithm: q(2, 4, 2, 7, '12:33 PM'),
       sdvx: q(1, 3, 1, 5, '12:35 PM'),
@@ -91,8 +107,12 @@ export const ARCADES = [
     address: '614 George Street, Sydney NSW 2000',
     distanceKm: 1.4,
     games: {
-      maimai: q(5, 10, 4, 6, '12:34 PM'),
-      chunithm: q(3, 5, 3, 4, '12:36 PM'),
+      maimai: q(5, 10, 4, 6, '12:34 PM', [
+        { handle: 'ovo_' },
+        { handle: 'p0lar', plus: 1 },
+        { handle: 'tsuki', helps: true },
+      ]),
+      chunithm: q(3, 5, 3, 4, '12:36 PM', [{ handle: 'ovo_' }, { handle: 'hnr' }]),
       sdvx: q(2, 2, 2, 26, '12:14 PM'),
       gitadora: q(1, 1, 1, 11, '12:29 PM'),
       taiko: q(5, 6, 3, 3, '12:37 PM'),

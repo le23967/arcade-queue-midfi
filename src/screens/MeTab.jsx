@@ -14,6 +14,8 @@ export default function MeTab({
   onOpenFollows,
   likedCount,
   onOpenLiked,
+  helps,
+  onHelps,
 }) {
   const { followers, following } = followCounts()
 
@@ -69,7 +71,13 @@ export default function MeTab({
           }
         />
 
-        <div className="p-4">
+        <div className="space-y-2 p-4">
+          <Toggle
+            checked={helps}
+            onChange={onHelps}
+            label="Happy to help beginners"
+            hint="Shows next to your name in a queue, so nobody has to guess whether it is fine to ask."
+          />
           <Toggle
             checked={visible}
             onChange={onVisible}

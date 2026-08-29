@@ -39,12 +39,14 @@ function StatusBar() {
   )
 }
 
-const TABS = [
+export const TABS = [
   { id: 'arcades', label: 'Arcades', Icon: Bars },
   { id: 'watch', label: 'Watch', Icon: Play },
   { id: 'friends', label: 'Friends', Icon: Users },
   { id: 'me', label: 'Me', Icon: User },
 ]
+
+export const TAB_IDS = TABS.map((t) => t.id)
 
 export function TabBar({ active, onSelect, banner }) {
   return (

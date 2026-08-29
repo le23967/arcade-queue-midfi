@@ -6,7 +6,7 @@ import {
   venuesForGame,
   otherGamesAt,
 } from './lib/queue.js'
-import { Frame, TabBar, SessionBanner } from './components/Frame.jsx'
+import { Frame, TabBar, SessionBanner, TAB_IDS } from './components/Frame.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 
 import Arcades from './screens/Arcades.jsx'
@@ -57,8 +57,8 @@ const DEMO_SESSION_OFFSET_MIN = 42
 
 export default function App() {
   const [arcades, setArcades] = useState(ARCADES)
-  const [tab, setTab] = useState('home')
-  const [view, setView] = useState('arcades')
+  const [tab, setTab] = useState(TAB_IDS[0])
+  const [view, setView] = useState(TAB_IDS[0])
   const [arcadeView, setArcadeView] = useState('list')
   const [game, setGame] = useState(DEFAULT_GAME)
   const [modal, setModal] = useState(null)
@@ -79,6 +79,12 @@ export default function App() {
   const [followsTab, setFollowsTab] = useState('followers')
   const [likedIds, setLikedIds] = useState([])
   const [comments, setComments] = useState(CLIP_COMMENTS)
+  const [queueOpen, setQueueOpen] = useState(false)
+  const [helps, setHelps] = useState(true)
+
+  /* Anything that navigates "back to the tab I came from" goes through this,
+     so a renamed tab can never strand the view on an id nothing renders. */
+  const backTab = TAB_IDS.includes(tab) ? tab : TAB_IDS[0]
 
   const rows = venuesForGame(arcades, game)
   const rawArcade = arcades.find((a) => a.id === activeId) ?? arcades[0]
@@ -122,7 +128,7 @@ export default function App() {
 
   function openPlayer(handle) {
     setPlayerHandle(handle)
-    setPlayerBack(view === 'detail' ? 'detail' : view)
+    setPlayerBack(view === 'detail' ? 'detail' : backTab)
     setView('player')
   }
 
@@ -305,6 +311,8 @@ export default function App() {
               }}
               likedCount={likedIds.length}
               onOpenLiked={() => setView('liked')}
+              helps={helps}
+              onHelps={setHelps}
             />
           )}
 
@@ -314,7 +322,16 @@ export default function App() {
               otherGames={otherGamesAt(rawArcade, game)}
               onPickGame={pickGame}
               onDirections={() => setModal('directions')}
-              onBack={() => setView(tab)}
+              queueOpen={queueOpen}
+              onToggleQueue={() => setQueueOpen((o) => !o)}
+              mePosition={
+                session &&
+                session.arcadeId === arcade.id &&
+                session.gameId === arcade.gameId
+                  ? session.position
+                  : null
+              }
+              onBack={() => setView(backTab)}
               onCheckIn={() => setView('checkin')}
               onReport={() => setModal('report')}
               onFriends={() => {
@@ -350,7 +367,7 @@ export default function App() {
             <CheckedIn
               arcade={sessionArcade}
               position={session.position}
-              total={session.position + 1}
+              total={Math.max(session.position, sessionArcade.queue)}
               queueAhead={QUEUE_AHEAD}
               aheadMin={estimateWaitMin({
                 ...sessionArcade,
@@ -393,7 +410,7 @@ export default function App() {
                 <SessionBanner
                   arcadeName={sessionArcade.short}
                   position={session.position}
-                  total={session.position + 1}
+                  total={Math.max(session.position, sessionArcade.queue)}
                   onOpen={() => setView('checkedin')}
                 />
               ) : null
