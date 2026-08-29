@@ -1,4 +1,4 @@
-import { HomeIcon, Bars, Pin, User } from './Icons.jsx'
+import { HomeIcon, Bars, Pin, User, Users } from './Icons.jsx'
 
 /* Device shell. The sketch draws a signal glyph in the corner of every screen,
    so the status bar is reproduced - flat, not chrome. */
@@ -46,6 +46,7 @@ const TABS = [
   { id: 'home', label: 'Home', Icon: HomeIcon },
   { id: 'compare', label: 'Compare', Icon: Bars },
   { id: 'maps', label: 'Maps', Icon: Pin },
+  { id: 'friends', label: 'Friends', Icon: Users },
   { id: 'me', label: 'Me', Icon: User },
 ]
 
@@ -53,7 +54,7 @@ export function TabBar({ active, onSelect, banner }) {
   return (
     <div className="border-t border-gray-300 bg-white">
       {banner}
-      <nav className="grid grid-cols-4">
+      <nav className="grid grid-cols-5">
         {TABS.map(({ id, label, Icon }) => {
           const on = active === id
           return (

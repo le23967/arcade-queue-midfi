@@ -13,6 +13,9 @@ import CheckedIn from './screens/CheckedIn.jsx'
 import Summary from './screens/Summary.jsx'
 import MapsTab from './screens/MapsTab.jsx'
 import MeTab from './screens/MeTab.jsx'
+import Friends from './screens/Friends.jsx'
+import PlayerProfile from './screens/PlayerProfile.jsx'
+import { FRIENDS } from './social.js'
 
 /* Screens carry their sketch number so a reviewer can hold the prototype and
    Fig 3 side by side. */
@@ -25,6 +28,8 @@ const CAPTIONS = {
   checkedin: 'Screen 6 — Checked In',
   summary: 'Screen 8 — Session summary',
   maps: 'Maps tab',
+  friends: 'Friends tab',
+  player: 'Player profile',
   me: 'Me tab',
 }
 
@@ -50,8 +55,18 @@ export default function App() {
   const [notify, setNotify] = useState(true)
   const [reports, setReports] = useState(7)
   const [lastSession, setLastSession] = useState(null)
+  const [friendsSection, setFriendsSection] = useState('here')
+  const [song, setSong] = useState('neon')
+  const [playerHandle, setPlayerHandle] = useState(null)
+  const [visible, setVisible] = useState(true)
 
   const arcade = arcades.find((a) => a.id === activeId) ?? arcades[0]
+  const player = FRIENDS.find((p) => p.handle === playerHandle) ?? null
+
+  function openPlayer(handle) {
+    setPlayerHandle(handle)
+    setView('player')
+  }
 
   function patchArcade(id, patch) {
     setArcades((list) =>
@@ -115,7 +130,7 @@ export default function App() {
   }
 
   const caption = modal ? MODAL_CAPTIONS[modal] : CAPTIONS[view]
-  const showTabs = ['nearby', 'compare', 'maps', 'me', 'detail'].includes(view)
+  const showTabs = ['nearby', 'compare', 'maps', 'friends', 'me', 'detail'].includes(view)
   const sessionArcade = session
     ? arcades.find((a) => a.id === session.arcadeId)
     : null
@@ -139,7 +154,34 @@ export default function App() {
 
           {view === 'maps' && <MapsTab arcades={arcades} onOpen={openArcade} />}
 
-          {view === 'me' && <MeTab reports={reports} sessions={3} />}
+          {view === 'friends' && (
+            <Friends
+              arcades={arcades}
+              section={friendsSection}
+              onSection={setFriendsSection}
+              song={song}
+              onSong={setSong}
+              onOpenPlayer={openPlayer}
+            />
+          )}
+
+          {view === 'player' && player && (
+            <PlayerProfile
+              player={player}
+              arcade={arcades.find((a) => a.id === player.at) ?? null}
+              onBack={() => setView(tab === 'home' ? 'detail' : 'friends')}
+              onOpenArcade={openArcade}
+            />
+          )}
+
+          {view === 'me' && (
+            <MeTab
+              reports={reports}
+              sessions={3}
+              visible={visible}
+              onVisible={setVisible}
+            />
+          )}
 
           {view === 'detail' && (
             <Detail
@@ -147,6 +189,11 @@ export default function App() {
               onBack={() => setView(tab === 'home' ? 'nearby' : tab)}
               onCheckIn={() => setView('checkin')}
               onReport={() => setModal('report')}
+              onFriends={() => {
+                setTab('friends')
+                setFriendsSection('here')
+                setView('friends')
+              }}
             />
           )}
 

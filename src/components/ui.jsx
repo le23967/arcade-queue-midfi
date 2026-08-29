@@ -100,6 +100,17 @@ export function StaleBadge() {
   )
 }
 
+/* Small bordered label. Gray only - a grade is information, not an action. */
+export function Chip({ children, className = '' }) {
+  return (
+    <span
+      className={`inline-block rounded-md border border-gray-400 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-gray-700 ${className}`}
+    >
+      {children}
+    </span>
+  )
+}
+
 export function Placeholder({ label, className = '', children }) {
   return (
     <div

@@ -7,7 +7,8 @@ import {
   StaleBadge,
   Note,
 } from '../components/ui.jsx'
-import { Users, User, Clock, Refresh } from '../components/Icons.jsx'
+import { Users, User, Clock, Refresh, Chevron } from '../components/Icons.jsx'
+import { presentAt } from '../lib/social.js'
 import {
   estimateWaitMin,
   isStale,
@@ -24,8 +25,9 @@ import {
    action, because staleness is the failure mode the current workaround has:
    asking the group chat takes "thirty or forty five minutes" to answer, if it
    answers at all. */
-export default function Detail({ arcade, onBack, onCheckIn, onReport }) {
+export default function Detail({ arcade, onBack, onCheckIn, onReport, onFriends }) {
   const stale = isStale(arcade)
+  const friendsHere = presentAt(arcade.id)
 
   return (
     <Screen>
@@ -65,6 +67,27 @@ export default function Detail({ arcade, onBack, onCheckIn, onReport }) {
             {stale && ' — worth confirming before you travel'}
           </Stat>
         </dl>
+
+        {friendsHere.length > 0 && (
+          <button
+            type="button"
+            onClick={onFriends}
+            className="flex w-full items-center gap-3 border-b border-gray-300 px-4 py-3 text-left"
+          >
+            <span className="text-gray-700">
+              <Users size={18} />
+            </span>
+            <span className="flex-1">
+              <span className="block text-xs uppercase tracking-wide text-gray-600">
+                People you follow
+              </span>
+              <span className="block text-sm font-semibold text-gray-900">
+                {friendsHere.map((p) => p.handle).join(', ')} here now
+              </span>
+            </span>
+            <Chevron size={16} />
+          </button>
+        )}
 
         <div className="space-y-2 px-4 py-4">
           <Note>

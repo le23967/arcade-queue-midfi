@@ -81,6 +81,84 @@ venue.
 
 ---
 
+## The social layer, and what was deliberately left out
+
+The queue findings above were **volunteered** — asked "any pain points?", players
+answered "I think it's just queue organization" before anything was suggested to
+them. The social findings mostly appeared **only after an interviewer described a
+concept first**. That asymmetry set the scope: only the three things a
+participant raised on their own are built.
+
+### Built — evidence graded
+
+**A. No cap on score comparison** *(strongest evidence — volunteered, specific)*
+
+The six-year maimai player raised this without being prompted. The official
+score site lets you favourite 20 people: *"the website lets you favorite up to
+20 people, and then on whatever song you use, you'll show all the scores"* …
+*"but you can't have more than that"* → *"if you make something [to] get around
+that, **that would actually be like—**"*
+
+**In the UI:** the Friends → Scores leaderboard ranks all 26 people you follow
+and draws a dashed line where the official site stops. On the seed data that
+line hides 7 players — two of whom are checked into an arcade at that moment.
+The point of the screen is that the person standing next to you can be
+invisible on the tool you use today.
+
+**B. Who's here, at venue level** *(moderate evidence)*
+
+*"Seeing where your friends are and all of that."* The Sound Voltex player also
+said yes to knowing when people she already knows are playing.
+
+**In the UI:** Friends → Here now, grouped by venue, plus a "people you follow"
+row on the arcade detail screen. Presence is mutual-follow, opt-in, and venue
+level — never a position inside a venue.
+
+**C. Passive profile signals** *(moderate evidence)*
+
+*"Just being able to see like, oh, I mainly play Maimai … DDR or whatever"* and
+*"Favourite songs? Absolutely."*
+
+**In the UI:** games played and favourite songs on every profile, with shared
+ones marked. There is no message button. The team had already concluded that
+*"the app can't force our users to just go up to someone they haven't met"* —
+*"it's impossible"* — so the profile lowers the cost of an opening rather than
+brokering one. That matches how the veteran actually met people: at the
+cabinet, because someone else said *"do you wanna play together?"*
+
+### Not built
+
+**Invite-and-earn events (points for bringing people on quiet weekdays)** —
+parked as future work. It was the team's own idea in the Wednesday session, not
+a participant request, and four things argue against building it now:
+
+1. **The game already does it.** *"If you play as two people, you get like an
+   extra song. So you get to play more. So there is a lot of incentive to
+   actually like socialize."* An app-level reward duplicates an in-game
+   mechanic that is immediate, free, and already working.
+2. **It needs money the project does not have.** The team flagged this
+   themselves: *"who gonna provide the money?"* and *"that's very hard, we need
+   to coordinate with the arcade"* — against their own stated goal, *"our core
+   goal isn't to make money or to help the arcade profit."*
+3. **It asks introverts to recruit.** The most repeated personal trait across
+   the interviews is reluctance to approach people — *"Very introverted."* A
+   referral mechanic puts that first.
+4. **It can fight the queue goal.** Concentrating players on a chosen day
+   creates the crowding the rest of the app exists to help people avoid.
+
+The strongest version of the idea is *demand smoothing* — moving players off the
+reported Friday/weekend peak onto quiet weekdays. That is worth testing, but it
+serves the venue's revenue before the player's stated need, and still requires
+arcade partnership. **Preconditions before building:** a willing venue partner,
+and evidence that an event flattens the peak rather than creating a new one.
+
+**Avoid-lists** — one player would return to a venue he avoids if he could
+reliably know certain people were not there (*"Honestly, probably"*). Real need,
+not built: it requires tracking people who have not consented to being tracked.
+The venue-level crowd count gives partial value without the surveillance.
+
+---
+
 ## Screens
 
 | Screen | Route | Notes |
@@ -94,10 +172,14 @@ venue.
 | 6 — Checked In | `checkedin` | Position, running order, one-turn-away notification. |
 | 7 — Check out | modal | Confirmation. |
 | 8 — Session summary | `summary` | Session time and time queued. |
-| Maps / Me | tabs | Gray map placeholder; profile and privacy statement. |
+| Friends — Here now | tab | People you follow who are at an arcade, grouped by venue. |
+| Friends — Scores | tab | Uncapped per-song leaderboard with the official site's 20-favourite line drawn on it. |
+| Player profile | `player` | Games, favourite songs, shared items, scores. No message button. |
+| Maps / Me | tabs | Gray map placeholder; profile, visibility toggle and privacy statement. |
 
 The current screen number is printed under the device frame so the prototype can
-be reviewed alongside the lo-fi sheet.
+be reviewed alongside the lo-fi sheet. The lo-fi sheet has four tabs; Friends is
+a fifth, added for the social layer.
 
 ---
 
@@ -122,7 +204,9 @@ discipline, so the prototype cannot drift into hi-fi by accident.
 
 ## Data
 
-Seed data lives in `src/data.js` and the wait model in `src/lib/queue.js`.
+Queue data lives in `src/data.js` with the wait model in `src/lib/queue.js`;
+players, songs and scores live in `src/social.js` with helpers in
+`src/lib/social.js`.
 Reporting a queue or checking in mutates the shared state, so the list, the
 compare table and the detail screen all move together.
 

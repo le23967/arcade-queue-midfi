@@ -1,0 +1,216 @@
+import { Screen, TopBar, Body, Note, Chip } from '../components/ui.jsx'
+import { Chevron, Pin } from '../components/Icons.jsx'
+import { FRIENDS, SONGS, OLD_SITE_FAVOURITE_CAP } from '../social.js'
+import {
+  leaderboard,
+  belowOldCap,
+  presentFriends,
+  gradeOf,
+  formatAchievement,
+} from '../lib/social.js'
+
+/* Friends tab. Two sections, one per interview finding.
+
+   "Here now" answers the request to see "where your friends are and all of
+   that", at venue level only.
+
+   "Scores" answers the one social pain point a participant raised without
+   being prompted: the official maimai site lets you favourite 20 people and
+   stops there. */
+export default function Friends({ arcades, section, onSection, song, onSong, onOpenPlayer }) {
+  return (
+    <Screen>
+      <TopBar title="Friends" />
+
+      <div className="flex gap-2 border-b border-gray-300 px-4 py-2">
+        <Seg on={section === 'here'} onClick={() => onSection('here')}>
+          Here now
+        </Seg>
+        <Seg on={section === 'scores'} onClick={() => onSection('scores')}>
+          Scores
+        </Seg>
+      </div>
+
+      {section === 'here' ? (
+        <HereNow arcades={arcades} onOpenPlayer={onOpenPlayer} />
+      ) : (
+        <Scores song={song} onSong={onSong} onOpenPlayer={onOpenPlayer} />
+      )}
+    </Screen>
+  )
+}
+
+function Seg({ on, children, ...rest }) {
+  return (
+    <button
+      type="button"
+      className={`rounded-md border px-3 py-1 text-xs font-medium ${
+        on
+          ? 'border-gray-900 bg-gray-100 text-gray-900'
+          : 'border-gray-300 bg-white text-gray-600'
+      }`}
+      {...rest}
+    >
+      {children}
+    </button>
+  )
+}
+
+function HereNow({ arcades, onOpenPlayer }) {
+  const here = presentFriends()
+  const venues = arcades
+    .map((a) => ({ arcade: a, players: here.filter((p) => p.at === a.id) }))
+    .filter((v) => v.players.length > 0)
+
+  return (
+    <Body>
+      <div className="border-b border-gray-300 px-4 py-3">
+        <p className="text-sm text-gray-900">
+          <span className="font-semibold tabular-nums">{here.length}</span> of the{' '}
+          <span className="tabular-nums">{FRIENDS.length}</span> people you follow
+          are at an arcade now.
+        </p>
+      </div>
+
+      {venues.map(({ arcade, players }) => (
+        <div key={arcade.id}>
+          <div className="flex items-center gap-2 border-b border-gray-300 bg-gray-100 px-4 py-2">
+            <Pin size={14} />
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-700">
+              {arcade.short}
+            </span>
+            <span className="text-xs tabular-nums text-gray-600">
+              {players.length} here
+            </span>
+          </div>
+          {players.map((p) => (
+            <button
+              key={p.handle}
+              type="button"
+              onClick={() => onOpenPlayer(p.handle)}
+              className="flex w-full items-center gap-3 border-b border-gray-300 px-4 py-3 text-left"
+            >
+              <span className="flex-1">
+                <span className="block text-sm font-semibold text-gray-900">
+                  {p.handle}
+                </span>
+                <span className="block text-xs text-gray-600">
+                  {p.games.join(' · ')}
+                </span>
+              </span>
+              <span className="text-xs tabular-nums text-gray-600">
+                {p.sinceMin}m
+              </span>
+              <Chevron size={16} />
+            </button>
+          ))}
+        </div>
+      ))}
+
+      <div className="space-y-2 px-4 py-4">
+        <Note>
+          You only appear here to people who follow you back, and only while you
+          are checked in and visible. Turn visibility off in{' '}
+          <span className="font-semibold text-gray-900">Me</span>.
+        </Note>
+        <Note>
+          Presence is venue level. The app never shows where anyone is inside a
+          venue, and it will not track a player you do not follow.
+        </Note>
+      </div>
+    </Body>
+  )
+}
+
+function Scores({ song, onSong, onOpenPlayer }) {
+  const rows = leaderboard(song)
+  const cut = belowOldCap(rows)
+  const current = SONGS.find((s) => s.id === song)
+
+  return (
+    <Body>
+      <div className="flex flex-wrap gap-2 border-b border-gray-300 px-4 py-2">
+        {SONGS.map((s) => (
+          <Seg key={s.id} on={s.id === song} onClick={() => onSong(s.id)}>
+            {s.title}
+          </Seg>
+        ))}
+      </div>
+
+      <div className="border-b border-gray-300 px-4 py-3">
+        <p className="text-sm font-semibold text-gray-900">{current.title}</p>
+        <p className="text-xs text-gray-600">
+          {current.chart} &middot; ranked against all{' '}
+          <span className="tabular-nums">{FRIENDS.length}</span> people you
+          follow
+        </p>
+      </div>
+
+      <ol>
+        {rows.map((r) => (
+          <li key={r.handle}>
+            {r.rank === OLD_SITE_FAVOURITE_CAP + 1 && <CapLine cut={cut} />}
+            <button
+              type="button"
+              onClick={() => !r.me && onOpenPlayer(r.handle)}
+              className={`flex w-full items-center gap-3 border-b border-gray-300 px-4 py-2 text-left ${
+                r.me ? 'bg-gray-100' : ''
+              }`}
+            >
+              <span className="w-6 text-xs tabular-nums text-gray-600">
+                {r.rank}
+              </span>
+              <span className="flex-1">
+                <span
+                  className={`text-sm ${
+                    r.me ? 'font-semibold text-gray-900' : 'text-gray-900'
+                  }`}
+                >
+                  {r.me ? 'You' : r.handle}
+                </span>
+                {r.at && (
+                  <span className="ml-2 text-xs text-gray-600">at an arcade now</span>
+                )}
+              </span>
+              <span className="w-24 text-right text-sm tabular-nums text-gray-900">
+                {formatAchievement(r.achievement)}
+              </span>
+              <Chip>{gradeOf(r.achievement)}</Chip>
+            </button>
+          </li>
+        ))}
+      </ol>
+
+      <div className="space-y-2 px-4 py-4">
+        <Note>
+          The official score site stops at {OLD_SITE_FAVOURITE_CAP} favourites.
+          On this chart that hides{' '}
+          <span className="font-semibold text-gray-900 tabular-nums">
+            {cut.count}
+          </span>{' '}
+          of the people you follow &mdash; including{' '}
+          <span className="font-semibold text-gray-900 tabular-nums">
+            {cut.hereNow}
+          </span>{' '}
+          who {cut.hereNow === 1 ? 'is' : 'are'} standing in an arcade right now.
+        </Note>
+      </div>
+    </Body>
+  )
+}
+
+/* The single most useful thing this screen draws: where the old tool stopped. */
+function CapLine({ cut }) {
+  return (
+    <div className="border-b border-dashed border-gray-500 bg-gray-100 px-4 py-2">
+      <p className="text-xs font-semibold uppercase tracking-wide text-gray-700">
+        Official site&rsquo;s {OLD_SITE_FAVOURITE_CAP}-favourite limit
+      </p>
+      <p className="text-xs text-gray-600">
+        Everyone below this line is invisible on the official site &mdash;{' '}
+        {cut.count} {cut.count === 1 ? 'player' : 'players'}, {cut.hereNow} of
+        them at an arcade now.
+      </p>
+    </div>
+  )
+}
