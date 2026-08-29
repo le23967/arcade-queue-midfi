@@ -1,12 +1,13 @@
 import { Screen, TopBar, Body, Info, Seg } from '../components/ui.jsx'
 import { Chevron, Pin } from '../components/Icons.jsx'
-import { FRIENDS, SONGS, OLD_SITE_FAVOURITE_CAP } from '../social.js'
+import { FRIENDS, SONGS, OLD_SITE_FAVOURITE_CAP, ACTIVITY } from '../social.js'
 import {
   leaderboard,
   belowOldCap,
   presentFriends,
   gradeOf,
   formatAchievement,
+  ago,
 } from '../lib/social.js'
 
 /* Friends tab. Two sections, one per interview finding.
@@ -17,13 +18,13 @@ import {
    "Scores" answers the one social pain point a participant raised without
    being prompted: the official maimai site lets you favourite 20 people and
    stops there. */
-export default function Friends({ arcades, section, onSection, song, onSong, onOpenPlayer }) {
+export default function Friends({ arcades, section, onSection, song, onSong, onOpenPlayer, onOpenClip }) {
   return (
     <Screen>
       <TopBar
         title="Friends"
         right={
-          <Info align="right">
+          <Info >
             Presence is venue level and mutual-only: you appear here to people
             you follow back, and only while checked in and visible.
           </Info>
@@ -34,14 +35,25 @@ export default function Friends({ arcades, section, onSection, song, onSong, onO
         <Seg on={section === 'here'} onClick={() => onSection('here')}>
           Here now
         </Seg>
+        <Seg on={section === 'activity'} onClick={() => onSection('activity')}>
+          Activity
+        </Seg>
         <Seg on={section === 'scores'} onClick={() => onSection('scores')}>
           Scores
         </Seg>
       </div>
 
-      {section === 'here' ? (
+      {section === 'here' && (
         <HereNow arcades={arcades} onOpenPlayer={onOpenPlayer} />
-      ) : (
+      )}
+      {section === 'activity' && (
+        <Activity
+          arcades={arcades}
+          onOpenPlayer={onOpenPlayer}
+          onOpenClip={onOpenClip}
+        />
+      )}
+      {section === 'scores' && (
         <Scores song={song} onSong={onSong} onOpenPlayer={onOpenPlayer} />
       )}
     </Screen>
@@ -100,6 +112,77 @@ function HereNow({ arcades, onOpenPlayer }) {
         </div>
       ))}
 
+    </Body>
+  )
+}
+
+/* Activity. Plain sentences in reverse time order - a mid-fi feed is a list,
+   not a timeline graphic. Each line names the player, what they did, and how
+   long ago, because "did I just miss them" is the question it answers. */
+function Activity({ arcades, onOpenPlayer, onOpenClip }) {
+  const venueName = (id) =>
+    arcades.find((a) => a.id === id)?.short ?? 'an arcade'
+
+  return (
+    <Body>
+      <ul>
+        {ACTIVITY.map((e) => (
+          <li
+            key={e.id}
+            className="border-b border-gray-300 px-4 py-3"
+          >
+            <p className="text-sm leading-relaxed text-gray-900">
+              <button
+                type="button"
+                onClick={() => onOpenPlayer(e.handle)}
+                className="font-semibold underline decoration-gray-400 underline-offset-2"
+              >
+                {e.handle}
+              </button>{' '}
+              {e.type === 'checkin' && <>checked into {venueName(e.venue)}</>}
+              {e.type === 'checkout' && <>left {venueName(e.venue)}</>}
+              {e.type === 'played' && (
+                <>
+                  played a set at {venueName(e.venue)} &mdash;{' '}
+                  {e.songs.map((t, i) => (
+                    <span key={t}>
+                      {i > 0 && ', '}
+                      &ldquo;{t}&rdquo;
+                    </span>
+                  ))}
+                </>
+              )}
+              {e.type === 'best' && (
+                <>
+                  set a new best on &ldquo;{e.song}&rdquo; &mdash;{' '}
+                  <span className="tabular-nums">
+                    {formatAchievement(e.achievement)}
+                  </span>{' '}
+                  {gradeOf(e.achievement)}
+                </>
+              )}
+              {e.type === 'clip' && (
+                <>
+                  posted a clip of &ldquo;{e.song}&rdquo;
+                </>
+              )}
+            </p>
+
+            <p className="mt-0.5 flex items-center gap-2 text-xs text-gray-600">
+              <span className="tabular-nums">{ago(e.minsAgo)}</span>
+              {e.type === 'clip' && (
+                <button
+                  type="button"
+                  onClick={() => onOpenClip(e.clipId)}
+                  className="font-semibold text-gray-900 underline decoration-gray-400 underline-offset-2"
+                >
+                  Watch
+                </button>
+              )}
+            </p>
+          </li>
+        ))}
+      </ul>
     </Body>
   )
 }

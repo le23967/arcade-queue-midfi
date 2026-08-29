@@ -145,6 +145,24 @@ export const Play = (p) => (
   </Svg>
 )
 
+export const Heart = ({ filled, ...p }) => (
+  <Svg {...p} fill={filled ? 'currentColor' : 'none'}>
+    <path d="M12 20.2S4.5 15.6 4.5 10.3A3.8 3.8 0 0 1 12 8.2a3.8 3.8 0 0 1 7.5 2.1c0 5.3-7.5 9.9-7.5 9.9Z" />
+  </Svg>
+)
+
+export const Comment = (p) => (
+  <Svg {...p}>
+    <path d="M20 15.5A2.5 2.5 0 0 1 17.5 18H8.5L4.5 21V6.5A2.5 2.5 0 0 1 7 4h10.5A2.5 2.5 0 0 1 20 6.5Z" />
+  </Svg>
+)
+
+export const Pulse = (p) => (
+  <Svg {...p}>
+    <path d="M3 12h3.5l2.5-6 4.5 13 2.5-7H21" />
+  </Svg>
+)
+
 export const Shield = (p) => (
   <Svg {...p}>
     <path d="M12 3.5 19 6v5.5c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9V6Z" />

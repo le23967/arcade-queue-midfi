@@ -11,7 +11,7 @@ export function Frame({ children, caption }) {
         </h1>
       </header>
 
-      <div className="relative h-[calc(100vh-180px)] max-h-[720px] min-h-[560px] w-full max-w-[390px] overflow-hidden rounded-md border border-gray-400 bg-white">
+      <div data-frame className="relative h-[calc(100vh-180px)] max-h-[720px] min-h-[560px] w-full max-w-[390px] overflow-hidden rounded-md border border-gray-400 bg-white">
         <StatusBar />
         <div className="absolute inset-x-0 bottom-0 top-7">{children}</div>
       </div>

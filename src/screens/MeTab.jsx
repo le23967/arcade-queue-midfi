@@ -12,6 +12,8 @@ export default function MeTab({
   visible,
   onVisible,
   onOpenFollows,
+  likedCount,
+  onOpenLiked,
 }) {
   const { followers, following } = followCounts()
 
@@ -52,6 +54,8 @@ export default function MeTab({
           </div>
         </Row>
 
+        <Nav label="Liked clips" value={likedCount} onClick={onOpenLiked} />
+
         <Line label="Sessions this week" value={sessions} />
         <Line label="Queue reports" value={reports} />
         <Line
@@ -77,7 +81,7 @@ export default function MeTab({
         <div className="mx-4 mb-4 flex items-center gap-2 rounded-md border border-gray-300 px-3 py-3">
           <Shield size={16} />
           <span className="flex-1 text-sm font-medium text-gray-900">Location</span>
-          <Info align="right" above>
+          <Info above>
             Check-ins are recorded against a venue, not a coordinate. Your
             precise position is never read or stored, your handle is never
             attached to a queue report, and presence is only shared with people
@@ -115,6 +119,24 @@ function Row({ label, children }) {
       <p className="mb-2 text-xs uppercase tracking-wide text-gray-600">{label}</p>
       {children}
     </div>
+  )
+}
+
+function Nav({ label, value, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center justify-between border-b border-gray-300 px-4 py-3 text-left"
+    >
+      <span className="text-sm text-gray-600">{label}</span>
+      <span className="flex items-center gap-2">
+        <span className="text-lg font-semibold tabular-nums text-gray-900">
+          {value}
+        </span>
+        <Chevron size={16} />
+      </span>
+    </button>
   )
 }
 

@@ -34,7 +34,7 @@ export default function Arcades({
       <TopBar
         title="Arcades"
         right={
-          <Info align="right">
+          <Info >
             <b>Queue</b> counts parties waiting, not people &mdash; players who
             came together take one machine between them. <b>Solo</b> is how many
             of those are a single player. Wait allows {SOLO_TURN_MIN} min for a
@@ -204,7 +204,7 @@ function CompareView({ arcades, onOpen }) {
           shortest queue.
           {anyStale && ' * older than 15 min, shown but not ranked.'}
         </p>
-        <Info align="right">
+        <Info >
           Wait is queue load divided by machines, so a venue with more people
           waiting can still be the faster choice if it runs more cabinets.
           Anything last confirmed over {STALE_AFTER_MIN} minutes ago is marked

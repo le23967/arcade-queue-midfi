@@ -1,5 +1,5 @@
 import { Screen, TopBar, Body, Seg, Info, PrimaryButton } from '../components/ui.jsx'
-import { Chevron, Bell, Users, Clock } from '../components/Icons.jsx'
+import { Chevron, Bell, Heart, Comment } from '../components/Icons.jsx'
 import { CLIPS } from '../social.js'
 import { gradeOf, formatAchievement } from '../lib/social.js'
 
@@ -29,6 +29,11 @@ export default function Watch({
   called,
   onCall,
   onGo,
+  liked,
+  likeCount,
+  onLike,
+  commentCount,
+  onComments,
 }) {
   const clip = clips[index]
   const venue = arcades.find((a) => a.id === clip.venue)
@@ -42,7 +47,7 @@ export default function Watch({
       <TopBar
         title="Watch"
         right={
-          <Info align="right">
+          <Info >
             Clips from people you follow. Watching is what most players already
             do with the wait, so it happens here, where the app still knows your
             place in the queue and can pull you out when you are up.
@@ -98,9 +103,23 @@ export default function Watch({
           </div>
         </div>
 
-        <div className="mt-2 flex items-center gap-4 px-1">
-          <Metric Icon={Users} value={clip.likes} label="likes" />
-          <Metric Icon={Clock} value={clip.comments} label="comments" />
+        {/* Watching without being able to answer is the worst of both: you see
+            your friends play and have no way to say anything. Like and comment
+            are the two cheapest replies, and the like needs no words at all -
+            which matters for the players who would rather not talk. */}
+        <div className="mt-2 flex items-center gap-2">
+          <Action
+            onClick={onLike}
+            active={liked}
+            label={liked ? 'Unlike' : 'Like'}
+          >
+            <Heart size={16} filled={liked} />
+            <span className="tabular-nums">{likeCount}</span>
+          </Action>
+          <Action onClick={onComments} label="Comments">
+            <Comment size={16} />
+            <span className="tabular-nums">{commentCount}</span>
+          </Action>
         </div>
 
         <div className="mt-3 flex items-center gap-2">
@@ -126,13 +145,23 @@ export default function Watch({
   )
 }
 
-function Metric({ Icon, value, label }) {
+/* Liked state is a black fill, not a colour - the palette has one accent and
+   it belongs to primary actions. */
+function Action({ children, onClick, active, label }) {
   return (
-    <span className="flex items-center gap-1 text-xs tabular-nums text-gray-600">
-      <Icon size={14} />
-      {value}
-      <span className="sr-only">{label}</span>
-    </span>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      aria-pressed={active}
+      className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium ${
+        active
+          ? 'border-gray-900 bg-gray-100 text-gray-900'
+          : 'border-gray-300 bg-white text-gray-700'
+      }`}
+    >
+      {children}
+    </button>
   )
 }
 

@@ -79,3 +79,13 @@ export function isMutual(handle) {
   const p = FRIENDS.find((x) => x.handle === handle)
   return Boolean(p && p.followsYou)
 }
+
+/* --- shared formatting -------------------------------------------------- */
+
+export function ago(min) {
+  if (min < 1) return 'just now'
+  if (min < 60) return `${min} min ago`
+  const h = Math.round(min / 60)
+  if (h < 24) return `${h}h ago`
+  return `${Math.round(h / 24)}d ago`
+}

@@ -17,7 +17,7 @@ export default function CheckIn({ arcade, onBack, onScan, onManual }) {
         title="Check-In"
         onBack={onBack}
         right={
-          <Info align="right">
+          <Info >
             The arcade already has a paper queue board and nobody uses it. If
             check-in is not one tap it will not happen, so manual is a fallback
             for a broken sticker or a phone without NFC.

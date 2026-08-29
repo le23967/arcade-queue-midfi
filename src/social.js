@@ -53,7 +53,7 @@ const FOLLOWING = [
   f('sable', ['maimai DX', 'DDR'], ['Halcyon Drift', 'Copper Sky'], 100.8534, 99.8776, 100.4415),
   f('qwl', ['maimai DX'], ['Neon Cascade', 'Midnight Ferry'], 100.7998, 99.7420, 100.2288),
   f('nagi', ['maimai DX', 'Taiko'], ['Paper Lantern', 'Static Bloom'], 100.7412, 99.6903, 100.5570),
-  f('ovo_', ['maimai DX', 'CHUNITHM'], ['Gravity Well', 'Halcyon Drift'], 100.687, 99.6015, 100.1192, 'timezone', 11),
+  f('ovo_', ['maimai DX', 'CHUNITHM'], ['Gravity Well', 'Halcyon Drift'], 100.687, 99.6015, 100.1192, 'koko-town-hall', 11),
   f('tmk', ['maimai DX'], ['Copper Sky', 'Neon Cascade'], 100.6103, 99.5338, 99.9840),
   f('lyn', ['maimai DX', 'GITADORA'], ['Midnight Ferry', 'Paper Lantern'], 100.5488, 99.4901, 100.3306),
   f('brz', ['maimai DX'], ['Static Bloom', 'Gravity Well'], 100.4102, 99.4177, 99.8812),
@@ -117,11 +117,55 @@ export const FOLLOWERS_ONLY = [
 --------------------------------------------------------------------------- */
 export const CLIPS = [
   { id: 'c1', handle: 'rin_9', song: 'Neon Cascade', chart: 'Master 13+', achievement: 99.2015, venue: 'central-park', postedMin: 12, seconds: 24, likes: 34, comments: 5 },
-  { id: 'c2', handle: 'ovo_', song: 'Gravity Well', chart: 'Master 14', achievement: 99.6015, venue: 'timezone', postedMin: 41, seconds: 31, likes: 88, comments: 12 },
+  { id: 'c2', handle: 'ovo_', song: 'Gravity Well', chart: 'Master 14', achievement: 99.6015, venue: 'koko-town-hall', postedMin: 41, seconds: 31, likes: 88, comments: 12 },
   { id: 'c3', handle: 'mtsk', song: 'Paper Lantern', chart: 'Expert 12+', achievement: 100.9912, venue: 'central-park', postedMin: 96, seconds: 19, likes: 210, comments: 27 },
   { id: 'c4', handle: 'kzt', song: 'Static Bloom', chart: 'Master 13', achievement: 99.0244, venue: 'central-park', postedMin: 143, seconds: 28, likes: 19, comments: 2 },
   { id: 'c5', handle: 'yuzu_', song: 'Neon Cascade', chart: 'Master 13+', achievement: 100.9812, venue: 'market-city', postedMin: 260, seconds: 22, likes: 156, comments: 18 },
-  { id: 'c6', handle: 'nagi', song: 'Halcyon Drift', chart: 'Master 14', achievement: 100.557, venue: 'timezone', postedMin: 380, seconds: 35, likes: 74, comments: 9 },
+  { id: 'c6', handle: 'nagi', song: 'Halcyon Drift', chart: 'Master 14', achievement: 100.557, venue: 'koko-town-hall', postedMin: 380, seconds: 35, likes: 74, comments: 9 },
   { id: 'c7', handle: 'lyn', song: 'Midnight Ferry', chart: 'Expert 12', achievement: 100.3306, venue: 'central-park', postedMin: 610, seconds: 27, likes: 41, comments: 6 },
   { id: 'c8', handle: 'sora', song: 'Paper Lantern', chart: 'Expert 12+', achievement: 100.1938, venue: 'market-city', postedMin: 900, seconds: 30, likes: 63, comments: 8 },
 ]
+
+/* ---------------------------------------------------------------------------
+   Activity.
+
+   The temporal half of "seeing where your friends are and all of that". A
+   presence list answers "who is there now"; this answers "did I just miss
+   them" - if someone left 25 minutes ago there is no point going. Both
+   questions came up, and only the first one had a screen.
+
+   Venue ids match ARCADES; `minsAgo` lines up with the `sinceMin` values on
+   FRIENDS so the two screens tell the same story.
+--------------------------------------------------------------------------- */
+export const ACTIVITY = [
+  { id: 'a1', handle: 'rin_9', type: 'played', venue: 'central-park', songs: ['Neon Cascade', 'Gravity Well', 'Paper Lantern', 'Midnight Ferry'], minsAgo: 3 },
+  { id: 'a2', handle: 'mtsk', type: 'clip', song: 'Paper Lantern', clipId: 'c3', minsAgo: 6 },
+  { id: 'a3', handle: 'kzt', type: 'checkin', venue: 'central-park', minsAgo: 8 },
+  { id: 'a4', handle: 'ovo_', type: 'checkin', venue: 'koko-town-hall', minsAgo: 11 },
+  { id: 'a5', handle: 'yuzu_', type: 'best', song: 'Neon Cascade', achievement: 100.9812, minsAgo: 18 },
+  { id: 'a6', handle: 'rin_9', type: 'checkin', venue: 'central-park', minsAgo: 24 },
+  { id: 'a7', handle: 'ovo_', type: 'checkout', venue: 'central-park', minsAgo: 25 },
+  { id: 'a8', handle: 'nagi', type: 'played', venue: 'koko-town-hall', songs: ['Halcyon Drift', 'Static Bloom'], minsAgo: 40 },
+  { id: 'a9', handle: 'lyn', type: 'checkout', venue: 'market-city', minsAgo: 55 },
+  { id: 'a10', handle: 'tmk', type: 'best', song: 'Paper Lantern', achievement: 99.984, minsAgo: 96 },
+  { id: 'a11', handle: 'mtsk', type: 'played', venue: 'koko-town-hall', songs: ['Copper Sky', 'Neon Cascade', 'Halcyon Drift'], minsAgo: 140 },
+]
+
+/* Seed comments, keyed by clip id. */
+export const CLIP_COMMENTS = {
+  c1: [
+    { id: 'k1', handle: 'kzt', text: 'that last section is clean', minsAgo: 8 },
+    { id: 'k2', handle: 'mtsk', text: 'how are you hitting the slides that fast', minsAgo: 5 },
+  ],
+  c2: [{ id: 'k3', handle: 'nagi', text: 'gravity well on 14 is brutal, nice', minsAgo: 30 }],
+  c3: [
+    { id: 'k4', handle: 'yuzu_', text: 'sss+ on expert, ridiculous', minsAgo: 80 },
+    { id: 'k5', handle: 'lyn', text: 'which cab was this on?', minsAgo: 61 },
+    { id: 'k6', handle: 'mtsk', text: 'the left one at koko', minsAgo: 58 },
+  ],
+  c4: [],
+  c5: [{ id: 'k7', handle: 'rvn_', text: 'been chasing this chart for weeks', minsAgo: 200 }],
+  c6: [],
+  c7: [{ id: 'k8', handle: 'sora', text: 'good recovery at the end', minsAgo: 540 }],
+  c8: [],
+}

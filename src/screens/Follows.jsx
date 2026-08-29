@@ -17,7 +17,7 @@ export default function Follows({ tabName, onTab, onBack, onOpenPlayer }) {
         title="People"
         onBack={onBack}
         right={
-          <Info align="right">
+          <Info >
             You only share your arcade with people you follow back. Following
             someone who does not follow you back shows you nothing until they do.
           </Info>

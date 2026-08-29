@@ -23,7 +23,7 @@ export default function Scan({ arcade, method, onBack, onSuccess }) {
         title={qr ? 'Scan QR' : 'Tap NFC'}
         onBack={onBack}
         right={
-          <Info align="right">
+          <Info >
             Scanning at the cabinet is what ties you to this venue. No precise
             location is read or stored &mdash; the app only knows which arcade
             you tapped.

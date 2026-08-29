@@ -16,12 +16,14 @@ import Report from './screens/Report.jsx'
 import CheckedIn from './screens/CheckedIn.jsx'
 import Summary from './screens/Summary.jsx'
 import Directions from './screens/Directions.jsx'
+import Comments from './screens/Comments.jsx'
+import Liked from './screens/Liked.jsx'
 import MeTab from './screens/MeTab.jsx'
 import Friends from './screens/Friends.jsx'
 import Watch from './screens/Watch.jsx'
 import Follows from './screens/Follows.jsx'
 import PlayerProfile from './screens/PlayerProfile.jsx'
-import { FRIENDS, FOLLOWERS_ONLY, CLIPS } from './social.js'
+import { FRIENDS, FOLLOWERS_ONLY, CLIPS, CLIP_COMMENTS } from './social.js'
 
 /* Screens carry their sketch number so a reviewer can hold the prototype and
    Fig 3 side by side. */
@@ -35,6 +37,7 @@ const CAPTIONS = {
   watch: 'Watch — clip feed',
   friends: 'Friends tab',
   follows: 'Followers / Following',
+  liked: 'Liked clips',
   player: 'Player profile',
   me: 'Me tab',
 }
@@ -43,6 +46,7 @@ const MODAL_CAPTIONS = {
   report: 'Screen 4B — Report',
   checkout: 'Screen 7 — Check out confirmation',
   directions: 'Directions — hand-off to the phone’s maps app',
+  comments: 'Comments on a clip',
 }
 
 /* The summary is only interesting if a session has some length to it, and a
@@ -72,6 +76,8 @@ export default function App() {
   const [clipScope, setClipScope] = useState('following')
   const [called, setCalled] = useState(false)
   const [followsTab, setFollowsTab] = useState('followers')
+  const [likedIds, setLikedIds] = useState([])
+  const [comments, setComments] = useState(CLIP_COMMENTS)
 
   const rows = venuesForGame(arcades, game)
   const rawArcade = arcades.find((a) => a.id === activeId) ?? arcades[0]
@@ -82,6 +88,36 @@ export default function App() {
     null
 
   const [playerBack, setPlayerBack] = useState('friends')
+
+  const clip = CLIPS[clipIndex]
+  const clipComments = comments[clip.id] ?? []
+  const liked = likedIds.includes(clip.id)
+
+  function toggleLike() {
+    setLikedIds((ids) =>
+      ids.includes(clip.id) ? ids.filter((i) => i !== clip.id) : [...ids, clip.id]
+    )
+  }
+
+  function postComment(text) {
+    setComments((all) => ({
+      ...all,
+      [clip.id]: [
+        { id: `own-${Date.now()}`, handle: 'kntt', text, minsAgo: 0 },
+        ...(all[clip.id] ?? []),
+      ],
+    }))
+  }
+
+  /* Jumping to a clip from Activity or from Liked lands you in the feed at
+     that clip, rather than opening a one-off player. */
+  function openClip(id) {
+    const i = CLIPS.findIndex((c) => c.id === id)
+    if (i < 0) return
+    setClipIndex(i)
+    setTab('watch')
+    setView('watch')
+  }
 
   function openPlayer(handle) {
     setPlayerHandle(handle)
@@ -204,6 +240,11 @@ export default function App() {
               sessionArcade={sessionArcade}
               called={called}
               onCall={() => setCalled(true)}
+              liked={liked}
+              likeCount={clip.likes + (liked ? 1 : 0)}
+              onLike={toggleLike}
+              commentCount={clipComments.length}
+              onComments={() => setModal('comments')}
               onGo={() => {
                 setCalled(false)
                 setTab('arcades')
@@ -229,6 +270,15 @@ export default function App() {
               song={song}
               onSong={setSong}
               onOpenPlayer={openPlayer}
+              onOpenClip={openClip}
+            />
+          )}
+
+          {view === 'liked' && (
+            <Liked
+              likedIds={likedIds}
+              onBack={() => setView('me')}
+              onOpenClip={openClip}
             />
           )}
 
@@ -251,6 +301,8 @@ export default function App() {
                 setFollowsTab(t)
                 setView('follows')
               }}
+              likedCount={likedIds.length}
+              onOpenLiked={() => setView('liked')}
             />
           )}
 
@@ -359,6 +411,15 @@ export default function App() {
               })
               setReports((n) => n + 1)
             }}
+          />
+        )}
+
+        {modal === 'comments' && (
+          <Comments
+            clip={clip}
+            comments={clipComments}
+            onPost={postComment}
+            onClose={() => setModal(null)}
           />
         )}
 

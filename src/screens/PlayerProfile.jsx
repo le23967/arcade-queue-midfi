@@ -101,7 +101,7 @@ export default function PlayerProfile({ player, arcade, onBack, onOpenArcade }) 
 
         <p className="flex items-center gap-1.5 px-4 py-4 text-xs text-gray-600">
           No message button
-          <Info above align="right">
+          <Info above >
             The app shows who is around and what you already have in common; the
             conversation happens at the cabinet, the way it actually does today.
           </Info>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 
 /* Shared primitives.
 
@@ -59,11 +59,14 @@ export function Body({ children, className = '' }) {
 }
 
 /* The one blue element per screen. */
-export function PrimaryButton({ children, className = '', ...rest }) {
+export function PrimaryButton({ children, className = '', disabled, ...rest }) {
   return (
     <button
       type="button"
-      className={`w-full rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white ${className}`}
+      disabled={disabled}
+      className={`w-full rounded-md px-4 py-3 text-sm font-semibold ${
+        disabled ? 'bg-gray-200 text-gray-500' : 'bg-blue-600 text-white'
+      } ${className}`}
       {...rest}
     >
       {children}
@@ -102,6 +105,9 @@ export function StaleBadge() {
   )
 }
 
+const TOOLTIP_WIDTH = 224
+const EDGE_GUTTER = 8
+
 /* ---------------------------------------------------------------------------
    Info tooltip.
 
@@ -117,11 +123,26 @@ export function StaleBadge() {
    Anything that does not fit in a tooltip belongs in the code or the README,
    not on the screen.
 --------------------------------------------------------------------------- */
-export function Info({ children, label = 'More information', align = 'left', above = false }) {
+export function Info({ children, label = 'More information', above = false }) {
   const [open, setOpen] = useState(false)
+  const [alignRight, setAlignRight] = useState(false)
+  const ref = useRef(null)
+
+  /* The popup is anchored to a 16px button, so on a 390px frame it can easily
+     hang off the edge - and the scroll container clips it, which is how the
+     text ends up half-readable. Measure on open and flip the side rather than
+     hand-tuning an alignment prop per call site. */
+  useLayoutEffect(() => {
+    if (!open || !ref.current) return
+    const frame = ref.current.closest('[data-frame]')
+    if (!frame) return
+    const t = ref.current.getBoundingClientRect()
+    const f = frame.getBoundingClientRect()
+    setAlignRight(t.left + TOOLTIP_WIDTH > f.right - EDGE_GUTTER)
+  }, [open])
 
   return (
-    <span className="relative inline-flex align-middle">
+    <span ref={ref} className="relative inline-flex align-middle">
       <button
         type="button"
         aria-label={label}
@@ -143,14 +164,15 @@ export function Info({ children, label = 'More information', align = 'left', abo
       {open && (
         <span
           role="tooltip"
-          className={`absolute z-20 w-56 rounded-md border border-gray-400 bg-white p-2 text-xs font-normal leading-relaxed text-gray-700 ${
+          style={{ width: TOOLTIP_WIDTH }}
+          className={`absolute z-20 rounded-md border border-gray-400 bg-white p-2 text-xs font-normal leading-relaxed text-gray-700 ${
             above ? 'bottom-6' : 'top-6'
-          } ${align === 'right' ? 'right-0' : 'left-0'}`}
+          } ${alignRight ? 'right-0' : 'left-0'}`}
         >
           <span
             className={`absolute h-2 w-2 rotate-45 border-gray-400 bg-white ${
               above ? '-bottom-1 border-b border-r' : '-top-1 border-l border-t'
-            } ${align === 'right' ? 'right-1.5' : 'left-1.5'}`}
+            } ${alignRight ? 'right-1.5' : 'left-1.5'}`}
           />
           {children}
         </span>

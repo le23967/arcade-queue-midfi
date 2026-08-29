@@ -177,6 +177,35 @@ community. The introverted player got in by watching: *"I'd watch like my
 friends play for ages … I was really interested 'cause it looked so cool."*
 Another described it as *"watching a concert almost … a display of skill."*
 
+**F. Activity** *(the temporal half of presence)*
+
+A presence list answers "who is there now". Activity answers **"did I just
+miss them"** — if someone left 25 minutes ago there is no point going. Both
+questions came out of the same interview interest in seeing where friends are;
+only the first one had a screen.
+
+Plain sentences in reverse time order: checked in, left, played a set, posted a
+clip, set a new best. A mid-fi feed is a list, not a timeline graphic.
+
+**G. Like and comment on clips** *(watching without a reply is half a feature)*
+
+A feed you can only watch is worse than no feed: you see your friends play and
+have no way to say anything. Like and comment are the two cheapest replies, and
+**the like needs no words at all** — which is the point for the players who
+would rather not start a conversation. Liked state is a black fill, never a
+red heart; the palette has one accent and it belongs to primary actions.
+
+**Liked clips live under Me, not under Watch.** Watch is a lean-back surface —
+one clip at a time, served to you, in order. Retrieving something you saved is
+the opposite task: you have a specific thing in mind and you are going to find
+it. Those two want different shapes (a pager versus a list), and folding a
+saved list into Watch's segmented control would have mixed two content
+*sources* (Following / Nearby) with one saved *state* in the same control — a
+category error in what the control means. Me is already the tab for things that
+belong to you: your sessions, your reports, who you follow, your songs. Liked
+clips fit that model without changing what the tab means, and it is where
+Instagram and TikTok both put theirs, so it is where people look first.
+
 ### Not built
 
 **Invite-and-earn events (points for bringing people on quiet weekdays)** —
@@ -255,8 +284,11 @@ Sources: [SEGA maimai DX International location finder](https://location.am-all.
 | 6 — Checked In | `checkedin` | Position, running order, one-turn-away notification. |
 | 7 — Check out | modal | Confirmation. |
 | 8 — Session summary | `summary` | Session time and time queued. |
-| Watch | tab | Clip feed from people you follow, with your queue position pinned above it. |
+| Watch | tab | Clip feed from people you follow, with your queue position pinned above it. Like and comment on each clip. |
+| Comments | modal | Comment thread on a clip; posting adds to it. |
+| Liked clips | `liked` | Clips you liked, reachable from Me; opening one jumps into the feed at that clip. |
 | Friends — Here now | tab | People you follow who are at an arcade, grouped by venue. |
+| Friends — Activity | tab | What friends did and when: checked in, left, played a set, posted a clip, set a best. |
 | Friends — Scores | tab | Uncapped per-song leaderboard with the official site's 20-favourite line drawn on it. |
 | Player profile | `player` | Games, favourite songs, shared items, scores. No message button. |
 | Followers / Following | `follows` | Roster with the direction of each relationship, reachable from Me. |
@@ -299,7 +331,11 @@ than for polish:
   tap or focus and closes on the same frame. Explanation that does not fit in a
   tooltip belongs in the code or in this file, not on the screen. An earlier
   pass put it all on the screen as paragraphs; that reads as documentation,
-  gets skipped, and clutters the layout — the worst of both outcomes.
+  gets skipped, and clutters the layout — the worst of both outcomes. The
+  tooltip measures itself against the frame on open and flips side rather than
+  relying on a hand-set alignment per call site, because a 224px popup anchored
+  to a 16px button will otherwise hang off a 390px screen and get clipped by
+  the scroll container.
 
 The first three are enforced globally in `src/index.css` rather than left to
 discipline, so the prototype cannot drift into hi-fi by accident.
