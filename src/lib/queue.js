@@ -1,3 +1,5 @@
+import { gameLabel } from '../data.js'
+
 /* ---------------------------------------------------------------------------
    Wait estimation.
 
@@ -21,6 +23,35 @@ export const SOLO_TURN_MIN = 4 // one credit, single player
 export const PAIR_TURN_MIN = 6 // pair: one credit plus the bonus song
 export const STALE_AFTER_MIN = 15 // past this, treat a report as unreliable
 
+/* Flatten a venue plus one of its game queues into the single object every
+   screen already consumes. Returns null when the venue does not run the game,
+   which is what filters the lists. */
+export function venueGame(arcade, gameId) {
+  const g = arcade.games[gameId]
+  if (!g) return null
+  return {
+    id: arcade.id,
+    name: arcade.name,
+    short: arcade.short,
+    suburb: arcade.suburb,
+    distanceKm: arcade.distanceKm,
+    gameId,
+    game: gameLabel(gameId),
+    ...g,
+  }
+}
+
+export function venuesForGame(arcades, gameId) {
+  return arcades.map((a) => venueGame(a, gameId)).filter(Boolean)
+}
+
+/* Other games the same venue runs, for the detail screen. */
+export function otherGamesAt(arcade, gameId) {
+  return Object.keys(arcade.games)
+    .filter((id) => id !== gameId)
+    .map((id) => venueGame(arcade, id))
+}
+
 export function pairsOf(a) {
   return Math.max(0, a.queue - a.solo)
 }
@@ -43,6 +74,7 @@ export function freshnessLabel(a) {
 /* The best option is the shortest WAIT, not the shortest queue - and a report
    nobody has confirmed for 15 minutes is not allowed to win. */
 export function bestArcadeId(list) {
+  if (list.length === 0) return null
   const fresh = list.filter((a) => !isStale(a))
   const pool = fresh.length > 0 ? fresh : list
   return pool.reduce((best, a) =>

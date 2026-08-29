@@ -1,4 +1,5 @@
 import { Screen, TopBar, Body, BestBadge, StaleBadge, Info, Seg } from '../components/ui.jsx'
+import { GAMES, gameLabel } from '../data.js'
 import { Pin, Chevron } from '../components/Icons.jsx'
 import {
   estimateWaitMin,
@@ -17,7 +18,17 @@ import {
    same three venues carrying the same four numbers; only the layout differs.
    Splitting them costs a tab and makes the user navigate to answer one
    question. They are one screen with a view switch. */
-export default function Arcades({ arcades, view, onView, sort, onSort, onOpen }) {
+export default function Arcades({
+  arcades,
+  venueCount,
+  game,
+  onGame,
+  view,
+  onView,
+  sort,
+  onSort,
+  onOpen,
+}) {
   return (
     <Screen>
       <TopBar
@@ -32,6 +43,17 @@ export default function Arcades({ arcades, view, onView, sort, onSort, onOpen })
           </Info>
         }
       />
+
+      {/* Queues belong to a game, not a venue, so the game is picked first and
+          every number below is that game's queue at that venue. */}
+      <div className="flex flex-wrap items-center gap-1.5 border-b border-gray-300 px-4 py-2">
+        <span className="mr-0.5 text-xs text-gray-600">Game</span>
+        {GAMES.map((g) => (
+          <Seg key={g.id} on={g.id === game} onClick={() => onGame(g.id)}>
+            {g.label}
+          </Seg>
+        ))}
+      </div>
 
       <div className="flex items-center gap-2 border-b border-gray-300 px-4 py-2">
         <Seg on={view === 'list'} onClick={() => onView('list')}>
@@ -53,6 +75,14 @@ export default function Arcades({ arcades, view, onView, sort, onSort, onOpen })
           </span>
         )}
       </div>
+
+      {arcades.length < venueCount && (
+        <p className="border-b border-gray-300 px-4 py-2 text-xs text-gray-600">
+          <span className="tabular-nums">{arcades.length}</span> of{' '}
+          <span className="tabular-nums">{venueCount}</span> arcades run{' '}
+          {gameLabel(game)}.
+        </p>
+      )}
 
       {view === 'list' ? (
         <ListView arcades={arcades} sort={sort} onOpen={onOpen} />
@@ -175,8 +205,8 @@ function CompareView({ arcades, onOpen }) {
           {anyStale && ' * older than 15 min, shown but not ranked.'}
         </p>
         <Info align="right">
-          Timezone has more parties waiting than Central Park and is still
-          faster, because it runs four machines to Central Park&rsquo;s one.
+          Wait is queue load divided by machines, so a venue with more people
+          waiting can still be the faster choice if it runs more cabinets.
           Anything last confirmed over {STALE_AFTER_MIN} minutes ago is marked
           stale and left out of the ranking.
         </Info>

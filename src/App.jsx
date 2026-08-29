@@ -1,6 +1,11 @@
 import { useState } from 'react'
-import { ARCADES, QUEUE_AHEAD } from './data.js'
-import { estimateWaitMin } from './lib/queue.js'
+import { ARCADES, QUEUE_AHEAD, DEFAULT_GAME } from './data.js'
+import {
+  estimateWaitMin,
+  venueGame,
+  venuesForGame,
+  otherGamesAt,
+} from './lib/queue.js'
 import { Frame, TabBar, SessionBanner } from './components/Frame.jsx'
 
 import Arcades from './screens/Arcades.jsx'
@@ -50,6 +55,7 @@ export default function App() {
   const [tab, setTab] = useState('home')
   const [view, setView] = useState('arcades')
   const [arcadeView, setArcadeView] = useState('list')
+  const [game, setGame] = useState(DEFAULT_GAME)
   const [modal, setModal] = useState(null)
   const [sort, setSort] = useState('distance')
   const [activeId, setActiveId] = useState(null)
@@ -67,7 +73,9 @@ export default function App() {
   const [called, setCalled] = useState(false)
   const [followsTab, setFollowsTab] = useState('followers')
 
-  const arcade = arcades.find((a) => a.id === activeId) ?? arcades[0]
+  const rows = venuesForGame(arcades, game)
+  const rawArcade = arcades.find((a) => a.id === activeId) ?? arcades[0]
+  const arcade = venueGame(rawArcade, game) ?? rows[0] ?? null
   const player =
     FRIENDS.find((p) => p.handle === playerHandle) ??
     FOLLOWERS_ONLY.find((p) => p.handle === playerHandle) ??
@@ -81,10 +89,20 @@ export default function App() {
     setView('player')
   }
 
-  function patchArcade(id, patch) {
+  function patchVenueGame(id, gameId, patch) {
     setArcades((list) =>
-      list.map((a) => (a.id === id ? { ...a, ...patch } : a))
+      list.map((a) =>
+        a.id === id
+          ? { ...a, games: { ...a.games, [gameId]: { ...a.games[gameId], ...patch } } }
+          : a
+      )
     )
+  }
+
+  /* Opening a venue that does not run the selected game would show nothing, so
+     switching game from the detail screen switches the whole filter. */
+  function pickGame(next) {
+    setGame(next)
   }
 
   function goTab(next) {
@@ -104,7 +122,7 @@ export default function App() {
 
     /* Checking in is itself a queue report: the count goes up and the clock
        resets, so the next person to look sees a number that is seconds old. */
-    patchArcade(target.id, {
+    patchVenueGame(target.id, target.gameId, {
       queue: target.queue + 1,
       updatedMinsAgo: 0,
       updatedAt: '12:38 PM',
@@ -112,6 +130,7 @@ export default function App() {
 
     setSession({
       arcadeId: target.id,
+      gameId: target.gameId,
       position,
       checkInAt: Date.now() - DEMO_SESSION_OFFSET_MIN * 60_000,
       waitedMin: estimateWaitMin(target),
@@ -121,8 +140,11 @@ export default function App() {
   }
 
   function doCheckOut() {
-    const target = arcades.find((a) => a.id === session.arcadeId)
-    patchArcade(target.id, {
+    const target = venueGame(
+      arcades.find((a) => a.id === session.arcadeId),
+      session.gameId
+    )
+    patchVenueGame(target.id, session.gameId, {
       queue: Math.max(0, target.queue - 1),
       updatedMinsAgo: 0,
       updatedAt: '12:38 PM',
@@ -134,6 +156,7 @@ export default function App() {
     )
     setLastSession({
       arcadeId: session.arcadeId,
+      gameId: session.gameId,
       sessionMin: elapsed,
       waitedMin: session.waitedMin,
     })
@@ -145,7 +168,10 @@ export default function App() {
   const caption = modal ? MODAL_CAPTIONS[modal] : CAPTIONS[view]
   const showTabs = ['arcades', 'watch', 'maps', 'friends', 'me', 'detail'].includes(view)
   const sessionArcade = session
-    ? arcades.find((a) => a.id === session.arcadeId)
+    ? venueGame(
+        arcades.find((a) => a.id === session.arcadeId),
+        session.gameId
+      )
     : null
 
   return (
@@ -154,7 +180,10 @@ export default function App() {
         <div className="min-h-0 flex-1">
           {view === 'arcades' && (
             <Arcades
-              arcades={arcades}
+              arcades={rows}
+              venueCount={arcades.length}
+              game={game}
+              onGame={setGame}
               view={arcadeView}
               onView={setArcadeView}
               sort={sort}
@@ -192,7 +221,7 @@ export default function App() {
             />
           )}
 
-          {view === 'maps' && <MapsTab arcades={arcades} onOpen={openArcade} />}
+          {view === 'maps' && <MapsTab arcades={rows} onOpen={openArcade} />}
 
           {view === 'friends' && (
             <Friends
@@ -227,9 +256,11 @@ export default function App() {
             />
           )}
 
-          {view === 'detail' && (
+          {view === 'detail' && arcade && (
             <Detail
               arcade={arcade}
+              otherGames={otherGamesAt(rawArcade, game)}
+              onPickGame={pickGame}
               onBack={() => setView(tab)}
               onCheckIn={() => setView('checkin')}
               onReport={() => setModal('report')}
@@ -285,7 +316,10 @@ export default function App() {
 
           {view === 'summary' && lastSession && (
             <Summary
-              arcade={arcades.find((a) => a.id === lastSession.arcadeId)}
+              arcade={venueGame(
+                arcades.find((a) => a.id === lastSession.arcadeId),
+                lastSession.gameId
+              )}
               sessionMin={lastSession.sessionMin}
               waitedMin={lastSession.waitedMin}
               onDone={() => {
@@ -313,7 +347,7 @@ export default function App() {
           />
         )}
 
-        {modal === 'report' && (
+        {modal === 'report' && arcade && (
           <Report
             arcade={arcade}
             onCancel={() => setModal(null)}

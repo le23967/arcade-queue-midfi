@@ -25,14 +25,14 @@ import {
    action, because staleness is the failure mode the current workaround has:
    asking the group chat takes "thirty or forty five minutes" to answer, if it
    answers at all. */
-export default function Detail({ arcade, onBack, onCheckIn, onReport, onFriends }) {
+export default function Detail({ arcade, otherGames, onBack, onCheckIn, onReport, onFriends, onPickGame }) {
   const stale = isStale(arcade)
   const friendsHere = presentAt(arcade.id)
 
   return (
     <Screen>
       <TopBar
-        title={arcade.short}
+        title={`${arcade.short} · ${arcade.game}`}
         onBack={onBack}
         right={stale ? <StaleBadge /> : null}
       />
@@ -42,7 +42,7 @@ export default function Detail({ arcade, onBack, onCheckIn, onReport, onFriends 
           <p className="text-sm text-gray-900">{arcade.name}</p>
           <p className="text-xs text-gray-600">
             {arcade.suburb} &middot; {arcade.distanceKm.toFixed(1)} km &middot;{' '}
-            {arcade.game}
+            {arcade.cabinets} {arcade.cabinets === 1 ? 'cabinet' : 'cabinets'}
           </p>
         </div>
 
@@ -99,6 +99,34 @@ export default function Detail({ arcade, onBack, onCheckIn, onReport, onFriends 
             </span>
             <Chevron size={16} />
           </button>
+        )}
+
+        {otherGames.length > 0 && (
+          <div className="border-b border-gray-300">
+            <p className="px-4 pt-3 text-xs uppercase tracking-wide text-gray-600">
+              Also at this venue
+            </p>
+            <ul className="px-4 pb-3">
+              {otherGames.map((g) => (
+                <li key={g.gameId}>
+                  <button
+                    type="button"
+                    onClick={() => onPickGame(g.gameId)}
+                    className="flex w-full items-center gap-2 py-1.5 text-left"
+                  >
+                    <span className="flex-1 text-sm text-gray-900">{g.game}</span>
+                    <span className="text-xs tabular-nums text-gray-600">
+                      Q {g.queue}
+                    </span>
+                    <span className="w-16 text-right text-sm tabular-nums text-gray-900">
+                      ~{estimateWaitMin(g)} min
+                    </span>
+                    {isStale(g) && <StaleBadge />}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
 
       </Body>

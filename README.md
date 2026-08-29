@@ -71,6 +71,29 @@ wait model charges a pair 6 minutes against a solo player's 4. The report modal
 recalculates the estimate live as you step the numbers, so the reporter can see
 their report is worth making.
 
+### 6. A queue belongs to a game, not to a venue
+
+Every interviewee talks about one cabinet's queue, never the building's. The
+Sound Voltex player queues for Sound Voltex — *"it really depends on time of
+day … especially at Ikebukuro, 'cause there's two cabinets that you can play
+together"* — while the maimai players queue for maimai. Asking "how busy is
+Market City?" is not a question anyone actually has.
+
+**In the UI:** the game is chosen first, on Arcades, and every number below it
+is that game's queue at that venue. No venue runs all six games, so the filter
+genuinely narrows the list — GITADORA is at one arcade only. The detail screen
+lists the other games at the same venue with their own queues, so switching is
+one tap when your first choice is backed up.
+
+This also makes the seed data carry more than one lesson:
+
+| Game | What it demonstrates |
+| --- | --- |
+| maimai DX | Throughput beats queue length — Timezone wins with 8 waiting against Central Park's 3, on four cabinets to one |
+| Sound Voltex | Timezone is fastest at 4 min but 22 min stale, so Central Park wins on freshness |
+| GITADORA | One venue of three — the filter narrowing to a real answer |
+| DDR | Both venues stale, exercising the fallback when nothing is fresh |
+
 ### Privacy
 
 Check-in is recorded against a venue, never a coordinate, and reports are
@@ -190,7 +213,7 @@ The venue-level crowd count gives partial value without the surveillance.
 
 | Screen | Route | Notes |
 | --- | --- | --- |
-| 1 + 2 — Arcades | `arcades` | One screen, two views. **List** carries queue, distance, wait and report age; **Compare** is the Arcade / Queue / Solo / Wait table with a computed best option. The lo-fi sheet drew these as two tabs, but they are the same three venues with the same four numbers — splitting them cost a tab and made you navigate to answer one question. |
+| 1 + 2 — Arcades | `arcades` | Pick a game, then one screen with two views. **List** carries queue, distance, wait and report age; **Compare** is the Arcade / Queue / Solo / Wait table with a computed best option. The lo-fi sheet drew these as two tabs, but they are the same venues with the same four numbers — splitting them cost a tab and made you navigate to answer one question. |
 | 3 — Detail | `detail` | Stats plus Check In and Report. |
 | 4A — Check-In | `checkin` | QR / NFC / Manual. |
 | 5 — Scan target | `scan` | Cabinet placeholder; simulates a successful scan. |
@@ -242,7 +265,8 @@ discipline, so the prototype cannot drift into hi-fi by accident.
 
 ## Data
 
-Queue data lives in `src/data.js` with the wait model in `src/lib/queue.js`;
+Queue data lives in `src/data.js` — a venue holds one record per game it runs —
+with the wait model and the game resolvers in `src/lib/queue.js`;
 players, songs and scores live in `src/social.js` with helpers in
 `src/lib/social.js`.
 Reporting a queue or checking in mutates the shared state, so the list, the

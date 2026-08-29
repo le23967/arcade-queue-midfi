@@ -48,16 +48,16 @@ const f = (handle, games, songs, neon, gravity, lantern, at = null, sinceMin = 0
 const FOLLOWING = [
   f('mtsk', ['maimai DX'], ['Halcyon Drift', 'Static Bloom'], 101.0, 100.4021, 100.9912),
   f('yuzu_', ['maimai DX', 'CHUNITHM'], ['Neon Cascade', 'Copper Sky'], 100.9812, 100.1144, 100.8003),
-  f('0xC0', ['maimai DX', 'SDVX'], ['Gravity Well', 'Midnight Ferry'], 100.9455, 100.0087, 100.6621),
+  f('0xC0', ['maimai DX', 'Sound Voltex'], ['Gravity Well', 'Midnight Ferry'], 100.9455, 100.0087, 100.6621),
   f('hnr', ['maimai DX'], ['Static Bloom', 'Paper Lantern'], 100.8901, 99.9310, 100.9004),
   f('sable', ['maimai DX', 'DDR'], ['Halcyon Drift', 'Copper Sky'], 100.8534, 99.8776, 100.4415),
   f('qwl', ['maimai DX'], ['Neon Cascade', 'Midnight Ferry'], 100.7998, 99.7420, 100.2288),
   f('nagi', ['maimai DX', 'Taiko'], ['Paper Lantern', 'Static Bloom'], 100.7412, 99.6903, 100.5570),
   f('ovo_', ['maimai DX', 'CHUNITHM'], ['Gravity Well', 'Halcyon Drift'], 100.687, 99.6015, 100.1192, 'timezone', 11),
   f('tmk', ['maimai DX'], ['Copper Sky', 'Neon Cascade'], 100.6103, 99.5338, 99.9840),
-  f('lyn', ['maimai DX', "pop'n music"], ['Midnight Ferry', 'Paper Lantern'], 100.5488, 99.4901, 100.3306),
+  f('lyn', ['maimai DX', 'GITADORA'], ['Midnight Ferry', 'Paper Lantern'], 100.5488, 99.4901, 100.3306),
   f('brz', ['maimai DX'], ['Static Bloom', 'Gravity Well'], 100.4102, 99.4177, 99.8812),
-  f('rvn_', ['maimai DX', 'SDVX'], ['Halcyon Drift', 'Neon Cascade'], 100.3577, 99.3560, 100.0451),
+  f('rvn_', ['maimai DX', 'Sound Voltex'], ['Halcyon Drift', 'Neon Cascade'], 100.3577, 99.3560, 100.0451),
   f('mky', ['maimai DX'], ['Copper Sky', 'Midnight Ferry'], 100.2914, 99.2884, 99.7723),
   f('sora', ['maimai DX', 'Taiko'], ['Paper Lantern', 'Halcyon Drift'], 100.1806, 99.2011, 100.1938),
   f('dpr', ['maimai DX'], ['Neon Cascade', 'Static Bloom'], 100.0455, 99.1350, 99.6604),
@@ -67,11 +67,11 @@ const FOLLOWING = [
   f('hako', ['maimai DX'], ['Copper Sky', 'Gravity Well'], 99.5117, 98.8503, 99.4462),
   f('mkr_', ['maimai DX'], ['Neon Cascade', 'Midnight Ferry'], 99.3842, 98.7790, 99.7005),
   f('rin_9', ['maimai DX', 'Taiko'], ['Neon Cascade', 'Midnight Ferry'], 99.2015, 98.7044, 99.3311, 'central-park', 24),
-  f('cyn', ['maimai DX', 'SDVX'], ['Halcyon Drift', 'Static Bloom'], 99.0778, 98.6320, 99.1877),
+  f('cyn', ['maimai DX', 'Sound Voltex'], ['Halcyon Drift', 'Static Bloom'], 99.0778, 98.6320, 99.1877),
   f('kzt', ['maimai DX'], ['Static Bloom', 'Copper Sky'], 98.9341, 98.5588, 99.0244, 'central-park', 8),
   f('pnt', ['maimai DX', 'DDR'], ['Paper Lantern', 'Gravity Well'], 98.762, 98.4802, 98.8619),
   f('lvo', ['maimai DX'], ['Midnight Ferry', 'Copper Sky'], 98.4193, 98.3115, 98.5530),
-  f('zed', ['maimai DX', "pop'n music"], ['Gravity Well', 'Halcyon Drift'], 98.0055, 98.1006, 98.2201),
+  f('zed', ['maimai DX', 'GITADORA'], ['Gravity Well', 'Halcyon Drift'], 98.0055, 98.1006, 98.2201),
 ]
 
 /* Following is not symmetric. A few of the people you follow do not follow
@@ -90,7 +90,7 @@ export const FRIENDS = FOLLOWING.map((p) => ({
 export const FOLLOWERS_ONLY = [
   { handle: 'aki_', games: ['maimai DX'] },
   { handle: 'nori', games: ['maimai DX', 'Taiko'] },
-  { handle: 'p0lar', games: ['maimai DX', 'SDVX'] },
+  { handle: 'p0lar', games: ['maimai DX', 'Sound Voltex'] },
   { handle: 'hsk', games: ['maimai DX'] },
   { handle: 'vex_', games: ['maimai DX', 'CHUNITHM'] },
   { handle: 'tsuki', games: ['maimai DX', 'DDR'] },
