@@ -1,4 +1,4 @@
-import { Screen, TopBar, Body, Info, Seg } from '../components/ui.jsx'
+import { Screen, TopBar, Body, Info, Seg, Chip } from '../components/ui.jsx'
 import { Chevron, Pin } from '../components/Icons.jsx'
 import { FRIENDS, SONGS, OLD_SITE_FAVOURITE_CAP, ACTIVITY } from '../social.js'
 import {
@@ -10,7 +10,7 @@ import {
   ago,
 } from '../lib/social.js'
 
-/* Friends tab. Two sections, one per interview finding.
+/* Friends tab. Three sections, one per interview finding.
 
    "Here now" answers the request to see "where your friends are and all of
    that", at venue level only.

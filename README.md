@@ -9,7 +9,16 @@ Stack: React + Vite + Tailwind CSS.
 ```bash
 npm install
 npm run dev
+npm run lint   # catches undefined references before they blank a screen
 ```
+
+`npm run lint` exists for one reason. Twice, a bulk edit across screens dropped
+an import and left a component referenced but undefined. React throws mid-render
+and unmounts the whole tree, so the symptom is a blank white screen with nothing
+to explain it — and it only appears when you happen to click that one section.
+`no-undef` turns that into a build-time error. A small error boundary also keeps
+a future crash inside the phone frame with the message visible, rather than
+ending a live critique with a white void.
 
 ---
 

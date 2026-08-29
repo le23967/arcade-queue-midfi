@@ -7,6 +7,7 @@ import {
   otherGamesAt,
 } from './lib/queue.js'
 import { Frame, TabBar, SessionBanner } from './components/Frame.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
 
 import Arcades from './screens/Arcades.jsx'
 import Detail from './screens/Detail.jsx'
@@ -214,6 +215,7 @@ export default function App() {
     <Frame caption={caption}>
       <div className="relative flex h-full flex-col">
         <div className="min-h-0 flex-1">
+          <ErrorBoundary resetKey={view}>
           {view === 'arcades' && (
             <Arcades
               arcades={rows}
@@ -379,6 +381,7 @@ export default function App() {
               }}
             />
           )}
+          </ErrorBoundary>
         </div>
 
         {showTabs && (
@@ -403,7 +406,7 @@ export default function App() {
             arcade={arcade}
             onCancel={() => setModal(null)}
             onSubmit={({ queue, solo }) => {
-              patchArcade(arcade.id, {
+              patchVenueGame(arcade.id, arcade.gameId, {
                 queue,
                 solo,
                 updatedMinsAgo: 0,
