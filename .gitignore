@@ -1,0 +1,9 @@
+node_modules
+dist
+.DS_Store
+*.log
+
+# Raw interview transcripts are kept out of the public repository.
+# Participants consented to a university project, not to publication.
+# The findings drawn from them are summarised in README.md instead.
+*.txt

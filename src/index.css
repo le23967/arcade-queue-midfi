@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------------
+   MID-FI GUARD RAILS
+
+   These rules are deliberate. A mid-fi prototype is tested for flow and
+   information, not for polish, so the constraints are enforced globally
+   rather than left to discipline:
+
+   - every state change is instant (no transition, no animation)
+   - nothing casts a shadow, glows, or blurs
+
+   If a future contributor adds `transition-*`, `duration-*`, `animate-*`
+   or `shadow-*`, it is overridden here and the prototype stays mid-fi.
+--------------------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  transition: none !important;
+  animation: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: #f3f4f6; /* gray-100 */
+}
+
+/* Keyboard focus stays visible: outline is not box-shadow, so it survives. */
+:focus-visible {
+  outline: 2px solid #111827; /* gray-900 */
+  outline-offset: 1px;
+}

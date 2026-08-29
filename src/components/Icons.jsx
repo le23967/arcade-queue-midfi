@@ -1,0 +1,145 @@
+/* Generic line icons, drawn inline so the prototype pulls in no icon library
+   and ships no image assets. Single weight, currentColor, no fill. */
+
+const base = {
+  width: 20,
+  height: 20,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 1.6,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+}
+
+const Svg = ({ children, size = 20, ...rest }) => (
+  <svg {...base} width={size} height={size} aria-hidden="true" {...rest}>
+    {children}
+  </svg>
+)
+
+export const Pin = (p) => (
+  <Svg {...p}>
+    <path d="M12 21s7-5.2 7-11a7 7 0 1 0-14 0c0 5.8 7 11 7 11Z" />
+    <circle cx="12" cy="10" r="2.5" />
+  </Svg>
+)
+
+export const Users = (p) => (
+  <Svg {...p}>
+    <circle cx="9" cy="8" r="3" />
+    <path d="M3 20a6 6 0 0 1 12 0" />
+    <path d="M16 5.5a3 3 0 0 1 0 5.6" />
+    <path d="M17.5 14.4A6 6 0 0 1 21 20" />
+  </Svg>
+)
+
+export const User = (p) => (
+  <Svg {...p}>
+    <circle cx="12" cy="8" r="3.2" />
+    <path d="M5 20a7 7 0 0 1 14 0" />
+  </Svg>
+)
+
+export const Clock = (p) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 7.5V12l3 1.8" />
+  </Svg>
+)
+
+export const Refresh = (p) => (
+  <Svg {...p}>
+    <path d="M20 12a8 8 0 1 1-2.3-5.6" />
+    <path d="M20 4v4.5h-4.5" />
+  </Svg>
+)
+
+export const Chevron = (p) => (
+  <Svg {...p}>
+    <path d="M9 5l7 7-7 7" />
+  </Svg>
+)
+
+export const ArrowLeft = (p) => (
+  <Svg {...p}>
+    <path d="M15 5l-7 7 7 7" />
+    <path d="M8 12h11" />
+  </Svg>
+)
+
+export const Check = (p) => (
+  <Svg {...p}>
+    <path d="M5 12.5l4.5 4.5L19 7.5" />
+  </Svg>
+)
+
+export const CheckCircle = (p) => (
+  <Svg {...p} strokeWidth={1.4}>
+    <circle cx="12" cy="12" r="9.5" />
+    <path d="M7.5 12.4l3.1 3.1L16.6 9.4" />
+  </Svg>
+)
+
+export const Qr = (p) => (
+  <Svg {...p}>
+    <rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1" />
+    <rect x="14" y="3.5" width="6.5" height="6.5" rx="1" />
+    <rect x="3.5" y="14" width="6.5" height="6.5" rx="1" />
+    <path d="M14 14h3v3h-3zM20.5 14v3M17.5 20.5h3" />
+  </Svg>
+)
+
+export const Nfc = (p) => (
+  <Svg {...p}>
+    <path d="M8.5 15.5a5 5 0 0 1 0-7" />
+    <path d="M5.6 18.4a9 9 0 0 1 0-12.8" />
+    <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+    <path d="M18.4 5.6a9 9 0 0 1 0 12.8" />
+  </Svg>
+)
+
+export const Hand = (p) => (
+  <Svg {...p}>
+    <path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11" />
+    <path d="M12 11V4.5a1.5 1.5 0 0 1 3 0V11" />
+    <path d="M15 11V6.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1a6 6 0 0 1-5.2-3l-2-3.4a1.5 1.5 0 0 1 2.4-1.8L9 15" />
+  </Svg>
+)
+
+export const Bell = (p) => (
+  <Svg {...p}>
+    <path d="M18 15V10a6 6 0 1 0-12 0v5l-1.5 2.5h15Z" />
+    <path d="M10 20.5a2.2 2.2 0 0 0 4 0" />
+  </Svg>
+)
+
+export const Minus = (p) => (
+  <Svg {...p} strokeWidth={2}>
+    <path d="M5 12h14" />
+  </Svg>
+)
+
+export const Plus = (p) => (
+  <Svg {...p} strokeWidth={2}>
+    <path d="M12 5v14M5 12h14" />
+  </Svg>
+)
+
+export const HomeIcon = (p) => (
+  <Svg {...p}>
+    <path d="M4 10.5 12 4l8 6.5V20H4Z" />
+  </Svg>
+)
+
+export const Bars = (p) => (
+  <Svg {...p}>
+    <path d="M5 20V12M12 20V5M19 20v-6" strokeWidth={2} />
+  </Svg>
+)
+
+export const Shield = (p) => (
+  <Svg {...p}>
+    <path d="M12 3.5 19 6v5.5c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9V6Z" />
+  </Svg>
+)
