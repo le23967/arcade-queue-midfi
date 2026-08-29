@@ -69,6 +69,20 @@ dead, *"it's dry out, it's got no ink left"*. Asked what would work instead:
 **In the UI:** check-in is ordered QR → NFC → Manual, with Manual explicitly
 demoted to a fallback for a broken sticker or a phone without NFC.
 
+Reporting the count is now **part of check-in** rather than a second button
+beside it. Reporting and checking in are not the same action — one says *the
+line is this long*, the other says *I am joining it*, and you can do the first
+without the second — but as UI they competed: two buttons at equal weight at
+the bottom of the screen, one of them occasional. So the detail screen keeps a
+single primary action, and the report moves to the two places it belongs:
+
+- **Inside check-in**, as a confirm step. You have just scanned at the cabinet,
+  so you are standing in front of the line and can count it. The steppers
+  arrive pre-filled, so an already-correct count stays one tap. Every check-in
+  now carries a verified number instead of a blind +1 on an unconfirmed one.
+- **Inside the expanded queue**, as *Update count*, which is where a wrong
+  number is actually visible.
+
 ### 5. Queue counts parties, not people
 
 *"There's two cabinets that you can play together, so people like playing
@@ -303,10 +317,11 @@ Sources: [SEGA maimai DX International location finder](https://location.am-all.
 | Screen | Route | Notes |
 | --- | --- | --- |
 | 1 + 2 — Arcades | `arcades` | Pick a game, then one screen with two views. **List** carries queue, distance, wait and report age; **Compare** is the Arcade / Queue / Solo / Wait table with a computed best option. The lo-fi sheet drew these as two tabs, but they are the same venues with the same four numbers — splitting them cost a tab and made you navigate to answer one question. |
-| 3 — Detail | `detail` | Stats plus Check In and Report. |
+| 3 — Detail | `detail` | Stats, an expandable queue, and one primary action: Check In. |
 | 4A — Check-In | `checkin` | QR / NFC / Manual. |
 | 5 — Scan target | `scan` | Cabinet placeholder; simulates a successful scan. |
-| 4B — Report | modal | Queue and Solo steppers with a live wait preview. |
+| Check-In — confirm | `confirm` | Pre-filled count to confirm or correct before joining. |
+| 4B — Report | modal | Queue and Solo steppers with a live wait preview, reached from *Update count* in the expanded queue. |
 | 6 — Checked In | `checkedin` | Position, running order, one-turn-away notification. |
 | 7 — Check out | modal | Confirmation. |
 | 8 — Session summary | `summary` | Session time and time queued. |

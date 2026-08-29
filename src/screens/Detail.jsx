@@ -3,7 +3,6 @@ import {
   TopBar,
   Body,
   PrimaryButton,
-  SecondaryButton,
   StaleBadge,
   Info,
 } from '../components/ui.jsx'
@@ -85,6 +84,7 @@ export default function Detail({
             open={queueOpen}
             onToggle={onToggleQueue}
             mePosition={mePosition}
+            onReport={onReport}
           />
           <Stat Icon={User} label="Solo" value={String(arcade.solo)}>
             Single players, queued on their own
@@ -166,15 +166,18 @@ export default function Detail({
 
       </Body>
 
-      <div className="space-y-2 border-t border-gray-300 p-4">
+      {/* One primary action. Correcting the count is an occasional, secondary
+          job, so it lives inside the queue list where the wrong number is
+          actually visible, and inside check-in where you are looking at the
+          line anyway. */}
+      <div className="border-t border-gray-300 p-4">
         <PrimaryButton onClick={onCheckIn}>Check In</PrimaryButton>
-        <SecondaryButton onClick={onReport}>Report queue</SecondaryButton>
       </div>
     </Screen>
   )
 }
 
-function QueueStat({ arcade, open, onToggle, mePosition }) {
+function QueueStat({ arcade, open, onToggle, mePosition, onReport }) {
   const rows = queueRoster(arcade, { mePosition })
   const known = rosterKnownCount(arcade, mePosition)
 
@@ -241,19 +244,28 @@ function QueueStat({ arcade, open, onToggle, mePosition }) {
             ))}
           </ol>
 
-          <p className="flex items-start gap-1.5 px-4 py-2 text-xs text-gray-600">
-            <span>
-              <span className="tabular-nums">{known}</span> of{' '}
-              <span className="tabular-nums">{arcade.queue}</span> checked in
-              through the app.
-            </span>
-            <Info>
-              The queue count comes from reports, so it includes people who are
-              not running this app. They are held as guests rather than guessed
-              at. A venue where nobody checks in is also a venue whose number
-              goes stale.
-            </Info>
-          </p>
+          <div className="flex items-center gap-2 px-4 py-2">
+            <p className="flex flex-1 items-start gap-1.5 text-xs text-gray-600">
+              <span>
+                <span className="tabular-nums">{known}</span> of{' '}
+                <span className="tabular-nums">{arcade.queue}</span> checked in
+                through the app.
+              </span>
+              <Info>
+                The queue count comes from reports, so it includes people who
+                are not running this app. They are held as guests rather than
+                guessed at. A venue where nobody checks in is also a venue whose
+                number goes stale.
+              </Info>
+            </p>
+            <button
+              type="button"
+              onClick={onReport}
+              className="flex-none rounded-md border border-gray-400 px-2 py-1 text-xs font-medium text-gray-900"
+            >
+              Update count
+            </button>
+          </div>
         </>
       )}
     </div>

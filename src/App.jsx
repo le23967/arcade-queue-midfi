@@ -13,6 +13,7 @@ import Arcades from './screens/Arcades.jsx'
 import Detail from './screens/Detail.jsx'
 import CheckIn from './screens/CheckIn.jsx'
 import Scan from './screens/Scan.jsx'
+import ConfirmQueue from './screens/ConfirmQueue.jsx'
 import Report from './screens/Report.jsx'
 import CheckedIn from './screens/CheckedIn.jsx'
 import Summary from './screens/Summary.jsx'
@@ -33,6 +34,7 @@ const CAPTIONS = {
   detail: 'Screen 3 — Detail',
   checkin: 'Screen 4A — Check-In',
   scan: 'Screen 5 — Scan target',
+  confirm: 'Check-In — confirm the count',
   checkedin: 'Screen 6 — Checked In',
   summary: 'Screen 8 — Session summary',
   watch: 'Watch — clip feed',
@@ -158,14 +160,16 @@ export default function App() {
     setView('detail')
   }
 
-  function doCheckIn() {
+  /* Check-in carries the count the person just confirmed at the cabinet, so
+     the next reader gets a verified number rather than a blind +1 on top of an
+     unconfirmed one. */
+  function doCheckIn({ queue, solo }) {
     const target = arcade
-    const position = target.queue + 1
+    const position = queue + 1
 
-    /* Checking in is itself a queue report: the count goes up and the clock
-       resets, so the next person to look sees a number that is seconds old. */
     patchVenueGame(target.id, target.gameId, {
-      queue: target.queue + 1,
+      queue: queue + 1,
+      solo: Math.min(solo + 1, queue + 1),
       updatedMinsAgo: 0,
       updatedAt: '12:38 PM',
     })
@@ -175,7 +179,7 @@ export default function App() {
       gameId: target.gameId,
       position,
       checkInAt: Date.now() - DEMO_SESSION_OFFSET_MIN * 60_000,
-      waitedMin: estimateWaitMin(target),
+      waitedMin: estimateWaitMin({ ...target, queue, solo }),
     })
     setView('checkedin')
     setTab('arcades')
@@ -347,7 +351,7 @@ export default function App() {
                 setScanMethod(method)
                 setView('scan')
               }}
-              onManual={doCheckIn}
+              onManual={() => setView('confirm')}
             />
           )}
 
@@ -356,7 +360,15 @@ export default function App() {
               arcade={arcade}
               method={scanMethod}
               onBack={() => setView('checkin')}
-              onSuccess={doCheckIn}
+              onSuccess={() => setView('confirm')}
+            />
+          )}
+
+          {view === 'confirm' && arcade && (
+            <ConfirmQueue
+              arcade={arcade}
+              onBack={() => setView('checkin')}
+              onConfirm={doCheckIn}
             />
           )}
 

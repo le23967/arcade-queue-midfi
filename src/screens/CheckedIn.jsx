@@ -73,17 +73,22 @@ export default function CheckedIn({
               next.
             </Info>
           </p>
+          {/* State comes from the venue's cabinet count, not from a fixed
+              label: at a two-machine venue only the first two are playing,
+              whatever your position happens to be. */}
           <ol>
-            {queueAhead.map((p, i) => (
+            {queueAhead.map((p, i) => {
+              const n = position - queueAhead.length + i
+              return <Row key={p.handle} n={n} name={p.handle} state={stateAt(n, arcade.cabinets)} />
+            })}
+            <Row n={position} name="You" state={stateAt(position, arcade.cabinets)} you />
+            {total > position && (
               <Row
-                key={p.handle}
-                n={position - queueAhead.length + i}
-                name={p.handle}
-                state={p.state}
+                n={position + 1}
+                name="mkr_"
+                state={stateAt(position + 1, arcade.cabinets)}
               />
-            ))}
-            <Row n={position} name="You" state="Waiting" you />
-            <Row n={position + 1} name="mkr_" state="Waiting" />
+            )}
           </ol>
         </div>
 
@@ -102,6 +107,12 @@ export default function CheckedIn({
       </div>
     </Screen>
   )
+}
+
+function stateAt(n, cabinets) {
+  if (n <= cabinets) return 'Playing now'
+  if (n === cabinets + 1) return 'Next'
+  return 'Waiting'
 }
 
 function Row({ n, name, state, you }) {
