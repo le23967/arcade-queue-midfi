@@ -50,8 +50,7 @@ export function gameLabel(id) {
    running this app. The rest of the list is filled with unnamed guests, which
    is the honest picture rather than a flattering one.
 
-   `plus: 1` marks a party of two - they hold one machine between them.
-   `helps: true` is a player who has opted in to being approachable, from Me. */
+   `plus: 1` marks a party of two - they hold one machine between them. */
 const q = (cabinets, queue, solo, updatedMinsAgo, updatedAt, roster = []) => ({
   cabinets,
   queue,
@@ -71,12 +70,12 @@ export const ARCADES = [
     distanceKm: 0.3,
     games: {
       maimai: q(2, 7, 2, 2, '12:38 PM', [
-        { handle: 'rin_9', helps: true },
+        { handle: 'rin_9' },
         { handle: 'kzt', plus: 1 },
         { handle: 'nori', plus: 1 },
       ]),
       chunithm: q(1, 2, 1, 9, '12:31 PM', [{ handle: 'yuzu_' }]),
-      sdvx: q(1, 2, 2, 4, '12:36 PM', [{ handle: 'rvn_', helps: true }]),
+      sdvx: q(1, 2, 2, 4, '12:36 PM', [{ handle: 'rvn_' }]),
       taiko: q(2, 0, 0, 12, '12:28 PM'),
       /* No GITADORA and no DDR here - confirmed absent. */
     },
@@ -110,7 +109,7 @@ export const ARCADES = [
       maimai: q(5, 10, 4, 6, '12:34 PM', [
         { handle: 'ovo_' },
         { handle: 'p0lar', plus: 1 },
-        { handle: 'tsuki', helps: true },
+        { handle: 'tsuki' },
       ]),
       chunithm: q(3, 5, 3, 4, '12:36 PM', [{ handle: 'ovo_' }, { handle: 'hnr' }]),
       sdvx: q(2, 2, 2, 26, '12:14 PM'),

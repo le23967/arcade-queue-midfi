@@ -80,7 +80,6 @@ export default function App() {
   const [likedIds, setLikedIds] = useState([])
   const [comments, setComments] = useState(CLIP_COMMENTS)
   const [queueOpen, setQueueOpen] = useState(false)
-  const [helps, setHelps] = useState(true)
 
   /* Anything that navigates "back to the tab I came from" goes through this,
      so a renamed tab can never strand the view on an id nothing renders. */
@@ -311,8 +310,6 @@ export default function App() {
               }}
               likedCount={likedIds.length}
               onOpenLiked={() => setView('liked')}
-              helps={helps}
-              onHelps={setHelps}
             />
           )}
 

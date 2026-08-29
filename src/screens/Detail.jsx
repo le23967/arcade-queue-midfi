@@ -234,11 +234,6 @@ function QueueStat({ arcade, open, onToggle, mePosition }) {
                         ? `${r.handle}${r.plus ? ` +${r.plus}` : ''}`
                         : `+${(r.plus ?? 0) + 1} guest${r.plus ? 's' : ''}`}
                   </span>
-                  {r.helps && (
-                    <span className="mt-0.5 inline-block rounded-md border border-gray-400 px-1.5 py-0.5 text-[10px] font-medium text-gray-700">
-                      Happy to help beginners
-                    </span>
-                  )}
                 </span>
 
                 <span className="pt-0.5 text-xs text-gray-600">{r.state}</span>

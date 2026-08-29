@@ -121,15 +121,6 @@ Parties that came together show as one slot (`kzt +1`, `+2 guests`), because
 that is how they hold a machine, and the first rows read *Playing now* rather
 than *Waiting* for as many cabinets as the venue actually runs.
 
-A player can flag **Happy to help beginners** from Me, which then shows beside
-their name in the line. The six-year veteran got into the community because
-*"someone talked to me first ... 'do you wanna play together?'"* The flag does
-not make anyone approach anyone; it removes the guess about whether it would be
-welcome, which is the part the team said an app cannot force.
-
-> Rendered as a gray bordered chip, not the green in the sketch: the palette
-> has one accent colour and it is reserved for primary actions.
-
 ### Privacy
 
 Check-in is recorded against a venue, never a coordinate, and reports are
