@@ -1,4 +1,4 @@
-import { Screen, TopBar, Body, PrimaryButton, Note } from '../components/ui.jsx'
+import { Screen, TopBar, Body, PrimaryButton, Info } from '../components/ui.jsx'
 import { CheckCircle } from '../components/Icons.jsx'
 
 /* SCREEN 8 - Session summary. */
@@ -24,13 +24,14 @@ export default function Summary({ arcade, sessionMin, waitedMin, onDone }) {
           <Line label="Arcade" value={arcade.short} />
         </dl>
 
-        <div className="px-4 py-4">
-          <Note>
-            Checking out frees your slot immediately, which is what keeps the
-            running order honest for everyone still waiting. Session times also
-            feed the wait estimate at this venue.
-          </Note>
-        </div>
+        <p className="flex items-center gap-1.5 px-4 py-4 text-xs text-gray-600">
+          Your slot has been freed
+          <Info above>
+            Checking out immediately is what keeps the running order honest for
+            everyone still waiting. Session times also feed this venue&rsquo;s
+            wait estimate.
+          </Info>
+        </p>
       </Body>
 
       <div className="border-t border-gray-300 p-4">

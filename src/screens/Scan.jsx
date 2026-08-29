@@ -5,7 +5,7 @@ import {
   PrimaryButton,
   SecondaryButton,
   Placeholder,
-  Note,
+  Info,
 } from '../components/ui.jsx'
 
 /* SCREEN 5 - Scan target.
@@ -19,7 +19,17 @@ export default function Scan({ arcade, method, onBack, onSuccess }) {
 
   return (
     <Screen>
-      <TopBar title={qr ? 'Scan QR' : 'Tap NFC'} onBack={onBack} />
+      <TopBar
+        title={qr ? 'Scan QR' : 'Tap NFC'}
+        onBack={onBack}
+        right={
+          <Info align="right">
+            Scanning at the cabinet is what ties you to this venue. No precise
+            location is read or stored &mdash; the app only knows which arcade
+            you tapped.
+          </Info>
+        }
+      />
 
       <Body className="p-4">
         <Placeholder className="h-56 w-full" label="Cabinet — placeholder">
@@ -45,13 +55,6 @@ export default function Scan({ arcade, method, onBack, onSuccess }) {
             : 'Hold the top of your phone against the reader.'}
         </p>
 
-        <div className="mt-3">
-          <Note>
-            Scanning at the cabinet is what ties you to this venue. No precise
-            location is read or stored &mdash; the app only knows which arcade
-            you tapped.
-          </Note>
-        </div>
       </Body>
 
       <div className="space-y-2 border-t border-gray-300 p-4">

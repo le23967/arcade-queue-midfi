@@ -126,6 +126,33 @@ ones marked. There is no message button. The team had already concluded that
 brokering one. That matches how the veteran actually met people: at the
 cabinet, because someone else said *"do you wanna play together?"*
 
+**D. Followers and following** *(structural, not vanity)*
+
+Reachable from Me. Worth having as its own screen because the direction of a
+relationship is functional here, not decorative: presence is shared only
+between mutuals, so "follows you" and "not mutual" change what each person can
+actually see.
+
+**E. Watch — a clip feed** *(moderate evidence, and it earns its place by
+attaching to the queue)*
+
+Asked what he does while queued, a player answered *"watch videos"*, and the
+interviewer noted *"I'm guessing that's the general trend."* The failure is
+that the watching happens in a different app, so *"scrolling phones and they're
+not paying attention"* becomes a queue nobody can run and a group asking *"who's
+next?"*
+
+**In the UI:** clips from people you follow, with your live queue position
+pinned above the feed and a simulated *"You're up"* takeover that interrupts
+playback. That interruption is the reason the feature exists — a feed that
+cannot pull you out of itself would make the original problem worse, not
+better.
+
+It also serves the on-ramp the team said they wanted for people outside the
+community. The introverted player got in by watching: *"I'd watch like my
+friends play for ages … I was really interested 'cause it looked so cool."*
+Another described it as *"watching a concert almost … a display of skill."*
+
 ### Not built
 
 **Invite-and-earn events (points for bringing people on quiet weekdays)** —
@@ -163,8 +190,7 @@ The venue-level crowd count gives partial value without the surveillance.
 
 | Screen | Route | Notes |
 | --- | --- | --- |
-| 1 — Nearby Arcade | `nearby` | List with queue, distance, wait and report age. Sort by distance or wait. |
-| 2 — Compare | `compare` | Arcade / Queue / Solo / Wait table with a computed best option. |
+| 1 + 2 — Arcades | `arcades` | One screen, two views. **List** carries queue, distance, wait and report age; **Compare** is the Arcade / Queue / Solo / Wait table with a computed best option. The lo-fi sheet drew these as two tabs, but they are the same three venues with the same four numbers — splitting them cost a tab and made you navigate to answer one question. |
 | 3 — Detail | `detail` | Stats plus Check In and Report. |
 | 4A — Check-In | `checkin` | QR / NFC / Manual. |
 | 5 — Scan target | `scan` | Cabinet placeholder; simulates a successful scan. |
@@ -172,14 +198,19 @@ The venue-level crowd count gives partial value without the surveillance.
 | 6 — Checked In | `checkedin` | Position, running order, one-turn-away notification. |
 | 7 — Check out | modal | Confirmation. |
 | 8 — Session summary | `summary` | Session time and time queued. |
+| Watch | tab | Clip feed from people you follow, with your queue position pinned above it. |
 | Friends — Here now | tab | People you follow who are at an arcade, grouped by venue. |
 | Friends — Scores | tab | Uncapped per-song leaderboard with the official site's 20-favourite line drawn on it. |
 | Player profile | `player` | Games, favourite songs, shared items, scores. No message button. |
+| Followers / Following | `follows` | Roster with the direction of each relationship, reachable from Me. |
 | Maps / Me | tabs | Gray map placeholder; profile, visibility toggle and privacy statement. |
 
 The current screen number is printed under the device frame so the prototype can
-be reviewed alongside the lo-fi sheet. The lo-fi sheet has four tabs; Friends is
-a fifth, added for the social layer.
+be reviewed alongside the lo-fi sheet.
+
+The tab bar is **Arcades · Watch · Maps · Friends · Me**. The lo-fi sheet had
+Home, Compare, Maps and Me; Home and Compare merged into Arcades, and Watch and
+Friends were added for the social layer.
 
 ---
 
@@ -194,8 +225,15 @@ than for polish:
   not by colour.
 - **Motion** — none. Every state change, tab switch and modal is instant.
 - **Depth** — no shadows, glows, blurs or gradients.
-- **Assets** — no photography or illustration. The cabinet, the map and the
-  avatar are gray placeholder blocks; icons are inline single-weight strokes.
+- **Assets** — no photography or illustration. The cabinet, the clip, the map
+  and the avatar are gray placeholder blocks; icons are inline single-weight
+  strokes.
+- **Text** — at most one short line of helper text per screen. Rationale,
+  caveats and privacy detail live behind a `?` tooltip, which opens on hover,
+  tap or focus and closes on the same frame. Explanation that does not fit in a
+  tooltip belongs in the code or in this file, not on the screen. An earlier
+  pass put it all on the screen as paragraphs; that reads as documentation,
+  gets skipped, and clutters the layout — the worst of both outcomes.
 
 The first three are enforced globally in `src/index.css` rather than left to
 discipline, so the prototype cannot drift into hi-fi by accident.

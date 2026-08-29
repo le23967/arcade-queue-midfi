@@ -1,4 +1,4 @@
-import { Screen, TopBar, Body, Note } from '../components/ui.jsx'
+import { Screen, TopBar, Body, Info } from '../components/ui.jsx'
 import { Qr, Nfc, Hand, Chevron } from '../components/Icons.jsx'
 
 /* SCREEN 4A - Check-In.
@@ -13,13 +13,23 @@ import { Qr, Nfc, Hand, Chevron } from '../components/Icons.jsx'
 export default function CheckIn({ arcade, onBack, onScan, onManual }) {
   return (
     <Screen>
-      <TopBar title="Check-In" onBack={onBack} />
+      <TopBar
+        title="Check-In"
+        onBack={onBack}
+        right={
+          <Info align="right">
+            The arcade already has a paper queue board and nobody uses it. If
+            check-in is not one tap it will not happen, so manual is a fallback
+            for a broken sticker or a phone without NFC.
+          </Info>
+        }
+      />
 
       <Body>
         <div className="border-b border-gray-300 px-4 py-3">
           <p className="text-sm text-gray-900">{arcade.name}</p>
           <p className="text-xs text-gray-600">
-            Joining the queue puts you in the running order everyone can see.
+            Joins the running order everyone can see.
           </p>
         </div>
 
@@ -43,13 +53,6 @@ export default function CheckIn({ arcade, onBack, onScan, onManual }) {
           onClick={onManual}
         />
 
-        <div className="space-y-2 px-4 py-4">
-          <Note>
-            Manual is kept only as a fallback for a broken sticker or a phone
-            without NFC. The paper queue board in the arcade already proves that
-            anything slower than one tap gets skipped.
-          </Note>
-        </div>
       </Body>
     </Screen>
   )

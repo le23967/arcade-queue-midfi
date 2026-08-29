@@ -1,4 +1,4 @@
-import { Screen, TopBar, Body, Note, Chip } from '../components/ui.jsx'
+import { Screen, TopBar, Body, Info, Seg } from '../components/ui.jsx'
 import { Chevron, Pin } from '../components/Icons.jsx'
 import { FRIENDS, SONGS, OLD_SITE_FAVOURITE_CAP } from '../social.js'
 import {
@@ -20,7 +20,15 @@ import {
 export default function Friends({ arcades, section, onSection, song, onSong, onOpenPlayer }) {
   return (
     <Screen>
-      <TopBar title="Friends" />
+      <TopBar
+        title="Friends"
+        right={
+          <Info align="right">
+            Presence is venue level and mutual-only: you appear here to people
+            you follow back, and only while checked in and visible.
+          </Info>
+        }
+      />
 
       <div className="flex gap-2 border-b border-gray-300 px-4 py-2">
         <Seg on={section === 'here'} onClick={() => onSection('here')}>
@@ -40,21 +48,6 @@ export default function Friends({ arcades, section, onSection, song, onSong, onO
   )
 }
 
-function Seg({ on, children, ...rest }) {
-  return (
-    <button
-      type="button"
-      className={`rounded-md border px-3 py-1 text-xs font-medium ${
-        on
-          ? 'border-gray-900 bg-gray-100 text-gray-900'
-          : 'border-gray-300 bg-white text-gray-600'
-      }`}
-      {...rest}
-    >
-      {children}
-    </button>
-  )
-}
 
 function HereNow({ arcades, onOpenPlayer }) {
   const here = presentFriends()
@@ -107,17 +100,6 @@ function HereNow({ arcades, onOpenPlayer }) {
         </div>
       ))}
 
-      <div className="space-y-2 px-4 py-4">
-        <Note>
-          You only appear here to people who follow you back, and only while you
-          are checked in and visible. Turn visibility off in{' '}
-          <span className="font-semibold text-gray-900">Me</span>.
-        </Note>
-        <Note>
-          Presence is venue level. The app never shows where anyone is inside a
-          venue, and it will not track a player you do not follow.
-        </Note>
-      </div>
     </Body>
   )
 }
@@ -181,20 +163,7 @@ function Scores({ song, onSong, onOpenPlayer }) {
         ))}
       </ol>
 
-      <div className="space-y-2 px-4 py-4">
-        <Note>
-          The official score site stops at {OLD_SITE_FAVOURITE_CAP} favourites.
-          On this chart that hides{' '}
-          <span className="font-semibold text-gray-900 tabular-nums">
-            {cut.count}
-          </span>{' '}
-          of the people you follow &mdash; including{' '}
-          <span className="font-semibold text-gray-900 tabular-nums">
-            {cut.hereNow}
-          </span>{' '}
-          who {cut.hereNow === 1 ? 'is' : 'are'} standing in an arcade right now.
-        </Note>
-      </div>
+
     </Body>
   )
 }

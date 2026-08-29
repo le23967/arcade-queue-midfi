@@ -4,9 +4,9 @@ import {
   Body,
   PrimaryButton,
   Toggle,
-  Note,
+  Info,
 } from '../components/ui.jsx'
-import { CheckCircle, Bell } from '../components/Icons.jsx'
+import { CheckCircle } from '../components/Icons.jsx'
 
 /* SCREEN 6 - Checked In.
 
@@ -66,8 +66,12 @@ export default function CheckedIn({
         </div>
 
         <div className="border-b border-gray-300">
-          <p className="px-4 pt-3 text-xs uppercase tracking-wide text-gray-600">
+          <p className="flex items-center gap-1.5 px-4 pt-3 text-xs uppercase tracking-wide text-gray-600">
             Running order
+            <Info>
+              Updates as people check in and out, so nobody has to ask who is
+              next.
+            </Info>
           </p>
           <ol>
             {queueAhead.map((p, i) => (
@@ -90,15 +94,6 @@ export default function CheckedIn({
             label="Notify me when I'm one turn away"
             hint="Go play something else — you'll get pulled back in time."
           />
-          <div className="mt-3 flex items-start gap-2">
-            <span className="mt-0.5 text-gray-600">
-              <Bell size={14} />
-            </span>
-            <Note>
-              The order updates as people check in and out, so no one has to ask
-              who is next.
-            </Note>
-          </div>
         </div>
       </Body>
 

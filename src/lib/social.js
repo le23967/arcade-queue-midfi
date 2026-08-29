@@ -1,4 +1,4 @@
-import { FRIENDS, ME, OLD_SITE_FAVOURITE_CAP } from '../social.js'
+import { FRIENDS, FOLLOWERS_ONLY, ME, OLD_SITE_FAVOURITE_CAP } from '../social.js'
 
 /* maimai grades the achievement percentage, so the leaderboard shows the same
    thing a player would see on the cabinet. */
@@ -56,4 +56,26 @@ export function sharedSongs(player) {
 
 export function sharedGames(player) {
   return player.games.filter((g) => ME.games.includes(g))
+}
+
+/* --- follows ------------------------------------------------------------ */
+
+export function followingList() {
+  return FRIENDS
+}
+
+export function followerList() {
+  return [
+    ...FRIENDS.filter((p) => p.followsYou),
+    ...FOLLOWERS_ONLY.map((p) => ({ ...p, followsYou: true, youFollow: false })),
+  ]
+}
+
+export function followCounts() {
+  return { following: FRIENDS.length, followers: followerList().length }
+}
+
+export function isMutual(handle) {
+  const p = FRIENDS.find((x) => x.handle === handle)
+  return Boolean(p && p.followsYou)
 }

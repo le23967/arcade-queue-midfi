@@ -45,7 +45,7 @@ const f = (handle, games, songs, neon, gravity, lantern, at = null, sinceMin = 0
   sinceMin,
 })
 
-export const FRIENDS = [
+const FOLLOWING = [
   f('mtsk', ['maimai DX'], ['Halcyon Drift', 'Static Bloom'], 101.0, 100.4021, 100.9912),
   f('yuzu_', ['maimai DX', 'CHUNITHM'], ['Neon Cascade', 'Copper Sky'], 100.9812, 100.1144, 100.8003),
   f('0xC0', ['maimai DX', 'SDVX'], ['Gravity Well', 'Midnight Ferry'], 100.9455, 100.0087, 100.6621),
@@ -72,4 +72,56 @@ export const FRIENDS = [
   f('pnt', ['maimai DX', 'DDR'], ['Paper Lantern', 'Gravity Well'], 98.762, 98.4802, 98.8619),
   f('lvo', ['maimai DX'], ['Midnight Ferry', 'Copper Sky'], 98.4193, 98.3115, 98.5530),
   f('zed', ['maimai DX', "pop'n music"], ['Gravity Well', 'Halcyon Drift'], 98.0055, 98.1006, 98.2201),
+]
+
+/* Following is not symmetric. A few of the people you follow do not follow
+   back, and some people follow you that you have not followed. Presence is
+   only ever shared between mutuals, so this distinction is load-bearing
+   rather than decorative. */
+const NOT_FOLLOWING_BACK = new Set(['0xC0', 'sable', 'dpr', 'wsp', 'pnt'])
+
+export const FRIENDS = FOLLOWING.map((p) => ({
+  ...p,
+  followsYou: !NOT_FOLLOWING_BACK.has(p.handle),
+}))
+
+/* People who follow you that you have not followed back. They cannot see your
+   presence until you follow them too. */
+export const FOLLOWERS_ONLY = [
+  { handle: 'aki_', games: ['maimai DX'] },
+  { handle: 'nori', games: ['maimai DX', 'Taiko'] },
+  { handle: 'p0lar', games: ['maimai DX', 'SDVX'] },
+  { handle: 'hsk', games: ['maimai DX'] },
+  { handle: 'vex_', games: ['maimai DX', 'CHUNITHM'] },
+  { handle: 'tsuki', games: ['maimai DX', 'DDR'] },
+  { handle: 'orb', games: ['maimai DX'] },
+  { handle: 'nine_', games: ['maimai DX', 'Taiko'] },
+  { handle: 'kmr', games: ['maimai DX'] },
+]
+
+/* ---------------------------------------------------------------------------
+   Clips.
+
+   A feed is in here for one reason: watching is already what these players do
+   with the wait. Asked what he does while queued, one player answered "watch
+   videos", and the interviewer noted "I'm guessing that's the general trend."
+   The problem is that they watch somewhere else - "scrolling phones and
+   they're not paying attention" - and then miss their turn, which is why
+   people keep having to ask "who's next?".
+
+   Putting the watching inside the app that holds your place is what makes the
+   feed worth building rather than a borrowed pattern. It is also the on-ramp
+   the team said they wanted for people outside the community: the introverted
+   player got in by watching first - "I'd watch like my friends play for ages
+   ... I was really interested 'cause it looked so cool."
+--------------------------------------------------------------------------- */
+export const CLIPS = [
+  { id: 'c1', handle: 'rin_9', song: 'Neon Cascade', chart: 'Master 13+', achievement: 99.2015, venue: 'central-park', postedMin: 12, seconds: 24, likes: 34, comments: 5 },
+  { id: 'c2', handle: 'ovo_', song: 'Gravity Well', chart: 'Master 14', achievement: 99.6015, venue: 'timezone', postedMin: 41, seconds: 31, likes: 88, comments: 12 },
+  { id: 'c3', handle: 'mtsk', song: 'Paper Lantern', chart: 'Expert 12+', achievement: 100.9912, venue: 'central-park', postedMin: 96, seconds: 19, likes: 210, comments: 27 },
+  { id: 'c4', handle: 'kzt', song: 'Static Bloom', chart: 'Master 13', achievement: 99.0244, venue: 'central-park', postedMin: 143, seconds: 28, likes: 19, comments: 2 },
+  { id: 'c5', handle: 'yuzu_', song: 'Neon Cascade', chart: 'Master 13+', achievement: 100.9812, venue: 'market-city', postedMin: 260, seconds: 22, likes: 156, comments: 18 },
+  { id: 'c6', handle: 'nagi', song: 'Halcyon Drift', chart: 'Master 14', achievement: 100.557, venue: 'timezone', postedMin: 380, seconds: 35, likes: 74, comments: 9 },
+  { id: 'c7', handle: 'lyn', song: 'Midnight Ferry', chart: 'Expert 12', achievement: 100.3306, venue: 'central-park', postedMin: 610, seconds: 27, likes: 41, comments: 6 },
+  { id: 'c8', handle: 'sora', song: 'Paper Lantern', chart: 'Expert 12+', achievement: 100.1938, venue: 'market-city', postedMin: 900, seconds: 30, likes: 63, comments: 8 },
 ]

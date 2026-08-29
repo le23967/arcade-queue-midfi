@@ -3,8 +3,7 @@ import { ARCADES, QUEUE_AHEAD } from './data.js'
 import { estimateWaitMin } from './lib/queue.js'
 import { Frame, TabBar, SessionBanner } from './components/Frame.jsx'
 
-import Nearby from './screens/Nearby.jsx'
-import Compare from './screens/Compare.jsx'
+import Arcades from './screens/Arcades.jsx'
 import Detail from './screens/Detail.jsx'
 import CheckIn from './screens/CheckIn.jsx'
 import Scan from './screens/Scan.jsx'
@@ -14,22 +13,25 @@ import Summary from './screens/Summary.jsx'
 import MapsTab from './screens/MapsTab.jsx'
 import MeTab from './screens/MeTab.jsx'
 import Friends from './screens/Friends.jsx'
+import Watch from './screens/Watch.jsx'
+import Follows from './screens/Follows.jsx'
 import PlayerProfile from './screens/PlayerProfile.jsx'
-import { FRIENDS } from './social.js'
+import { FRIENDS, FOLLOWERS_ONLY, CLIPS } from './social.js'
 
 /* Screens carry their sketch number so a reviewer can hold the prototype and
    Fig 3 side by side. */
 const CAPTIONS = {
-  nearby: 'Screen 1 — Nearby Arcade',
-  compare: 'Screen 2 — Compare',
+  arcades: 'Screens 1 + 2 — Arcades (list / compare)',
   detail: 'Screen 3 — Detail',
   checkin: 'Screen 4A — Check-In',
   scan: 'Screen 5 — Scan target',
   checkedin: 'Screen 6 — Checked In',
   summary: 'Screen 8 — Session summary',
-  maps: 'Maps tab',
+  watch: 'Watch — clip feed',
   friends: 'Friends tab',
+  follows: 'Followers / Following',
   player: 'Player profile',
+  maps: 'Maps tab',
   me: 'Me tab',
 }
 
@@ -46,7 +48,8 @@ const DEMO_SESSION_OFFSET_MIN = 42
 export default function App() {
   const [arcades, setArcades] = useState(ARCADES)
   const [tab, setTab] = useState('home')
-  const [view, setView] = useState('nearby')
+  const [view, setView] = useState('arcades')
+  const [arcadeView, setArcadeView] = useState('list')
   const [modal, setModal] = useState(null)
   const [sort, setSort] = useState('distance')
   const [activeId, setActiveId] = useState(null)
@@ -59,12 +62,22 @@ export default function App() {
   const [song, setSong] = useState('neon')
   const [playerHandle, setPlayerHandle] = useState(null)
   const [visible, setVisible] = useState(true)
+  const [clipIndex, setClipIndex] = useState(0)
+  const [clipScope, setClipScope] = useState('following')
+  const [called, setCalled] = useState(false)
+  const [followsTab, setFollowsTab] = useState('followers')
 
   const arcade = arcades.find((a) => a.id === activeId) ?? arcades[0]
-  const player = FRIENDS.find((p) => p.handle === playerHandle) ?? null
+  const player =
+    FRIENDS.find((p) => p.handle === playerHandle) ??
+    FOLLOWERS_ONLY.find((p) => p.handle === playerHandle) ??
+    null
+
+  const [playerBack, setPlayerBack] = useState('friends')
 
   function openPlayer(handle) {
     setPlayerHandle(handle)
+    setPlayerBack(view === 'detail' ? 'detail' : view)
     setView('player')
   }
 
@@ -77,7 +90,7 @@ export default function App() {
   function goTab(next) {
     setTab(next)
     setModal(null)
-    setView(next === 'home' ? 'nearby' : next)
+    setView(next)
   }
 
   function openArcade(id) {
@@ -104,7 +117,7 @@ export default function App() {
       waitedMin: estimateWaitMin(target),
     })
     setView('checkedin')
-    setTab('home')
+    setTab('arcades')
   }
 
   function doCheckOut() {
@@ -130,7 +143,7 @@ export default function App() {
   }
 
   const caption = modal ? MODAL_CAPTIONS[modal] : CAPTIONS[view]
-  const showTabs = ['nearby', 'compare', 'maps', 'friends', 'me', 'detail'].includes(view)
+  const showTabs = ['arcades', 'watch', 'maps', 'friends', 'me', 'detail'].includes(view)
   const sessionArcade = session
     ? arcades.find((a) => a.id === session.arcadeId)
     : null
@@ -139,17 +152,44 @@ export default function App() {
     <Frame caption={caption}>
       <div className="relative flex h-full flex-col">
         <div className="min-h-0 flex-1">
-          {view === 'nearby' && (
-            <Nearby
+          {view === 'arcades' && (
+            <Arcades
               arcades={arcades}
+              view={arcadeView}
+              onView={setArcadeView}
               sort={sort}
               onSort={setSort}
               onOpen={openArcade}
             />
           )}
 
-          {view === 'compare' && (
-            <Compare arcades={arcades} onOpen={openArcade} />
+          {view === 'watch' && (
+            <Watch
+              clips={CLIPS}
+              index={clipIndex}
+              onIndex={setClipIndex}
+              scope={clipScope}
+              onScope={setClipScope}
+              arcades={arcades}
+              session={session}
+              sessionArcade={sessionArcade}
+              called={called}
+              onCall={() => setCalled(true)}
+              onGo={() => {
+                setCalled(false)
+                setTab('arcades')
+                setView('checkedin')
+              }}
+            />
+          )}
+
+          {view === 'follows' && (
+            <Follows
+              tabName={followsTab}
+              onTab={setFollowsTab}
+              onBack={() => setView('me')}
+              onOpenPlayer={openPlayer}
+            />
           )}
 
           {view === 'maps' && <MapsTab arcades={arcades} onOpen={openArcade} />}
@@ -169,7 +209,7 @@ export default function App() {
             <PlayerProfile
               player={player}
               arcade={arcades.find((a) => a.id === player.at) ?? null}
-              onBack={() => setView(tab === 'home' ? 'detail' : 'friends')}
+              onBack={() => setView(playerBack)}
               onOpenArcade={openArcade}
             />
           )}
@@ -180,13 +220,17 @@ export default function App() {
               sessions={3}
               visible={visible}
               onVisible={setVisible}
+              onOpenFollows={(t) => {
+                setFollowsTab(t)
+                setView('follows')
+              }}
             />
           )}
 
           {view === 'detail' && (
             <Detail
               arcade={arcade}
-              onBack={() => setView(tab === 'home' ? 'nearby' : tab)}
+              onBack={() => setView(tab)}
               onCheckIn={() => setView('checkin')}
               onReport={() => setModal('report')}
               onFriends={() => {
@@ -232,8 +276,8 @@ export default function App() {
               notify={notify}
               onNotify={setNotify}
               onBack={() => {
-                setTab('home')
-                setView('nearby')
+                setTab('arcades')
+                setView('arcades')
               }}
               onCheckOut={() => setModal('checkout')}
             />
@@ -245,8 +289,8 @@ export default function App() {
               sessionMin={lastSession.sessionMin}
               waitedMin={lastSession.waitedMin}
               onDone={() => {
-                setTab('home')
-                setView('nearby')
+                setTab('arcades')
+                setView('arcades')
               }}
             />
           )}

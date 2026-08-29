@@ -1,4 +1,4 @@
-import { HomeIcon, Bars, Pin, User, Users } from './Icons.jsx'
+import { Bars, Pin, User, Users, Play } from './Icons.jsx'
 
 /* Device shell. The sketch draws a signal glyph in the corner of every screen,
    so the status bar is reproduced - flat, not chrome. */
@@ -43,8 +43,8 @@ function StatusBar() {
 }
 
 const TABS = [
-  { id: 'home', label: 'Home', Icon: HomeIcon },
-  { id: 'compare', label: 'Compare', Icon: Bars },
+  { id: 'arcades', label: 'Arcades', Icon: Bars },
+  { id: 'watch', label: 'Watch', Icon: Play },
   { id: 'maps', label: 'Maps', Icon: Pin },
   { id: 'friends', label: 'Friends', Icon: Users },
   { id: 'me', label: 'Me', Icon: User },

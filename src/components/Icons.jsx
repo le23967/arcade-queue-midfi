@@ -138,6 +138,13 @@ export const Bars = (p) => (
   </Svg>
 )
 
+export const Play = (p) => (
+  <Svg {...p}>
+    <rect x="3.5" y="5" width="17" height="14" rx="2" />
+    <path d="M10.5 9.5l4.5 2.5-4.5 2.5Z" />
+  </Svg>
+)
+
 export const Shield = (p) => (
   <Svg {...p}>
     <path d="M12 3.5 19 6v5.5c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9V6Z" />

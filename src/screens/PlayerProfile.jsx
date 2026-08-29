@@ -1,4 +1,4 @@
-import { Screen, TopBar, Body, Placeholder, Note, Chip } from '../components/ui.jsx'
+import { Screen, TopBar, Body, Placeholder, Info, Chip } from '../components/ui.jsx'
 import { SONGS } from '../social.js'
 import {
   sharedSongs,
@@ -99,12 +99,13 @@ export default function PlayerProfile({ player, arcade, onBack, onOpenArcade }) 
           </ul>
         </Section>
 
-        <div className="px-4 pb-4">
-          <Note>
-            There is no message button. The app shows you who is around and what
-            you already have in common; the conversation happens at the cabinet.
-          </Note>
-        </div>
+        <p className="flex items-center gap-1.5 px-4 py-4 text-xs text-gray-600">
+          No message button
+          <Info above align="right">
+            The app shows who is around and what you already have in common; the
+            conversation happens at the cabinet, the way it actually does today.
+          </Info>
+        </p>
       </Body>
     </Screen>
   )

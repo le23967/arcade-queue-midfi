@@ -1,4 +1,4 @@
-import { Screen, TopBar, Body, Placeholder, Note } from '../components/ui.jsx'
+import { Screen, TopBar, Body, Placeholder, Info } from '../components/ui.jsx'
 import { Pin } from '../components/Icons.jsx'
 import { estimateWaitMin, isStale } from '../lib/queue.js'
 
@@ -13,7 +13,15 @@ export default function MapsTab({ arcades, onOpen }) {
 
   return (
     <Screen>
-      <TopBar title="Maps" />
+      <TopBar
+        title="Maps"
+        right={
+          <Info align="right">
+            Pins sit on the venue, never on a person. Position is recorded at
+            venue level only.
+          </Info>
+        }
+      />
 
       <Body>
         <div className="p-4">
@@ -65,12 +73,6 @@ export default function MapsTab({ arcades, onOpen }) {
           ))}
         </ul>
 
-        <div className="px-4 py-4">
-          <Note>
-            Pins sit on the venue, never on a person. Position is recorded at
-            venue level only.
-          </Note>
-        </div>
       </Body>
     </Screen>
   )

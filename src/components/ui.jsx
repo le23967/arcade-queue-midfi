@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 /* Shared primitives.
 
    Palette rule for the whole prototype: black, white and gray only, with
@@ -100,6 +102,80 @@ export function StaleBadge() {
   )
 }
 
+/* ---------------------------------------------------------------------------
+   Info tooltip.
+
+   Rationale, caveats and privacy detail used to sit on the screen as
+   paragraphs. In testing that reads as documentation, and people skip it,
+   which is the worst of both outcomes: the screen looks cluttered AND the
+   explanation goes unread.
+
+   It lives behind a "?" instead. Opens on hover for a mouse, on tap for a
+   phone, and on focus for a keyboard. Appears and disappears on the same
+   frame - no fade.
+
+   Anything that does not fit in a tooltip belongs in the code or the README,
+   not on the screen.
+--------------------------------------------------------------------------- */
+export function Info({ children, label = 'More information', align = 'left', above = false }) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <span className="relative inline-flex align-middle">
+      <button
+        type="button"
+        aria-label={label}
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        className={`flex h-4 w-4 flex-none items-center justify-center rounded-full border text-[10px] font-bold leading-none ${
+          open
+            ? 'border-gray-900 bg-gray-900 text-white'
+            : 'border-gray-500 bg-white text-gray-600'
+        }`}
+      >
+        ?
+      </button>
+
+      {open && (
+        <span
+          role="tooltip"
+          className={`absolute z-20 w-56 rounded-md border border-gray-400 bg-white p-2 text-xs font-normal leading-relaxed text-gray-700 ${
+            above ? 'bottom-6' : 'top-6'
+          } ${align === 'right' ? 'right-0' : 'left-0'}`}
+        >
+          <span
+            className={`absolute h-2 w-2 rotate-45 border-gray-400 bg-white ${
+              above ? '-bottom-1 border-b border-r' : '-top-1 border-l border-t'
+            } ${align === 'right' ? 'right-1.5' : 'left-1.5'}`}
+          />
+          {children}
+        </span>
+      )}
+    </span>
+  )
+}
+
+/* Segmented control. Selected state is a black border, not a colour. */
+export function Seg({ on, children, className = '', ...rest }) {
+  return (
+    <button
+      type="button"
+      className={`rounded-md border px-2.5 py-1 text-xs font-medium ${
+        on
+          ? 'border-gray-900 bg-gray-100 text-gray-900'
+          : 'border-gray-300 bg-white text-gray-600'
+      } ${className}`}
+      {...rest}
+    >
+      {children}
+    </button>
+  )
+}
+
 /* Small bordered label. Gray only - a grade is information, not an action. */
 export function Chip({ children, className = '' }) {
   return (
@@ -125,11 +201,6 @@ export function Placeholder({ label, className = '', children }) {
   )
 }
 
-export function Note({ children }) {
-  return (
-    <p className="text-xs leading-relaxed text-gray-600">{children}</p>
-  )
-}
 
 /* Modals appear and disappear on the same frame - no fade, no slide. */
 export function Modal({ title, children }) {

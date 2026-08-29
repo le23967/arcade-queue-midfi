@@ -4,7 +4,7 @@ import {
   PrimaryButton,
   SecondaryButton,
   Stepper,
-  Note,
+  Info,
 } from '../components/ui.jsx'
 import { CheckCircle } from '../components/Icons.jsx'
 import { estimateWaitMin } from '../lib/queue.js'
@@ -37,8 +37,7 @@ export default function Report({ arcade, onCancel, onSubmit }) {
           <div>
             <p className="text-sm font-semibold text-gray-900">Queue updated</p>
             <p className="text-xs text-gray-600">
-              Everyone looking at {arcade.short} sees {queue} waiting and a{' '}
-              {preview} min wait, timestamped just now.
+              {arcade.short}: {queue} waiting, ~{preview} min, timestamped now.
             </p>
           </div>
         </div>
@@ -75,12 +74,14 @@ export default function Report({ arcade, onCancel, onSubmit }) {
         </p>
       </div>
 
-      <div className="mt-3">
-        <Note>
-          Submitted anonymously. Nobody has to be asked &ldquo;who&rsquo;s
-          next?&rdquo; and nobody has to answer.
-        </Note>
-      </div>
+      <p className="mt-3 flex items-center gap-1.5 text-xs text-gray-600">
+        Submitted anonymously
+        <Info>
+          Nobody has to be asked &ldquo;who&rsquo;s next?&rdquo; and nobody has
+          to answer &mdash; which matters for players who would rather not talk
+          to a stranger.
+        </Info>
+      </p>
 
       <div className="mt-4 space-y-2">
         <PrimaryButton
