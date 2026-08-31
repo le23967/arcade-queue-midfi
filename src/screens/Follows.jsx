@@ -15,7 +15,6 @@ export default function Follows({ tabName, onTab, onBack, onOpenPlayer }) {
     <Screen>
       <TopBar
         title="People"
-        subtitle="Who can see you, and who you can see"
         onBack={onBack}
         right={
           <Info >

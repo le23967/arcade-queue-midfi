@@ -25,7 +25,6 @@ export default function Liked({ likedIds, onBack, onOpenClip }) {
     <Screen>
       <TopBar
         title="Liked clips"
-        subtitle="Runs you saved to come back to"
         onBack={onBack}
         right={
           <Info>

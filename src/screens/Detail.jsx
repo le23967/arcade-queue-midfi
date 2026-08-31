@@ -46,7 +46,6 @@ export default function Detail({
     <Screen>
       <TopBar
         title={`${arcade.short} · ${arcade.game}`}
-        subtitle="See the line, then take a place in it"
         onBack={onBack}
         right={stale ? <StaleBadge /> : null}
       />

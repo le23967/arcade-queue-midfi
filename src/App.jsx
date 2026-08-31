@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { ARCADES, QUEUE_AHEAD, DEFAULT_GAME } from './data.js'
 import {
   estimateWaitMin,
@@ -19,7 +19,7 @@ import CheckedIn from './screens/CheckedIn.jsx'
 import Summary from './screens/Summary.jsx'
 import Directions from './screens/Directions.jsx'
 import Comments from './screens/Comments.jsx'
-import { playSound, isMuted, setMuted, listenForTaps } from './lib/sound.js'
+import { playSound, isMuted, setMuted } from './lib/sound.js'
 import Message from './screens/Message.jsx'
 import PlanSession from './screens/PlanSession.jsx'
 import Liked from './screens/Liked.jsx'
@@ -69,7 +69,6 @@ export default function App() {
   const [arcadeView, setArcadeView] = useState('list')
   const [game, setGame] = useState(DEFAULT_GAME)
   const [modal, setModal] = useState(null)
-  const [sort, setSort] = useState('distance')
   const [activeId, setActiveId] = useState(null)
   const [scanMethod, setScanMethod] = useState('qr')
   const [session, setSession] = useState(null)
@@ -88,10 +87,6 @@ export default function App() {
   const [comments, setComments] = useState(CLIP_COMMENTS)
   const [queueOpen, setQueueOpen] = useState(false)
   const [soundOn, setSoundOn] = useState(() => !isMuted())
-
-  /* One listener for every button in the prototype, rather than each screen
-     remembering to ask for a sound. */
-  useEffect(() => listenForTaps(), [])
   const [messageTo, setMessageTo] = useState(null)
   const [planPreset, setPlanPreset] = useState({})
 
@@ -114,7 +109,6 @@ export default function App() {
   const liked = likedIds.includes(clip.id)
 
   function toggleLike() {
-    if (!likedIds.includes(clip.id)) playSound('like')
     setLikedIds((ids) =>
       ids.includes(clip.id) ? ids.filter((i) => i !== clip.id) : [...ids, clip.id]
     )
@@ -259,8 +253,6 @@ export default function App() {
               onGame={setGame}
               view={arcadeView}
               onView={setArcadeView}
-              sort={sort}
-              onSort={setSort}
               onOpen={openArcade}
             />
           )}
@@ -366,7 +358,7 @@ export default function App() {
               onSound={(on) => {
                 setMuted(!on)
                 setSoundOn(on)
-                if (on) playSound('select')
+                if (on) playSound('success')
               }}
             />
           )}

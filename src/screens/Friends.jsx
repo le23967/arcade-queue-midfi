@@ -55,7 +55,6 @@ export default function Friends({
     <Screen>
       <TopBar
         title="Circle"
-        subtitle="See who's out, then go join them"
         right={
           <Info>
             Presence is venue level and mutual-only: you appear here to people

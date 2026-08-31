@@ -5,7 +5,6 @@ import {
   GameDot,
   Info,
   Screen,
-  Seg,
   StaleBadge,
   TopBar,
 } from '../components/ui.jsx'
@@ -18,7 +17,6 @@ import {
   isStale,
   PAIR_TURN_MIN,
   SOLO_TURN_MIN,
-  sortArcades,
   STALE_AFTER_MIN,
 } from '../lib/queue.js'
 import { presentAt } from '../lib/social.js'
@@ -32,15 +30,12 @@ export default function Arcades({
   onGame,
   view,
   onView,
-  sort,
-  onSort,
   onOpen,
 }) {
   return (
     <Screen>
       <TopBar
         title="Arcades"
-        subtitle="Choose where your next game starts"
         right={
           <Info>
             Queue counts groups, not individual players. A solo turn is about{' '}
@@ -62,27 +57,6 @@ export default function Arcades({
           </ModeButton>
         </div>
 
-        {view === 'list' && (
-          <div className="ml-auto flex items-center gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-subtle">
-              Order
-            </span>
-            <Seg
-              className="px-2.5 py-1"
-              on={sort === 'distance'}
-              onClick={() => onSort('distance')}
-            >
-              Near
-            </Seg>
-            <Seg
-              className="px-2.5 py-1"
-              on={sort === 'wait'}
-              onClick={() => onSort('wait')}
-            >
-              Fast
-            </Seg>
-          </div>
-        )}
       </div>
 
       {arcades.length < venueCount && (
@@ -92,7 +66,7 @@ export default function Arcades({
       )}
 
       {view === 'list' ? (
-        <DiscoverView arcades={arcades} sort={sort} onOpen={onOpen} />
+        <DiscoverView arcades={arcades} onOpen={onOpen} />
       ) : (
         <CompareView arcades={arcades} onOpen={onOpen} />
       )}
@@ -154,7 +128,7 @@ function ModeButton({ on, children, onClick }) {
   )
 }
 
-function DiscoverView({ arcades, sort, onOpen }) {
+function DiscoverView({ arcades, onOpen }) {
   if (arcades.length === 0) {
     return (
       <Body className="flex items-center justify-center p-6 text-center">
@@ -168,10 +142,10 @@ function DiscoverView({ arcades, sort, onOpen }) {
 
   const bestId = bestArcadeId(arcades)
   const best = arcades.find((a) => a.id === bestId) ?? arcades[0]
-  const others = sortArcades(
-    arcades.filter((a) => a.id !== best.id),
-    sort
-  )
+  /* The hero is the fastest, so the rest read as next fastest downward. */
+  const others = arcades
+    .filter((a) => a.id !== best.id)
+    .sort((a, b) => estimateWaitMin(a) - estimateWaitMin(b))
 
   return (
     <Body className="bg-page/70">
@@ -189,9 +163,6 @@ function DiscoverView({ arcades, sort, onOpen }) {
                   Swipe across, then open one to check the full queue.
                 </p>
               </div>
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-subtle">
-                {sort === 'wait' ? 'Fast first' : 'Near first'}
-              </span>
             </div>
 
             <div className="no-scrollbar -mx-3 flex snap-x gap-2.5 overflow-x-auto px-3 pb-1">

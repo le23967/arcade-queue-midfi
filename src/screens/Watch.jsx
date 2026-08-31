@@ -52,7 +52,7 @@ export default function Watch({
   if (!clip || scopedIndexes.length === 0) {
     return (
       <Screen>
-        <TopBar title="Watch" subtitle="Rhythm clips from your circle" />
+        <TopBar title="Watch" />
         <ScopeSwitch
           scope={scope}
           followingCount={clips.length}
@@ -257,7 +257,6 @@ function ClipStage({
         <StageAction
           onClick={onLike}
           active={liked}
-          data-sound="none"
           label={liked ? 'Unlike clip' : 'Like clip'}
         >
           <Heart size={15} filled={liked} />

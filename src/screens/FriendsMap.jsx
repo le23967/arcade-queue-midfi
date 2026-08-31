@@ -4,7 +4,6 @@ import { Circle, MapContainer, Marker, TileLayer } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { Avatar, GameDot, PrimaryButton, Chip } from '../components/ui.jsx'
 import { Plus, Minus, Users, Clock, Pin, Crosshair } from '../components/Icons.jsx'
-import { playSound } from '../lib/sound.js'
 import { ME_MAP } from '../data.js'
 import { estimateWaitMin, isStale, freshnessLabel } from '../lib/queue.js'
 import { presentFriends } from '../lib/social.js'
@@ -171,7 +170,6 @@ export default function FriendsMap({ arcades, onOpenPlayer, onOpenArcade, onMess
 
   function recentre() {
     if (!map) return
-    playSound('tap')
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     map.setView(MAP_CENTRE, START_ZOOM, { animate: !reduceMotion })
   }
@@ -180,7 +178,6 @@ export default function FriendsMap({ arcades, onOpenPlayer, onOpenArcade, onMess
      to yourself. */
   function locateMe() {
     if (!map) return
-    playSound('tap')
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     map.setView([me.lat, me.lng], Math.max(map.getZoom(), 16), { animate: !reduceMotion })
   }

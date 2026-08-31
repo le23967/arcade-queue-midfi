@@ -9,10 +9,11 @@
    follows, and suits a rhythm game app: the cues are short musical intervals
    rather than system beeps.
 
-   Cues are triggered by one delegated listener at the app root rather than by
-   each button asking for them. Thirty six buttons had no sound when this was
-   wired per component, which is the kind of gap that reopens every time a
-   screen is added.
+   The set is deliberately small. An earlier version played a click on every
+   button, which is not how apps behave: system interfaces are silent on a
+   plain tap. Sound is kept for the two moments that carry information you may
+   not be looking at the screen for, plus a confirmation when you switch it
+   back on.
 
    Browsers refuse to start audio before a gesture, so the context is created
    lazily on the first sound and resumed if the browser suspended it. Muting is
@@ -75,12 +76,10 @@ function note(at, freq, start, length, peak) {
 /* Frequencies are a pentatonic run, so any two cues played close together
    still sound like they belong to the same app. */
 const CUES = {
-  tap: [[660, 0, 0.07, 0.16]],
-  select: [[587, 0, 0.08, 0.2], [880, 0.055, 0.11, 0.18]],
-  like: [[784, 0, 0.07, 0.2], [1175, 0.05, 0.13, 0.18]],
+  /* You have finished checking in. */
   success: [[523, 0, 0.11, 0.22], [659, 0.085, 0.11, 0.22], [988, 0.17, 0.26, 0.24]],
+  /* Your turn, and you are probably looking at something else. */
   alert: [[880, 0, 0.14, 0.26], [660, 0.16, 0.14, 0.24], [880, 0.32, 0.28, 0.26]],
-  back: [[494, 0, 0.08, 0.15], [370, 0.06, 0.11, 0.13]],
 }
 
 export function playSound(name) {
@@ -94,28 +93,4 @@ export function playSound(name) {
   } catch {
     /* Audio is a nicety. It must never break a screen. */
   }
-}
-
-/* --- delegation -----------------------------------------------------------
-
-   One listener for the whole prototype. Any button makes a sound unless it
-   opts out, and an element can pick a different cue with `data-sound`:
-
-     <button data-sound="select">   a committing action
-     <button data-sound="none">     silent, for repeats like zoom or paging
-
-   Returns a cleanup function. */
-export function listenForTaps(root = document) {
-  function onDown(event) {
-    const el = event.target.closest?.(
-      'button, [role="button"], a[href], input[type="checkbox"], input[type="radio"]'
-    )
-    if (!el || el.disabled || el.getAttribute('aria-disabled') === 'true') return
-    const named = el.dataset?.sound ?? el.closest('[data-sound]')?.dataset?.sound
-    if (named === 'none') return
-    playSound(named && CUES[named] ? named : 'tap')
-  }
-
-  root.addEventListener('pointerdown', onDown, true)
-  return () => root.removeEventListener('pointerdown', onDown, true)
 }

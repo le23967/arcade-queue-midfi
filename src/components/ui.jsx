@@ -23,7 +23,6 @@ export function TopBar({ title, subtitle, onBack, right }) {
           type="button"
           onClick={onBack}
           aria-label="Back"
-          data-sound="back"
           className="-ml-2 rounded-full p-1.5 text-ink transition-colors duration-150 hover:bg-sunken active:bg-line"
         >
           <BackGlyph />
@@ -71,7 +70,6 @@ export function PrimaryButton({ children, className = '', disabled, ...rest }) {
   return (
     <button
       type="button"
-      data-sound="select"
       disabled={disabled}
       className={`w-full rounded-xl px-4 py-3.5 font-display text-sm font-semibold transition-all duration-150 ease-soft ${
         disabled
@@ -102,7 +100,6 @@ export function ActionButton({ children, className = '', icon, ...rest }) {
   return (
     <button
       type="button"
-      data-sound="select"
       className={`inline-flex items-center gap-1.5 rounded-full border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 transition-all duration-150 ease-soft hover:bg-brand-100 active:scale-95 ${className}`}
       {...rest}
     >
@@ -344,6 +341,63 @@ export function Chip({ children, className = '', tone = 'default' }) {
     >
       {children}
     </span>
+  )
+}
+
+/* A section that stays shut until asked for.
+
+   Progressive disclosure: the screen shows who you are and where to go next,
+   and everything else waits behind a row. Nothing is removed, so the content
+   is still one tap away, but the default view carries far less at once. */
+export function Disclosure({ title, hint, icon, defaultOpen = false, children }) {
+  const [open, setOpen] = useState(defaultOpen)
+  const id = useId()
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-3 p-4 text-left transition-colors duration-150 hover:bg-sunken"
+      >
+        {icon && (
+          <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-brand-50 text-brand-700">
+            {icon}
+          </span>
+        )}
+        <span className="min-w-0 flex-1">
+          <span className="block font-display text-sm font-semibold text-ink">{title}</span>
+          {hint && <span className="block truncate text-xs text-ink-muted">{hint}</span>}
+        </span>
+        <span
+          className={`flex-none text-ink-subtle transition-transform duration-200 ease-soft ${
+            open ? 'rotate-90' : ''
+          }`}
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M9 5l7 7-7 7" />
+          </svg>
+        </span>
+      </button>
+
+      {open && (
+        <div id={id} className="anim-row border-t border-line p-4">
+          {children}
+        </div>
+      )}
+    </section>
   )
 }
 

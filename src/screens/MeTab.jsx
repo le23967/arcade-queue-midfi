@@ -4,6 +4,7 @@ import {
   Chip,
   Screen,
   Toggle,
+  Disclosure,
   TopBar,
 } from '../components/ui.jsx'
 import {
@@ -40,7 +41,7 @@ export default function MeTab({
 
   return (
     <Screen>
-      <TopBar title="Me" subtitle="Your play, progress and privacy" />
+      <TopBar title="Me" />
 
       <Body className="bg-sunken">
         <div className="space-y-3 px-4 py-4 pb-6">
@@ -114,37 +115,26 @@ export default function MeTab({
             />
           </section>
 
-          <section className="rounded-2xl border border-line bg-surface p-4 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="font-display text-sm font-semibold text-ink">
-                  Your player card
-                </h2>
-                <p className="mt-0.5 text-xs leading-relaxed text-ink-muted">
-                  Friends can use these picks to find a game or song you both enjoy.
-                </p>
-              </div>
-              <Chip tone="quiet">Shared</Chip>
-            </div>
-
-            <div className="mt-3 grid grid-cols-2 gap-2">
+          <Disclosure
+            title="Your player card"
+            hint={`${ME.games.join(', ')} · shared with friends`}
+            icon={<Bars size={17} />}
+          >
+            <p className="mb-3 text-xs leading-relaxed text-ink-muted">
+              Friends can use these picks to find a game or song you both enjoy.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
               <Preference title="Main games" Icon={Bars} items={ME.games} />
               <Preference title="On repeat" Icon={Play} items={ME.songs} />
             </div>
-          </section>
+          </Disclosure>
 
-          <section className="rounded-2xl border border-line bg-surface p-4 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="font-display text-sm font-semibold text-ink">
-                  Community contribution
-                </h2>
-                <p className="mt-0.5 text-xs text-ink-muted">Your activity this week</p>
-              </div>
-              <Pulse size={19} className="text-brand-600" />
-            </div>
-
-            <div className="mt-3 grid grid-cols-2 gap-2">
+          <Disclosure
+            title="Community contribution"
+            hint={`${safeSessions} sessions, ${safeReports} queue updates`}
+            icon={<Pulse size={17} />}
+          >
+            <div className="grid grid-cols-2 gap-2">
               <ContributionStat
                 label="Play sessions"
                 value={safeSessions}
@@ -160,21 +150,13 @@ export default function MeTab({
             <p className="mt-3 rounded-xl bg-fresh-bg px-3 py-2 text-xs leading-relaxed text-ink-muted">
               Queue updates help other players choose a better time to visit.
             </p>
-          </section>
+          </Disclosure>
 
-          <section className="rounded-2xl border border-line bg-surface p-4 shadow-sm">
-            <div className="mb-3 flex items-start gap-2.5">
-              <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-brand-50 text-brand-700">
-                <Shield size={17} />
-              </span>
-              <div>
-                <h2 className="font-display text-sm font-semibold text-ink">Privacy</h2>
-                <p className="mt-0.5 text-xs leading-relaxed text-ink-muted">
-                  Choose whether mutuals can see your arcade while you are checked in.
-                </p>
-              </div>
-            </div>
-
+          <Disclosure
+            title="Privacy and sound"
+            hint={`${visible ? 'Visible to mutuals' : 'Hidden'} · sound ${soundOn ? 'on' : 'off'}`}
+            icon={<Shield size={17} />}
+          >
             <Toggle
               checked={visible}
               onChange={onVisible}
@@ -202,7 +184,7 @@ export default function MeTab({
                 and queue updates do not show your handle.
               </p>
             </div>
-          </section>
+          </Disclosure>
         </div>
       </Body>
     </Screen>

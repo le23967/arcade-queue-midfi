@@ -37,7 +37,7 @@ export default function CheckedIn({
   return (
     <Screen>
       <TopBar title="Checked In"
-        subtitle="Your place, and who is ahead" onBack={onBack} />
+        onBack={onBack} />
 
       <Body>
         <div className="flex items-center gap-3 border-b border-line px-4 py-5">
