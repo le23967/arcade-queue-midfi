@@ -49,7 +49,7 @@ export default function Report({ arcade, onCancel, onSubmit }) {
   }
 
   return (
-    <Modal title={`Report queue — ${arcade.short}`}>
+    <Modal title={`Report queue, ${arcade.short}`}>
       <Stepper
         label="Queue"
         hint="Parties waiting, not people"
@@ -78,7 +78,7 @@ export default function Report({ arcade, onCancel, onSubmit }) {
         Submitted anonymously
         <Info>
           Nobody has to be asked &ldquo;who&rsquo;s next?&rdquo; and nobody has
-          to answer &mdash; which matters for players who would rather not talk
+          to answer &middot; which matters for players who would rather not talk
           to a stranger.
         </Info>
       </p>

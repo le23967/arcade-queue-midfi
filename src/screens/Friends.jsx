@@ -84,6 +84,7 @@ export default function Friends({
           arcades={venues}
           onOpenPlayer={onOpenPlayer}
           onOpenArcade={onOpenArcade}
+          onMessage={onMessage}
         />
       )}
       {section === 'here' && (
@@ -256,7 +257,7 @@ function Activity({ arcades, onOpenPlayer, onOpenClip, onOpenArcade, onPlan, onM
                 {e.type === 'checkout' && <>left {venueName(e.venue)}</>}
                 {e.type === 'played' && (
                   <>
-                    played a set at {venueName(e.venue)} &mdash;{' '}
+                    played a set at {venueName(e.venue)}:{' '}
                     {e.songs.map((t, k) => (
                       <span key={t}>
                         {k > 0 && ', '}
@@ -267,7 +268,7 @@ function Activity({ arcades, onOpenPlayer, onOpenClip, onOpenArcade, onPlan, onM
                 )}
                 {e.type === 'best' && (
                   <>
-                    set a new best on &ldquo;{e.song}&rdquo; &mdash;{' '}
+                    set a new best on &ldquo;{e.song}&rdquo;,{' '}
                     <span className="tabular-nums">
                       {formatAchievement(e.achievement)}
                     </span>{' '}
@@ -391,7 +392,7 @@ function CapLine({ cut }) {
         Official site&rsquo;s {OLD_SITE_FAVOURITE_CAP}-favourite limit
       </p>
       <p className="text-xs text-ink-muted">
-        Everyone below is invisible on the official site &mdash; {cut.count}{' '}
+        Everyone below is invisible on the official site &middot; {cut.count}{' '}
         {cut.count === 1 ? 'player' : 'players'}, {cut.hereNow} of them at an arcade
         now.
       </p>

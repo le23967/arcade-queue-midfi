@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { Body, Avatar, GameDot, Chip, Info } from '../components/ui.jsx'
-import { Plus, Minus, Chevron } from '../components/Icons.jsx'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Avatar, GameDot, PrimaryButton, Chip } from '../components/ui.jsx'
+import { Plus, Minus, Users, Clock } from '../components/Icons.jsx'
 import { ME_MAP } from '../data.js'
-import { estimateWaitMin, isStale } from '../lib/queue.js'
+import { estimateWaitMin, isStale, freshnessLabel } from '../lib/queue.js'
 import { presentFriends } from '../lib/social.js'
+import MapCanvas from './MapCanvas.jsx'
 
 /* Map view.
 
@@ -12,138 +13,227 @@ import { presentFriends } from '../lib/social.js'
    and the venues enterable from it. It serves the interview request for
    "seeing where your friends are and all of that" better than a list does.
 
-   Still a drawn map rather than a tile server - no API key, no external
-   requests, no photography - but the geography is real: Central Park sits
-   south-west on Broadway, Market City in the middle of Haymarket, and KOKO
-   north-east near Town Hall. Real routing stays with the phone's own maps app
-   through the Directions hand-off. */
+   The list that used to sit under the map has gone. It repeated the pins and
+   left the map too short to read, and a map you cannot move is just a picture.
+   The space it freed goes to the map itself and to a card that carries the
+   action, so tapping a pin ends in going somewhere rather than in a fact.
 
-const ZOOMS = [1, 1.5, 2.2]
+   Zoom works the way a Mac user expects: pinch on the trackpad, two finger
+   scroll to pan, drag to pan, and buttons for anyone without a trackpad. */
 
-export default function FriendsMap({ arcades, onOpenPlayer, onOpenArcade }) {
-  const [zoom, setZoom] = useState(0)
+const MIN_SCALE = 1
+const MAX_SCALE = 4
+
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
+
+export default function FriendsMap({ arcades, onOpenPlayer, onOpenArcade, onMessage }) {
+  const [view, setView] = useState({ scale: 1, x: 0, y: 0 })
+  const [selected, setSelected] = useState(null)
+  const [dragging, setDragging] = useState(false)
+  const boxRef = useRef(null)
+  const drag = useRef(null)
+
   const here = presentFriends()
-  const scale = ZOOMS[zoom]
+
+  /* Keep the map from being dragged off screen: at scale 1 it cannot move, and
+     past that it can move by however much it overflows. */
+  const clampPan = useCallback((next) => {
+    const el = boxRef.current
+    if (!el) return next
+    const { width, height } = el.getBoundingClientRect()
+    const slackX = (width * (next.scale - 1)) / 2
+    const slackY = (height * (next.scale - 1)) / 2
+    return {
+      ...next,
+      x: clamp(next.x, -slackX, slackX),
+      y: clamp(next.y, -slackY, slackY),
+    }
+  }, [])
+
+  const zoomAt = useCallback(
+    (factor, cx, cy) => {
+      setView((v) => {
+        const el = boxRef.current
+        if (!el) return v
+        const rect = el.getBoundingClientRect()
+        const px = cx ?? rect.width / 2
+        const py = cy ?? rect.height / 2
+        const scale = clamp(v.scale * factor, MIN_SCALE, MAX_SCALE)
+        /* Keep whatever is under the cursor under the cursor. */
+        const originX = rect.width / 2 + v.x
+        const originY = rect.height / 2 + v.y
+        const k = scale / v.scale
+        return clampPan({
+          scale,
+          x: v.x + (px - originX) * (1 - k),
+          y: v.y + (py - originY) * (1 - k),
+        })
+      })
+    },
+    [clampPan]
+  )
+
+  /* Attached by hand rather than through onWheel, because the listener has to
+     be non passive to stop the browser zooming the whole page on a pinch. */
+  useEffect(() => {
+    const el = boxRef.current
+    if (!el) return
+
+    function onWheel(e) {
+      e.preventDefault()
+      const rect = el.getBoundingClientRect()
+      const cx = e.clientX - rect.left
+      const cy = e.clientY - rect.top
+
+      // macOS sends a pinch as a wheel event with ctrlKey set.
+      if (e.ctrlKey || e.metaKey) {
+        zoomAt(Math.exp(-e.deltaY * 0.01), cx, cy)
+      } else {
+        setView((v) =>
+          v.scale === 1 ? v : clampPan({ ...v, x: v.x - e.deltaX, y: v.y - e.deltaY })
+        )
+      }
+    }
+
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [zoomAt, clampPan])
+
+  function onPointerDown(e) {
+    if (view.scale === 1) return
+    drag.current = { pointerX: e.clientX, pointerY: e.clientY, x: view.x, y: view.y }
+    setDragging(true)
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  function onPointerMove(e) {
+    const d = drag.current
+    if (!d) return
+    setView((v) =>
+      clampPan({
+        ...v,
+        x: d.x + (e.clientX - d.pointerX),
+        y: d.y + (e.clientY - d.pointerY),
+      })
+    )
+  }
+
+  function endDrag() {
+    drag.current = null
+    setDragging(false)
+  }
+
+  const friendCard = selected?.kind === 'friend' ? selected.player : null
+  const venueCard =
+    selected?.kind === 'venue' ? arcades.find((a) => a.id === selected.id) : null
 
   return (
-    <Body className="flex flex-col">
-      <div className="relative flex-1 overflow-hidden bg-sunken">
-        {/* Street grid, drawn. Gives the pins something to sit on without
-            pretending to be a real map. */}
+    <div className="relative flex-1 overflow-hidden">
+      <div
+        ref={boxRef}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        className={`absolute inset-0 touch-none overflow-hidden ${
+          view.scale > 1 ? 'cursor-grab active:cursor-grabbing' : ''
+        }`}
+      >
         <div
-          className="absolute inset-0 origin-center transition-transform duration-300 ease-out"
-          style={{ transform: `scale(${scale})` }}
+          className="absolute inset-0 origin-center will-change-transform"
+          style={{
+            transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
+            transition: dragging ? 'none' : 'transform 180ms var(--ease-out)',
+          }}
         >
-          <Streets />
+          <MapCanvas />
 
-          {arcades.map((a) => {
-            const friends = here.filter((p) => p.at === a.id)
-            return (
-              <VenuePin
-                key={a.id}
-                arcade={a}
-                friends={friends}
-                scale={scale}
-                onOpenArcade={onOpenArcade}
-                onOpenPlayer={onOpenPlayer}
-              />
-            )
-          })}
+          {arcades.map((a) => (
+            <VenuePin
+              key={a.id}
+              arcade={a}
+              friends={here.filter((p) => p.at === a.id)}
+              scale={view.scale}
+              active={selected?.kind === 'venue' && selected.id === a.id}
+              onPick={() => setSelected({ kind: 'venue', id: a.id })}
+              onPickFriend={(player) => setSelected({ kind: 'friend', player })}
+            />
+          ))}
 
-          <YouPin scale={scale} />
+          <YouPin scale={view.scale} />
         </div>
+      </div>
 
-        <div className="absolute right-3 top-3 flex flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-lg">
+      <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between p-3">
+        <span className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-line bg-surface/90 px-2.5 py-1.5 shadow-sm backdrop-blur">
+          <span className="relative flex h-2 w-2">
+            <span className="anim-ring absolute inline-flex h-full w-full rounded-full bg-fresh" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-fresh" />
+          </span>
+          <span className="text-[11px] font-semibold text-ink">
+            {here.length} out now
+          </span>
+        </span>
+
+        <span className="pointer-events-auto flex flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-lg">
           <ZoomButton
             label="Zoom in"
-            disabled={zoom >= ZOOMS.length - 1}
-            onClick={() => setZoom((z) => Math.min(ZOOMS.length - 1, z + 1))}
+            disabled={view.scale >= MAX_SCALE}
+            onClick={() => zoomAt(1.5)}
           >
             <Plus size={16} />
           </ZoomButton>
           <span className="h-px bg-line" />
           <ZoomButton
             label="Zoom out"
-            disabled={zoom <= 0}
-            onClick={() => setZoom((z) => Math.max(0, z - 1))}
+            disabled={view.scale <= MIN_SCALE}
+            onClick={() => zoomAt(1 / 1.5)}
           >
             <Minus size={16} />
           </ZoomButton>
-        </div>
-
-        <div className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full border border-line bg-surface/90 px-2.5 py-1 backdrop-blur">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
-            {here.length} in your circle out now
-          </span>
-          <Info above>
-            Positions are venue level. The map never shows where anyone is
-            inside a venue, and only people you follow back appear.
-          </Info>
-        </div>
+        </span>
       </div>
 
-      {/* Tapping a venue on the map enters it; the strip repeats that in a
-          list so the same action is reachable without hunting for a pin. */}
-      <ul className="border-t border-line">
-        {arcades.map((a) => {
-          const n = here.filter((p) => p.at === a.id).length
-          return (
-            <li key={a.id}>
-              <button
-                type="button"
-                onClick={() => onOpenArcade(a.id)}
-                className="flex w-full items-center gap-3 border-b border-line px-4 py-2.5 text-left transition-colors duration-150 hover:bg-sunken"
-              >
-                <GameDot color={a.gameColor} />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-ink">
-                    {a.short}
-                  </span>
-                  <span className="block text-xs tabular-nums text-ink-muted">
-                    ~{estimateWaitMin(a)} min &middot; {a.distanceKm.toFixed(1)} km
-                    {n > 0 && ` · ${n} here`}
-                  </span>
-                </span>
-                {isStale(a) && <Chip tone="quiet">stale</Chip>}
-                <Chevron size={16} />
-              </button>
-            </li>
-          )
-        })}
-      </ul>
-    </Body>
+      {view.scale === 1 && (
+        <p className="pointer-events-none absolute inset-x-0 bottom-[132px] text-center text-[10px] font-medium text-ink-subtle">
+          Pinch to zoom, drag to move
+        </p>
+      )}
+
+      {/* The card is the point of the screen. Tapping anything on the map ends
+          in something you can do, not in a label. */}
+      <div className="absolute inset-x-0 bottom-0 p-3">
+        {venueCard ? (
+          <VenueCard
+            arcade={venueCard}
+            friends={here.filter((p) => p.at === venueCard.id)}
+            onEnter={() => onOpenArcade(venueCard.id)}
+            onClose={() => setSelected(null)}
+          />
+        ) : friendCard ? (
+          <FriendCard
+            player={friendCard}
+            arcade={arcades.find((a) => a.id === friendCard.at)}
+            onJoin={() => onOpenArcade(friendCard.at)}
+            onMessage={() => onMessage(friendCard.handle)}
+            onProfile={() => onOpenPlayer(friendCard.handle)}
+            onClose={() => setSelected(null)}
+          />
+        ) : (
+          <SummaryCard
+            friends={here}
+            arcades={arcades}
+            onPick={(player) => setSelected({ kind: 'friend', player })}
+          />
+        )}
+      </div>
+    </div>
   )
 }
 
-function Streets() {
-  return (
-    <svg
-      className="absolute inset-0 h-full w-full"
-      viewBox="0 0 100 100"
-      preserveAspectRatio="none"
-      aria-hidden="true"
-    >
-      <rect width="100" height="100" fill="var(--sunken)" />
-      <g stroke="var(--line)" strokeWidth="0.6">
-        <path d="M0 82 L100 12" />
-        <path d="M0 92 L100 22" />
-        <path d="M-5 55 L105 40" />
-        <path d="M18 -5 L34 105" />
-        <path d="M55 -5 L68 105" />
-        <path d="M82 -5 L94 105" />
-      </g>
-      <g stroke="var(--line-strong)" strokeWidth="1.4">
-        <path d="M0 87 L100 17" />
-        <path d="M36 -5 L52 105" />
-      </g>
-      <rect x="60" y="62" width="26" height="20" fill="var(--line)" opacity="0.5" rx="1" />
-      <rect x="6" y="14" width="20" height="16" fill="var(--line)" opacity="0.5" rx="1" />
-    </svg>
-  )
-}
-
-function VenuePin({ arcade, friends, scale, onOpenArcade, onOpenPlayer }) {
+function VenuePin({ arcade, friends, scale, active, onPick, onPickFriend }) {
   const wait = estimateWaitMin(arcade)
+  const stale = isStale(arcade)
 
   return (
     <div
@@ -154,18 +244,17 @@ function VenuePin({ arcade, friends, scale, onOpenArcade, onOpenPlayer }) {
         className="flex flex-col items-center"
         style={{ transform: `scale(${1 / scale})` }}
       >
-        {/* Friends stand above the pin they are at. */}
         {friends.length > 0 && (
-          <div className="mb-1 flex -space-x-2">
+          <div className="mb-1 flex -space-x-2.5">
             {friends.map((p) => (
               <button
                 key={p.handle}
                 type="button"
-                onClick={() => onOpenPlayer(p.handle)}
+                onClick={() => onPickFriend(p)}
                 aria-label={`${p.handle}, at ${arcade.short}`}
                 className="rounded-full ring-2 ring-surface transition-transform duration-150 ease-soft hover:z-10 hover:scale-110 active:scale-95"
               >
-                <Avatar handle={p.handle} size={26} live />
+                <Avatar handle={p.handle} size={30} live />
               </button>
             ))}
           </div>
@@ -173,15 +262,30 @@ function VenuePin({ arcade, friends, scale, onOpenArcade, onOpenPlayer }) {
 
         <button
           type="button"
-          onClick={() => onOpenArcade(arcade.id)}
-          className="flex items-center gap-1.5 rounded-full border border-line bg-surface py-1 pl-1.5 pr-2.5 shadow-lg transition-transform duration-150 ease-soft hover:scale-105 active:scale-95"
+          onClick={onPick}
+          aria-label={`${arcade.short}, about ${wait} minutes`}
+          className={`flex items-center gap-1.5 rounded-full py-1.5 pl-2 pr-3 shadow-lg transition-all duration-150 ease-soft hover:scale-105 active:scale-95 ${
+            active
+              ? 'bg-brand-600 text-white ring-4 ring-brand-600/20'
+              : 'border border-line bg-surface text-ink'
+          }`}
         >
-          <GameDot color={arcade.gameColor} />
-          <span className="whitespace-nowrap font-display text-[11px] font-bold tabular-nums text-ink">
+          {active ? (
+            <span className="h-2 w-2 rounded-full bg-white/80" />
+          ) : (
+            <GameDot color={arcade.gameColor} />
+          )}
+          <span className="whitespace-nowrap font-display text-xs font-bold tabular-nums">
+            {stale ? '~' : ''}
             {wait}m
           </span>
         </button>
-        <span className="mt-0.5 whitespace-nowrap rounded px-1 text-[9px] font-semibold uppercase tracking-wide text-ink-muted">
+
+        <span
+          className={`mt-1 whitespace-nowrap rounded px-1 text-[9px] font-bold uppercase tracking-wide ${
+            active ? 'text-brand-700' : 'text-ink-muted'
+          }`}
+        >
           {arcade.short}
         </span>
       </div>
@@ -196,15 +300,165 @@ function YouPin({ scale }) {
       style={{ left: `${ME_MAP.x * 100}%`, top: `${ME_MAP.y * 100}%` }}
     >
       <div style={{ transform: `scale(${1 / scale})` }} className="flex flex-col items-center">
-        <span className="relative flex h-3.5 w-3.5">
+        <span className="relative flex h-4 w-4">
           <span className="anim-ring absolute inline-flex h-full w-full rounded-full bg-brand-500" />
-          <span className="relative inline-flex h-3.5 w-3.5 rounded-full border-2 border-surface bg-brand-600" />
+          <span className="relative inline-flex h-4 w-4 rounded-full border-[3px] border-surface bg-brand-600 shadow" />
         </span>
-        <span className="mt-0.5 text-[9px] font-semibold uppercase tracking-wide text-brand-700">
+        <span className="mt-1 text-[9px] font-bold uppercase tracking-wide text-brand-700">
           You
         </span>
       </div>
     </div>
+  )
+}
+
+function Card({ children }) {
+  return (
+    <div className="anim-row rounded-2xl border border-line bg-surface p-3 shadow-xl">
+      {children}
+    </div>
+  )
+}
+
+function SummaryCard({ friends, arcades, onPick }) {
+  return (
+    <Card>
+      <div className="flex items-center justify-between">
+        <p className="font-display text-sm font-semibold text-ink">
+          {friends.length} in your circle are out
+        </p>
+        <span className="text-[11px] text-ink-subtle">Tap someone to join them</span>
+      </div>
+      <div className="mt-2.5 flex gap-2">
+        {friends.map((p) => {
+          const at = arcades.find((a) => a.id === p.at)
+          return (
+            <button
+              key={p.handle}
+              type="button"
+              onClick={() => onPick(p)}
+              className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-sunken px-2 py-2 text-left transition-colors duration-150 hover:bg-line/50"
+            >
+              <Avatar handle={p.handle} size={30} live />
+              <span className="min-w-0">
+                <span className="block truncate text-xs font-semibold text-ink">
+                  {p.handle}
+                </span>
+                <span className="block truncate text-[10px] text-ink-muted">
+                  {at?.short}
+                </span>
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    </Card>
+  )
+}
+
+function VenueCard({ arcade, friends, onEnter, onClose }) {
+  return (
+    <Card>
+      <div className="flex items-start gap-2">
+        <GameDot color={arcade.gameColor} className="mt-1.5 h-2.5 w-2.5" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-display text-base font-semibold text-ink">
+            {arcade.name}
+          </p>
+          <p className="flex flex-wrap items-center gap-x-2 text-xs text-ink-muted">
+            <span className="inline-flex items-center gap-1 tabular-nums">
+              <Clock size={12} /> ~{estimateWaitMin(arcade)} min
+            </span>
+            <span className="inline-flex items-center gap-1 tabular-nums">
+              <Users size={12} /> {arcade.queue} waiting
+            </span>
+            <span className="tabular-nums">{arcade.distanceKm.toFixed(1)} km</span>
+          </p>
+          <p className="mt-0.5 text-[11px] text-ink-subtle">
+            {arcade.game} &middot; {freshnessLabel(arcade).toLowerCase()}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="-mr-1 -mt-1 rounded-full p-1.5 text-ink-subtle transition-colors duration-150 hover:bg-sunken hover:text-ink"
+        >
+          &times;
+        </button>
+      </div>
+
+      {friends.length > 0 && (
+        <div className="mt-2 flex items-center gap-2 rounded-xl bg-fresh-bg px-2.5 py-1.5">
+          <span className="flex -space-x-2">
+            {friends.map((p) => (
+              <Avatar key={p.handle} handle={p.handle} size={22} className="ring-2 ring-surface" />
+            ))}
+          </span>
+          <span className="text-[11px] font-medium text-ink">
+            {friends.map((p) => p.handle).join(', ')} here now
+          </span>
+        </div>
+      )}
+
+      <div className="mt-2.5">
+        <PrimaryButton onClick={onEnter}>
+          {friends.length > 0 ? 'Join them here' : 'Open this arcade'}
+        </PrimaryButton>
+      </div>
+    </Card>
+  )
+}
+
+function FriendCard({ player, arcade, onJoin, onMessage, onProfile, onClose }) {
+  return (
+    <Card>
+      <div className="flex items-start gap-3">
+        <button type="button" onClick={onProfile} aria-label={`Open ${player.handle}`}>
+          <Avatar handle={player.handle} size={44} live />
+        </button>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-display text-base font-semibold text-ink">
+            {player.handle}
+          </p>
+          <p className="truncate text-xs text-ink-muted">
+            At {arcade?.short} for {player.sinceMin} min
+          </p>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {player.games.slice(0, 2).map((g) => (
+              <Chip key={g} tone="quiet">
+                {g}
+              </Chip>
+            ))}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="-mr-1 -mt-1 rounded-full p-1.5 text-ink-subtle transition-colors duration-150 hover:bg-sunken hover:text-ink"
+        >
+          &times;
+        </button>
+      </div>
+
+      <div className="mt-2.5 flex gap-2">
+        <button
+          type="button"
+          onClick={onMessage}
+          className="flex-1 rounded-xl border border-line-strong bg-surface py-2.5 font-display text-sm font-semibold text-ink transition-all duration-150 hover:bg-sunken active:scale-[0.98]"
+        >
+          Message
+        </button>
+        <button
+          type="button"
+          onClick={onJoin}
+          className="flex-1 rounded-xl bg-brand-600 py-2.5 font-display text-sm font-semibold text-white shadow-lg shadow-brand-600/25 transition-all duration-150 hover:bg-brand-700 active:scale-[0.98]"
+        >
+          Join them
+        </button>
+      </div>
+    </Card>
   )
 }
 
@@ -215,7 +469,7 @@ function ZoomButton({ children, label, disabled, onClick }) {
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className={`flex h-8 w-8 items-center justify-center transition-colors duration-150 ${
+      className={`flex h-9 w-9 items-center justify-center transition-colors duration-150 ${
         disabled ? 'text-ink-subtle' : 'text-ink hover:bg-sunken active:bg-line'
       }`}
     >

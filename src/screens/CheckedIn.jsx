@@ -98,7 +98,7 @@ export default function CheckedIn({
             checked={notify}
             onChange={onNotify}
             label="Notify me when I'm one turn away"
-            hint="Go play something else — you'll get pulled back in time."
+            hint="Go play something else, you'll get pulled back in time."
           />
         </div>
       </Body>

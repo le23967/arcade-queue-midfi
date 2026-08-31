@@ -109,7 +109,7 @@ export default function PlanSession({ arcades, preset, onBack, onDone }) {
           </div>
         </Section>
 
-        <Section title={`Who — ${invited.length} asked`}>
+        <Section title={`Who, ${invited.length} asked`}>
           <ul className="-mx-1">
             {mutuals.slice(0, 8).map((f) => {
               const on = invited.includes(f.handle)

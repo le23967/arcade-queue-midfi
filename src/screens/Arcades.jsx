@@ -46,7 +46,7 @@ export default function Arcades({
         subtitle="Pick a game, find where it moves fastest"
         right={
           <Info >
-            <b>Queue</b> counts parties waiting, not people &mdash; players who
+            <b>Queue</b> counts parties waiting, not people &middot; players who
             came together take one machine between them. <b>Solo</b> is how many
             of those are a single player. Wait allows {SOLO_TURN_MIN} min for a
             solo turn and {PAIR_TURN_MIN} min for a pair, since pairing buys an

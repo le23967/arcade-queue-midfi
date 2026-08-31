@@ -25,14 +25,14 @@ export default function Scan({ arcade, method, onBack, onSuccess }) {
         right={
           <Info >
             Scanning at the cabinet is what ties you to this venue. No precise
-            location is read or stored &mdash; the app only knows which arcade
+            location is read or stored &middot; the app only knows which arcade
             you tapped.
           </Info>
         }
       />
 
       <Body className="p-4">
-        <Placeholder className="h-56 w-full" label="Cabinet — placeholder">
+        <Placeholder className="h-56 w-full" label="Cabinet, placeholder">
           <div className="flex w-full flex-col items-center gap-2 px-6">
             <div className="w-full rounded-md border border-line-strong bg-line-strong py-1 text-center text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
               {arcade.game}

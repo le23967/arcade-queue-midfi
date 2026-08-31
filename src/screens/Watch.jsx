@@ -74,7 +74,7 @@ export default function Watch({
           <Bell size={14} />
           <span className="flex-1 text-xs text-ink">
             You&rsquo;re <span className="font-semibold tabular-nums">#{session.position}</span>{' '}
-            at {sessionArcade.short} &mdash; we&rsquo;ll pull you out when
+            at {sessionArcade.short} &middot; we&rsquo;ll pull you out when
             you&rsquo;re up
           </span>
           <span className="text-xs font-semibold text-ink">Simulate</span>
@@ -85,7 +85,7 @@ export default function Watch({
         {/* No video asset: the clip is a gray block, as the cabinet and map are. */}
         <div className="relative flex min-h-[200px] flex-1 flex-col justify-end rounded-md border border-line bg-sunken">
           <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-xs font-medium uppercase tracking-wide text-ink-subtle">
-            Clip &mdash; placeholder
+            Clip &middot; placeholder
           </span>
 
           <span className="absolute right-2 top-2 rounded-md border border-line-strong bg-surface px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-ink-muted">

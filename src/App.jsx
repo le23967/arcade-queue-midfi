@@ -32,14 +32,14 @@ import { FRIENDS, FOLLOWERS_ONLY, CLIPS, CLIP_COMMENTS } from './social.js'
 /* Screens carry their sketch number so a reviewer can hold the prototype and
    Fig 3 side by side. */
 const CAPTIONS = {
-  arcades: 'Screens 1 + 2 — Arcades (list / compare)',
-  detail: 'Screen 3 — Detail',
-  checkin: 'Screen 4A — Check-In',
-  scan: 'Screen 5 — Scan target',
-  confirm: 'Check-In — confirm the count',
-  checkedin: 'Screen 6 — Checked In',
-  summary: 'Screen 8 — Session summary',
-  watch: 'Watch — clip feed',
+  arcades: 'Screens 1 + 2, Arcades (list / compare)',
+  detail: 'Screen 3, Detail',
+  checkin: 'Screen 4A, Check-In',
+  scan: 'Screen 5, Scan target',
+  confirm: 'Check-In, confirm the count',
+  checkedin: 'Screen 6, Checked In',
+  summary: 'Screen 8, Session summary',
+  watch: 'Watch, clip feed',
   friends: 'Friends tab',
   follows: 'Followers / Following',
   liked: 'Liked clips',
@@ -49,9 +49,9 @@ const CAPTIONS = {
 }
 
 const MODAL_CAPTIONS = {
-  report: 'Screen 4B — Report',
-  checkout: 'Screen 7 — Check out confirmation',
-  directions: 'Directions — hand-off to the phone’s maps app',
+  report: 'Screen 4B, Report',
+  checkout: 'Screen 7, Check out confirmation',
+  directions: 'Directions, hand-off to the phone’s maps app',
   comments: 'Comments on a clip',
   message: 'Message a mutual',
 }

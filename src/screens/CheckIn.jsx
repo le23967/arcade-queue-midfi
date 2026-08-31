@@ -36,7 +36,7 @@ export default function CheckIn({ arcade, onBack, onScan, onManual }) {
         <Option
           Icon={Qr}
           title="Scan QR"
-          hint="Fastest — point the camera at the sticker on the cabinet"
+          hint="Fastest, point the camera at the sticker on the cabinet"
           onClick={() => onScan('qr')}
         />
         <Option
@@ -48,7 +48,7 @@ export default function CheckIn({ arcade, onBack, onScan, onManual }) {
         <Option
           Icon={Hand}
           title="Manual"
-          hint="Fallback — type in your position by hand"
+          hint="Fallback, type in your position by hand"
           muted
           onClick={onManual}
         />

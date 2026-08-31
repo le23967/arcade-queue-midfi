@@ -53,7 +53,7 @@ export default function ConfirmQueue({ arcade, onBack, onConfirm }) {
           </p>
           <p className="text-xs text-ink-muted">
             {freshnessLabel(arcade)}
-            {isStale(arcade) && ' — worth a second look'}
+            {isStale(arcade) && ', worth a second look'}
           </p>
         </div>
 

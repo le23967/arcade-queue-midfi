@@ -16,7 +16,7 @@ import { ME } from '../social.js'
 const OPENERS = [
   'How long is the wait really?',
   'Save me a spot, on my way',
-  'Nice score — what did you change?',
+  'Nice score, what did you change?',
   'Are you around later this week?',
 ]
 
