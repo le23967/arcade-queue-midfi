@@ -1,33 +1,37 @@
 import { Users, Play, Bars, User } from './Icons.jsx'
 
-/* Device shell. */
-export function Frame({ children, caption }) {
-  return (
-    <div className="flex min-h-screen flex-col items-center gap-4 bg-page px-4 py-8">
-      <header className="w-full max-w-[390px]">
-        <h1 className="font-display text-base font-bold tracking-tight text-ink">
-          Arcade Circle
-        </h1>
-      </header>
+/* Shell.
 
+   On a phone this is the app: it fills the screen, there is no title above it
+   and no caption below it, and once it has been added to a home screen it runs
+   without browser chrome. Safe area insets keep it clear of the notch and the
+   home bar.
+
+   On a desktop the same markup is centred in a device outline, which is only a
+   presentation frame for reviewing the work on a large screen. The simulated
+   status bar belongs to that frame, so it is hidden on a real phone where the
+   operating system draws the real one. */
+export function Frame({ children }) {
+  return (
+    <div className="flex min-h-[100dvh] justify-center bg-page sm:items-center sm:p-6">
       <div
         data-frame
-        className="relative h-[calc(100vh-172px)] max-h-[720px] min-h-[560px] w-full max-w-[390px] overflow-hidden rounded-[28px] border border-line-strong bg-surface shadow-2xl"
+        className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-surface sm:h-[760px] sm:max-h-[calc(100dvh-3rem)] sm:w-[390px] sm:rounded-[30px] sm:border sm:border-line-strong sm:shadow-2xl"
+        style={{
+          paddingTop: 'env(safe-area-inset-top)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
       >
         <StatusBar />
-        <div className="absolute inset-x-0 bottom-0 top-7">{children}</div>
+        <div className="min-h-0 flex-1">{children}</div>
       </div>
-
-      <footer className="w-full max-w-[390px]">
-        <p className="text-xs text-ink-muted">{caption}</p>
-      </footer>
     </div>
   )
 }
 
 function StatusBar() {
   return (
-    <div className="flex h-7 items-center justify-between bg-surface px-5">
+    <div className="hidden h-7 flex-none items-center justify-between bg-surface px-5 sm:flex">
       <span className="font-display text-[11px] font-semibold tabular-nums text-ink">
         12:38
       </span>
@@ -41,9 +45,7 @@ function StatusBar() {
   )
 }
 
-/* The project is about connecting the community rather than reading a queue,
-   so people come first and the venue list sits behind them. */
-export const TABS = [
+const TABS = [
   { id: 'friends', label: 'Circle', Icon: Users },
   { id: 'watch', label: 'Watch', Icon: Play },
   { id: 'arcades', label: 'Arcades', Icon: Bars },

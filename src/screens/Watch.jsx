@@ -85,37 +85,62 @@ export default function Watch({
     window.setTimeout(() => setRefreshing(false), 700)
   }, [])
 
-  /* Arrow keys and a trackpad, so the feed is not touch only. The wheel
-     listener is non passive because the gesture has to be swallowed rather
-     than scrolling the page behind it. */
+  /* Arrow keys and a trackpad, so the feed is not touch only.
+
+     The handlers read through refs and the effect subscribes once. An earlier
+     version listed `page` as a dependency, so every step tore the listener
+     down and rebuilt it, which reset the cooldown and let one flick run the
+     whole feed.
+
+     A time based cooldown is not enough on its own either, because macOS keeps
+     sending wheel events as the momentum decays. So a gesture stays locked
+     until the wheel has been quiet for a moment: one flick moves one clip, no
+     matter how many events it produces. */
+  const stepRef = useRef(step)
+  const pageRef = useRef(page)
+  const refreshRef = useRef(refresh)
+
+  useEffect(() => {
+    stepRef.current = step
+    pageRef.current = page
+    refreshRef.current = refresh
+  }, [page, refresh, step])
+
   useEffect(() => {
     const el = stageRef.current
     if (!el) return undefined
 
-    let cooling = false
+    let locked = false
+    let settle = 0
+
     function onWheel(event) {
       event.preventDefault()
-      if (cooling || Math.abs(event.deltaY) < 12) return
-      cooling = true
-      window.setTimeout(() => {
-        cooling = false
-      }, 320)
-      if (event.deltaY > 0) step(1)
-      else if (!step(-1) && page === 0) refresh()
+
+      window.clearTimeout(settle)
+      settle = window.setTimeout(() => {
+        locked = false
+      }, 180)
+
+      if (locked || Math.abs(event.deltaY) < 8) return
+      locked = true
+
+      if (event.deltaY > 0) stepRef.current(1)
+      else if (!stepRef.current(-1) && pageRef.current === 0) refreshRef.current()
     }
 
     function onKey(event) {
-      if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') step(-1)
-      if (event.key === 'ArrowDown' || event.key === 'ArrowRight') step(1)
+      if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') stepRef.current(-1)
+      if (event.key === 'ArrowDown' || event.key === 'ArrowRight') stepRef.current(1)
     }
 
     el.addEventListener('wheel', onWheel, { passive: false })
     el.addEventListener('keydown', onKey)
     return () => {
+      window.clearTimeout(settle)
       el.removeEventListener('wheel', onWheel)
       el.removeEventListener('keydown', onKey)
     }
-  }, [page, refresh, step])
+  }, [])
 
   if (called && session && sessionArcade) {
     return <YoureUp arcade={sessionArcade} position={session.position} onGo={onGo} />

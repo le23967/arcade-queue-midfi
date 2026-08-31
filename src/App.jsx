@@ -30,33 +30,6 @@ import Follows from './screens/Follows.jsx'
 import PlayerProfile from './screens/PlayerProfile.jsx'
 import { FRIENDS, FOLLOWERS_ONLY, CLIPS, CLIP_COMMENTS } from './social.js'
 
-/* Screens carry their sketch number so a reviewer can hold the prototype and
-   Fig 3 side by side. */
-const CAPTIONS = {
-  arcades: 'Screens 1 + 2, Arcades (list / compare)',
-  detail: 'Screen 3, Detail',
-  checkin: 'Screen 4A, Check-In',
-  scan: 'Screen 5, Scan target',
-  confirm: 'Check-In, confirm the count',
-  checkedin: 'Screen 6, Checked In',
-  summary: 'Screen 8, Session summary',
-  watch: 'Watch, clip feed',
-  friends: 'Friends tab',
-  follows: 'Followers / Following',
-  liked: 'Liked clips',
-  plan: 'Plan a session',
-  player: 'Player profile',
-  me: 'Me tab',
-}
-
-const MODAL_CAPTIONS = {
-  report: 'Screen 4B, Report',
-  checkout: 'Screen 7, Check out confirmation',
-  directions: 'Directions, hand-off to the phone’s maps app',
-  comments: 'Comments on a clip',
-  message: 'Message a mutual',
-}
-
 /* The summary is only interesting if a session has some length to it, and a
    reviewer clicks through in seconds. Check-in is therefore backdated by the
    42 minutes the sketch shows, and still counts up in real time from there. */
@@ -231,7 +204,6 @@ export default function App() {
     setView('summary')
   }
 
-  const caption = modal ? MODAL_CAPTIONS[modal] : CAPTIONS[view]
   const showTabs = ['arcades', 'watch', 'friends', 'me', 'detail'].includes(view)
   const sessionArcade = session
     ? venueGame(
@@ -241,7 +213,7 @@ export default function App() {
     : null
 
   return (
-    <Frame caption={caption}>
+    <Frame>
       <div className="relative flex h-full flex-col">
         <div className="min-h-0 flex-1">
           <ErrorBoundary resetKey={view}>
