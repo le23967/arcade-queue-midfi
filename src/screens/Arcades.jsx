@@ -1,33 +1,31 @@
 import {
-  Screen,
-  TopBar,
-  Body,
+  Avatar,
   BestBadge,
-  StaleBadge,
-  Info,
-  Seg,
+  Body,
   GameDot,
+  Info,
   LiveBadge,
+  Screen,
+  Seg,
+  StaleBadge,
+  TopBar,
 } from '../components/ui.jsx'
+import { Chevron, Clock, Users } from '../components/Icons.jsx'
 import { GAMES, gameLabel } from '../data.js'
-import { Chevron } from '../components/Icons.jsx'
 import {
-  estimateWaitMin,
-  isStale,
-  freshnessLabel,
-  sortArcades,
   bestArcadeId,
-  STALE_AFTER_MIN,
-  SOLO_TURN_MIN,
+  estimateWaitMin,
+  freshnessLabel,
+  isStale,
   PAIR_TURN_MIN,
+  SOLO_TURN_MIN,
+  sortArcades,
+  STALE_AFTER_MIN,
 } from '../lib/queue.js'
+import { presentAt } from '../lib/social.js'
 
-/* SCREENS 1 + 2 - Arcades.
-
-   The lo-fi sheet drew Nearby and Compare as separate tabs, but they are the
-   same three venues carrying the same four numbers; only the layout differs.
-   Splitting them costs a tab and makes the user navigate to answer one
-   question. They are one screen with a view switch. */
+/* Arcades is a decision screen. It brings the quickest option, travel cost
+   and familiar players into one place, then lets the user compare the rest. */
 export default function Arcades({
   arcades,
   venueCount,
@@ -43,65 +41,59 @@ export default function Arcades({
     <Screen>
       <TopBar
         title="Arcades"
-        subtitle="Pick a game, find where it moves fastest"
+        subtitle="Choose where your next game starts"
         right={
-          <Info >
-            <b>Queue</b> counts parties waiting, not people &middot; players who
-            came together take one machine between them. <b>Solo</b> is how many
-            of those are a single player. Wait allows {SOLO_TURN_MIN} min for a
-            solo turn and {PAIR_TURN_MIN} min for a pair, since pairing buys an
-            extra song.
+          <Info>
+            Queue counts groups, not individual players. A solo turn is about{' '}
+            {SOLO_TURN_MIN} minutes. A pair takes about {PAIR_TURN_MIN} minutes,
+            then the total is shared across the available cabinets.
           </Info>
         }
       />
 
-      {/* Queues belong to a game, not a venue, so the game is picked first and
-          every number below is that game's queue at that venue. */}
-      <div className="flex flex-wrap items-center gap-1.5 border-b border-line px-4 py-2">
-        <span className="mr-0.5 text-xs text-ink-muted">Game</span>
-        {GAMES.map((g) => (
-          <Seg
-            key={g.id}
-            on={g.id === game}
-            accent={g.color}
-            onClick={() => onGame(g.id)}
-          >
-            {g.label}
-          </Seg>
-        ))}
-      </div>
+      <GamePicker game={game} onGame={onGame} />
 
-      <div className="flex items-center gap-2 border-b border-line px-4 py-2">
-        <Seg on={view === 'list'} onClick={() => onView('list')}>
-          List
-        </Seg>
-        <Seg on={view === 'compare'} onClick={() => onView('compare')}>
-          Compare
-        </Seg>
+      <div className="flex items-center gap-2 border-b border-line bg-surface px-4 py-2">
+        <div className="flex rounded-full bg-sunken p-0.5">
+          <ModeButton on={view === 'list'} onClick={() => onView('list')}>
+            Discover
+          </ModeButton>
+          <ModeButton on={view === 'compare'} onClick={() => onView('compare')}>
+            Compare
+          </ModeButton>
+        </div>
 
         {view === 'list' && (
-          <span className="ml-auto flex items-center gap-1">
-            <span className="text-xs text-ink-muted">Sort</span>
-            <Seg on={sort === 'distance'} onClick={() => onSort('distance')}>
-              Distance
+          <div className="ml-auto flex items-center gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-subtle">
+              Order
+            </span>
+            <Seg
+              className="px-2.5 py-1"
+              on={sort === 'distance'}
+              onClick={() => onSort('distance')}
+            >
+              Near
             </Seg>
-            <Seg on={sort === 'wait'} onClick={() => onSort('wait')}>
-              Wait
+            <Seg
+              className="px-2.5 py-1"
+              on={sort === 'wait'}
+              onClick={() => onSort('wait')}
+            >
+              Fast
             </Seg>
-          </span>
+          </div>
         )}
       </div>
 
       {arcades.length < venueCount && (
-        <p className="border-b border-line px-4 py-2 text-xs text-ink-muted">
-          <span className="tabular-nums">{arcades.length}</span> of{' '}
-          <span className="tabular-nums">{venueCount}</span> arcades run{' '}
-          {gameLabel(game)}.
+        <p className="border-b border-line bg-stale-bg px-4 py-2 text-xs text-ink-muted">
+          {arcades.length} of {venueCount} arcades have {gameLabel(game)}.
         </p>
       )}
 
       {view === 'list' ? (
-        <ListView arcades={arcades} sort={sort} onOpen={onOpen} />
+        <DiscoverView arcades={arcades} sort={sort} onOpen={onOpen} />
       ) : (
         <CompareView arcades={arcades} onOpen={onOpen} />
       )}
@@ -109,134 +101,367 @@ export default function Arcades({
   )
 }
 
-function ListView({ arcades, sort, onOpen }) {
-  const rows = sortArcades(arcades, sort)
-
+function GamePicker({ game, onGame }) {
   return (
-    <Body>
-      <ul>
-        {rows.map((a) => (
-          <li key={a.id}>
+    <div className="border-b border-line bg-surface py-2">
+      <div className="no-scrollbar flex snap-x gap-2 overflow-x-auto px-4">
+        {GAMES.map((item) => {
+          const active = item.id === game
+          return (
             <button
+              key={item.id}
               type="button"
-              onClick={() => onOpen(a.id)}
-              className="flex w-full items-center gap-3 border-b border-line px-4 py-3 text-left"
+              aria-pressed={active}
+              onClick={() => onGame(item.id)}
+              className={`flex flex-none snap-start items-center gap-2 rounded-xl border px-3 py-2 text-left transition-all duration-150 active:scale-95 ${
+                active
+                  ? 'border-brand-200 bg-brand-50 shadow-sm'
+                  : 'border-line bg-surface hover:border-line-strong hover:bg-sunken'
+              }`}
             >
-              <GameDot color={a.gameColor} className="h-2.5 w-2.5" />
-
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-2">
-                  <span className="truncate text-sm font-semibold text-ink">
-                    {a.name}
-                  </span>
-                  {isStale(a) ? <StaleBadge /> : <LiveBadge label="live" />}
-                </span>
-                <span className="mt-0.5 block text-xs tabular-nums text-ink-muted">
-                  Q {a.queue} &middot; Solo {a.solo} &middot; {a.cabinets}{' '}
-                  {a.cabinets === 1 ? 'cab' : 'cabs'} &middot; ~
-                  {estimateWaitMin(a)} min
-                </span>
-                <span className="mt-0.5 block text-xs text-ink-subtle">
-                  {freshnessLabel(a)}
-                </span>
+              <span
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-[10px] font-bold text-white shadow-sm"
+                style={{ backgroundColor: item.color }}
+              >
+                {item.label.slice(0, 2).toUpperCase()}
               </span>
-
-              <span className="flex flex-none items-center gap-1">
-                <span className="text-xs tabular-nums text-ink-muted">
-                  {a.distanceKm.toFixed(1)} km
-                </span>
-                <Chevron size={16} />
+              <span
+                className={`whitespace-nowrap text-xs font-semibold ${
+                  active ? 'text-brand-700' : 'text-ink-muted'
+                }`}
+              >
+                {item.label}
               </span>
             </button>
-          </li>
-        ))}
-      </ul>
-    </Body>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
-function CompareView({ arcades, onOpen }) {
+function ModeButton({ on, children, onClick }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={onClick}
+      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-all duration-150 ${
+        on ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted hover:text-ink'
+      }`}
+    >
+      {children}
+    </button>
+  )
+}
+
+function DiscoverView({ arcades, sort, onOpen }) {
+  if (arcades.length === 0) {
+    return (
+      <Body className="flex items-center justify-center p-6 text-center">
+        <div>
+          <p className="font-display text-base font-semibold text-ink">No local cabinets yet</p>
+          <p className="mt-1 text-xs text-ink-muted">Try another game to see nearby arcades.</p>
+        </div>
+      </Body>
+    )
+  }
+
   const bestId = bestArcadeId(arcades)
-  const anyStale = arcades.some(isStale)
+  const best = arcades.find((a) => a.id === bestId) ?? arcades[0]
+  const others = sortArcades(
+    arcades.filter((a) => a.id !== best.id),
+    sort
+  )
 
   return (
-    <Body>
-      <table className="w-full border-collapse text-sm">
-        <thead>
-          <tr className="border-b border-line text-left">
-            <Th className="pl-4">Arcade</Th>
-            <Th className="text-right">Queue</Th>
-            <Th className="text-right">Solo</Th>
-            <Th className="pr-4 text-right">Wait</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {arcades.map((a) => {
-            const best = a.id === bestId
-            const stale = isStale(a)
-            return (
-              <tr
-                key={a.id}
-                onClick={() => onOpen(a.id)}
-                className={`cursor-pointer border-b border-line transition-colors duration-150 hover:bg-sunken ${
-                  best ? 'bg-brand-50' : ''
-                }`}
-              >
-                <td
-                  className={`py-3 pl-4 pr-2 border-l-4 ${
-                    best ? 'border-brand-600' : 'border-transparent'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-ink">
-                      {a.short}
-                    </span>
-                    {best && <BestBadge />}
-                    {stale && <StaleBadge />}
-                  </div>
-                  <div className="text-xs tabular-nums text-ink-muted">
-                    {a.cabinets} {a.cabinets === 1 ? 'cab' : 'cabs'} &middot;{' '}
-                    {a.distanceKm.toFixed(1)} km
-                  </div>
-                </td>
-                <td className="py-3 text-right tabular-nums text-ink">
-                  {a.queue}
-                </td>
-                <td className="py-3 text-right tabular-nums text-ink">
-                  {a.solo}
-                </td>
-                <td className="py-3 pr-4 text-right font-semibold tabular-nums text-ink">
-                  {estimateWaitMin(a)} min{stale ? '*' : ''}
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+    <Body className="bg-page/70">
+      <div className="p-3">
+        <BestVenue arcade={best} onOpen={onOpen} />
 
-      <div className="flex items-start gap-1.5 px-4 py-3">
-        <p className="text-xs text-ink-muted">
-          <b className="text-ink">Best</b> is the shortest wait, not the
-          shortest queue.
-          {anyStale && ' * older than 15 min, shown but not ranked.'}
-        </p>
-        <Info >
-          Wait is queue load divided by machines, so a venue with more people
-          waiting can still be the faster choice if it runs more cabinets.
-          Anything last confirmed over {STALE_AFTER_MIN} minutes ago is marked
-          stale and left out of the ranking.
-        </Info>
+        {others.length > 0 && (
+          <section className="mt-4" aria-labelledby="other-options">
+            <div className="mb-2 flex items-end justify-between px-0.5">
+              <div>
+                <h2 id="other-options" className="font-display text-sm font-semibold text-ink">
+                  Other good options
+                </h2>
+                <p className="text-[11px] text-ink-muted">
+                  Swipe across, then open one to check the full queue.
+                </p>
+              </div>
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-subtle">
+                {sort === 'wait' ? 'Fast first' : 'Near first'}
+              </span>
+            </div>
+
+            <div className="no-scrollbar -mx-3 flex snap-x gap-2.5 overflow-x-auto px-3 pb-1">
+              {others.map((arcade) => (
+                <VenueCard key={arcade.id} arcade={arcade} onOpen={onOpen} />
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </Body>
   )
 }
 
-function Th({ children, className = '' }) {
+function BestVenue({ arcade, onOpen }) {
+  const wait = estimateWaitMin(arcade)
+  const friends = presentAt(arcade.id)
+
   return (
-    <th
-      className={`py-2 text-xs font-semibold uppercase tracking-wide text-ink-muted ${className}`}
+    <button
+      type="button"
+      onClick={() => onOpen(arcade.id)}
+      className="group relative w-full overflow-hidden rounded-3xl bg-gradient-to-br from-brand-700 via-brand-600 to-[#7c3aed] p-4 text-left text-white shadow-xl shadow-brand-600/20 transition-transform duration-200 active:scale-[0.98]"
     >
-      {children}
-    </th>
+      <span className="absolute -right-10 -top-12 h-36 w-36 rounded-full border-[22px] border-white/10" />
+      <span className="absolute -bottom-14 left-10 h-28 w-28 rounded-full border-[18px] border-white/5" />
+
+      <span className="relative flex items-start justify-between gap-3">
+        <span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em]">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="anim-ring absolute inline-flex h-full w-full rounded-full bg-white" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
+            </span>
+            Fastest now
+          </span>
+          <span className="mt-3 block max-w-[220px] font-display text-xl font-bold leading-tight">
+            {arcade.name}
+          </span>
+          <span className="mt-1 block text-xs text-white/75">
+            {arcade.game} · {arcade.suburb}
+          </span>
+        </span>
+
+        <span className="flex h-20 w-20 flex-none flex-col items-center justify-center rounded-full border border-white/20 bg-white/10 shadow-inner backdrop-blur">
+          <span className="font-display text-2xl font-bold tabular-nums">{wait}</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-white/75">
+            min wait
+          </span>
+        </span>
+      </span>
+
+      <span className="relative mt-4 grid grid-cols-3 gap-2">
+        <HeroMetric label="Queue" value={arcade.queue} />
+        <HeroMetric label="Cabinets" value={arcade.cabinets} />
+        <HeroMetric label="Away" value={`${arcade.distanceKm.toFixed(1)} km`} />
+      </span>
+
+      <span className="relative mt-3 flex items-center justify-between rounded-2xl bg-white/10 px-3 py-2.5">
+        <span className="flex min-w-0 items-center gap-2">
+          {friends.length > 0 ? (
+            <span className="flex -space-x-2">
+              {friends.slice(0, 3).map((friend) => (
+                <Avatar
+                  key={friend.handle}
+                  handle={friend.handle}
+                  size={24}
+                  className="ring-2 ring-brand-600"
+                  live
+                />
+              ))}
+            </span>
+          ) : (
+            <Clock size={16} />
+          )}
+          <span className="truncate text-xs font-medium text-white/90">
+            {friends.length > 0
+              ? `${friends.map((friend) => friend.handle).join(', ')} here now`
+              : freshnessLabel(arcade)}
+          </span>
+        </span>
+        <span className="ml-2 inline-flex flex-none items-center gap-1 text-xs font-bold">
+          Open <Chevron size={14} />
+        </span>
+      </span>
+    </button>
+  )
+}
+
+function HeroMetric({ label, value }) {
+  return (
+    <span className="rounded-xl border border-white/10 bg-black/10 px-2 py-2">
+      <span className="block font-display text-sm font-bold tabular-nums">{value}</span>
+      <span className="block text-[10px] text-white/65">{label}</span>
+    </span>
+  )
+}
+
+function VenueCard({ arcade, onOpen }) {
+  const wait = estimateWaitMin(arcade)
+  const stale = isStale(arcade)
+  const friends = presentAt(arcade.id)
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(arcade.id)}
+      className="w-[252px] flex-none snap-start rounded-2xl border border-line bg-surface p-3 text-left shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-md active:translate-y-0"
+    >
+      <span className="flex items-start gap-2">
+        <span
+          className="mt-0.5 flex h-9 w-9 flex-none items-center justify-center rounded-xl"
+          style={{ backgroundColor: `${arcade.gameColor}18`, color: arcade.gameColor }}
+        >
+          <GameDot color={arcade.gameColor} className="h-3 w-3" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-display text-sm font-semibold text-ink">
+            {arcade.short}
+          </span>
+          <span className="block truncate text-[11px] text-ink-muted">{arcade.suburb}</span>
+        </span>
+        {stale ? <StaleBadge /> : <LiveBadge label="live" />}
+      </span>
+
+      <span className="mt-3 grid grid-cols-3 divide-x divide-line rounded-xl bg-sunken py-2">
+        <CardMetric label="Wait" value={`${wait}m`} />
+        <CardMetric label="Queue" value={arcade.queue} />
+        <CardMetric label="Away" value={`${arcade.distanceKm.toFixed(1)} km`} />
+      </span>
+
+      <span className="mt-3 flex items-center justify-between">
+        <span className="flex items-center gap-1.5 text-[11px] text-ink-muted">
+          {friends.length > 0 ? (
+            <>
+              <span className="flex -space-x-1.5">
+                {friends.slice(0, 2).map((friend) => (
+                  <Avatar key={friend.handle} handle={friend.handle} size={20} live />
+                ))}
+              </span>
+              {friends.length} here
+            </>
+          ) : (
+            freshnessLabel(arcade)
+          )}
+        </span>
+        <Chevron size={15} />
+      </span>
+    </button>
+  )
+}
+
+function CardMetric({ label, value }) {
+  return (
+    <span className="text-center">
+      <span className="block font-display text-sm font-bold tabular-nums text-ink">{value}</span>
+      <span className="block text-[9px] uppercase tracking-wide text-ink-subtle">{label}</span>
+    </span>
+  )
+}
+
+function CompareView({ arcades, onOpen }) {
+  const bestId = bestArcadeId(arcades)
+  const maxWait = Math.max(...arcades.map(estimateWaitMin), 1)
+  const anyStale = arcades.some(isStale)
+  const rows = [...arcades].sort((a, b) => estimateWaitMin(a) - estimateWaitMin(b))
+
+  return (
+    <Body className="bg-page/70 p-3">
+      <section className="rounded-2xl border border-line bg-surface p-3 shadow-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="font-display text-sm font-semibold text-ink">Time against travel</h2>
+            <p className="mt-0.5 text-[11px] leading-snug text-ink-muted">
+              A longer trip may still get you playing sooner.
+            </p>
+          </div>
+          <Info>
+            Fresh reports are ranked by estimated wait. Reports older than{' '}
+            {STALE_AFTER_MIN} minutes stay visible, but they cannot be the best option.
+          </Info>
+        </div>
+
+        <div className="mt-3 space-y-2.5">
+          {rows.map((arcade) => (
+            <CompareCard
+              key={arcade.id}
+              arcade={arcade}
+              best={arcade.id === bestId}
+              maxWait={maxWait}
+              onOpen={onOpen}
+            />
+          ))}
+        </div>
+      </section>
+
+      <div className="mt-3 flex items-start gap-2 rounded-2xl border border-brand-200 bg-brand-50 p-3">
+        <div className="mt-0.5 flex h-8 w-8 flex-none items-center justify-center rounded-full bg-brand-600 text-white">
+          <Clock size={15} />
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-brand-700">Why the shortest queue can lose</p>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-ink-muted">
+            More cabinets move several groups at once. That can make a busy arcade the quicker
+            choice.
+            {anyStale && ' One report is old, so check it before travelling.'}
+          </p>
+        </div>
+      </div>
+    </Body>
+  )
+}
+
+function CompareCard({ arcade, best, maxWait, onOpen }) {
+  const wait = estimateWaitMin(arcade)
+  const stale = isStale(arcade)
+  const friends = presentAt(arcade.id)
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(arcade.id)}
+      className={`w-full rounded-2xl border p-3 text-left transition-all duration-150 hover:border-brand-200 active:scale-[0.99] ${
+        best ? 'border-brand-200 bg-brand-50' : 'border-line bg-surface'
+      }`}
+    >
+      <span className="flex items-center gap-2">
+        <GameDot color={arcade.gameColor} className="h-2.5 w-2.5" />
+        <span className="min-w-0 flex-1 truncate text-xs font-semibold text-ink">
+          {arcade.short}
+        </span>
+        {best && <BestBadge />}
+        {stale && <StaleBadge />}
+      </span>
+
+      <span className="mt-2.5 flex items-end gap-3">
+        <span className="min-w-0 flex-1">
+          <span className="mb-1 flex items-center justify-between text-[10px] text-ink-muted">
+            <span>
+              {arcade.queue} groups · {arcade.cabinets} cabs
+            </span>
+            <span>{arcade.distanceKm.toFixed(1)} km away</span>
+          </span>
+          <span className="block h-2 overflow-hidden rounded-full bg-line">
+            <span
+              className={`block h-full rounded-full ${stale ? 'bg-stale' : 'bg-brand-500'}`}
+              style={{ width: `${Math.max(12, (wait / maxWait) * 100)}%` }}
+            />
+          </span>
+        </span>
+        <span className="w-12 text-right">
+          <span className="block font-display text-lg font-bold leading-none tabular-nums text-ink">
+            {stale ? '~' : ''}{wait}
+          </span>
+          <span className="text-[9px] uppercase tracking-wide text-ink-subtle">min</span>
+        </span>
+      </span>
+
+      <span className="mt-2 flex items-center justify-between text-[10px] text-ink-muted">
+        <span className="inline-flex items-center gap-1">
+          {friends.length > 0 ? <Users size={12} /> : <Clock size={12} />}
+          {friends.length > 0
+            ? `${friends.length} ${friends.length === 1 ? 'friend' : 'friends'} here`
+            : freshnessLabel(arcade)}
+        </span>
+        <span className="inline-flex items-center gap-0.5 font-semibold text-ink">
+          Details <Chevron size={12} />
+        </span>
+      </span>
+    </button>
   )
 }

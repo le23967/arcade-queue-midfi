@@ -7,7 +7,7 @@ problem underneath the queue, which is connection. The app still tracks queues,
 but the point of it is getting people to the same cabinet at the same time.
 
 Built from the lo-fi workflow in `Fig3_LoFi_Prototype_Workflow.jpg`, three field
-interviews at Sydney arcades, and Week 6 consultation feedback.
+interviews at Sydney arcades, and a review of the early prototype.
 
 ```bash
 npm install
@@ -99,13 +99,13 @@ person standing next to you can be invisible on the tool you use today.
 
 ### Who is out, on a map
 
-Players told us they care about *"seeing where your friends are and all of
-that"*. Consultation feedback pushed this further and asked for a map with
-people on it, not just a list.
+Players wanted an easy way to know when friends were already at an arcade. A
+map makes that information useful without adding another presence list.
 
-So the Circle tab opens on a map. Friends show as avatars, venues as pins. You
-can pinch to zoom on a trackpad, drag to pan, and tap a pin to enter the venue.
-Tapping a friend brings up a card with Join them and Message on it.
+So the Circle tab opens on a real map. Friends show as avatars and venues show
+as pins. You can drag, scroll, pinch or use the zoom buttons. The map can move
+beyond central Sydney. Tapping a friend opens useful next steps, while tapping
+a venue opens its queue details.
 
 ### Activity, which answers a different question
 
@@ -209,7 +209,7 @@ Sources: [SEGA maimai DX location finder](https://location.am-all.net/alm/locati
 | Circle, Scores | tab | Uncapped leaderboard with the 20 favourite limit drawn on it. |
 | Watch | tab | Clips from people you follow, with your queue position pinned above. |
 | Comments | modal | Comment thread on a clip. |
-| Arcades, List and Compare | tab | Queue, distance, wait and report age, plus the compare table. |
+| Arcades, Discover and Compare | tab | Recommends the quickest venue, then shows wait and travel trade-offs. |
 | Detail | `detail` | Venue stats, an expandable queue, and one primary action. |
 | Check-In | `checkin` | QR, NFC or Manual. |
 | Scan | `scan` | Cabinet placeholder, simulates a scan. |
@@ -222,7 +222,7 @@ Sources: [SEGA maimai DX location finder](https://location.am-all.net/alm/locati
 | Liked clips | `liked` | Clips you saved, reachable from Me. |
 | Followers and Following | `follows` | Who can see you, and who you can see. |
 | Directions | modal | Hands off to Apple Maps or Google Maps. |
-| Me | tab | Profile, counts, visibility and privacy. |
+| Me | tab | Player dashboard, progress, favourites, visibility and privacy. |
 
 Screens 1 to 8 from the lo-fi sheet all still run end to end. The current screen
 name prints under the phone frame so the prototype can be reviewed next to the
@@ -232,20 +232,16 @@ The tab bar is Circle, Watch, Arcades, Me. The lo-fi sheet had Home, Compare,
 Maps and Me. Home and Compare merged into Arcades. Watch and Circle were added
 for the social layer. People come first because the project is about connection.
 
-Maps is no longer its own tab. As a venue directory it just repeated the list.
-Consultation feedback asked for a map with people on it, which is a view of the
-community rather than a second directory, so it lives inside Circle. Real
-routing still hands off to the phone. Players choose a venue while they are
-already moving, so at that point they want live transit, and the phone does that
-properly.
+Maps is no longer its own tab. A venue directory would repeat Arcades, while a
+map of friends and venues belongs with the community tools in Circle. Route
+planning still hands off to the phone, where live traffic and transit data are
+available.
 
 ## Fidelity
 
-Week 6 consultation feedback reset what this stage should be. Mid-fidelity is
-meant to carry colour, type, motion and depth. It is the stage where a design
-starts to look like the finished product, while high fidelity is where it also
-behaves like one. An earlier pass suppressed all four, and the prototype read as
-a wireframe because of it. That suppression is gone.
+The current pass adds enough visual detail to test the experience, not only the
+screen order. Colour, type, motion and depth now help users read status and find
+the next action.
 
 - **Colour.** An indigo brand colour for primary actions, semantic colours for
   fresh, stale and live, and one hue per game. Game colour is used on dots, bars
@@ -256,8 +252,8 @@ a wireframe because of it. That suppression is gone.
   and live dots pulse. Everything is short and all of it turns off under
   `prefers-reduced-motion`.
 - **Depth.** Elevation separates sheets, the tab bar and map pins from the page.
-- **Assets.** Still no photography. The map and the clip frame are drawn, and
-  avatars are generated from the handle, so the repo ships no image files.
+- **Assets.** The map uses OpenStreetMap tiles. Clip artwork is generated from
+  the score data, and avatars are generated from each handle.
 - **Text.** One short line of helper text per screen at most. Longer explanations
   sit behind a `?` tooltip, which measures itself against the frame and flips
   side so it cannot get clipped. Each screen also says in one line what it is
@@ -267,7 +263,7 @@ a wireframe because of it. That suppression is gone.
 
 | Where | What |
 | --- | --- |
-| `src/data.js` | Venues, per game queues, map positions |
+| `src/data.js` | Venues, per game queues and map coordinates |
 | `src/social.js` | People, clips, activity, planned sessions |
 | `src/lib/queue.js` | Wait model, staleness, queue roster, venue resolvers |
 | `src/lib/social.js` | Leaderboard, presence, follows, formatting |

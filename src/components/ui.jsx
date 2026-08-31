@@ -1,4 +1,5 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useId, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 /* Shared primitives.
 
@@ -33,8 +34,6 @@ export function TopBar({ title, subtitle, onBack, right }) {
         <h1 className="truncate font-display text-[17px] font-semibold tracking-tight text-ink">
           {title}
         </h1>
-        {/* Consultation feedback asked that every feature state what it is for.
-            This line is where each screen answers that. */}
         {subtitle && (
           <p className="truncate text-[11px] leading-tight text-ink-muted">{subtitle}</p>
         )}
@@ -96,9 +95,7 @@ export function SecondaryButton({ children, className = '', ...rest }) {
   )
 }
 
-/* A compact action that ends a piece of information in something you can do.
-   Consultation feedback: knowing where people are is not engagement unless it
-   leads somewhere. */
+/* A compact action for short, contextual tasks. */
 export function ActionButton({ children, className = '', icon, ...rest }) {
   return (
     <button
@@ -152,9 +149,8 @@ export function GameDot({ color, className = '' }) {
   )
 }
 
-/* Consultation feedback asked for an icon or an avatar rather than a plain
-   clickable name. Deterministic from the handle, so the same person is the
-   same colour everywhere. */
+/* Avatar colours are deterministic, so a player stays recognisable across
+   screens without adding image files to the prototype. */
 const AVATAR_HUES = [
   ['#eef2ff', '#4338ca'],
   ['#fff1f2', '#be123c'],
@@ -198,32 +194,111 @@ export function Avatar({ handle = '?', size = 36, live = false, className = '' }
 
 export function Info({ children, label = 'More information', above = false }) {
   const [open, setOpen] = useState(false)
-  const [alignRight, setAlignRight] = useState(false)
+  const [position, setPosition] = useState(null)
   const ref = useRef(null)
+  const popupRef = useRef(null)
+  const closeTimer = useRef(null)
+  const tooltipId = useId()
 
-  /* The popup is anchored to a 16px button, so on a 390px frame it can hang
-     off the edge and get clipped by the scroll container. Measure on open and
-     flip the side rather than hand-tuning an alignment prop per call site. */
+  function cancelClose() {
+    if (closeTimer.current) window.clearTimeout(closeTimer.current)
+    closeTimer.current = null
+  }
+
+  function show() {
+    cancelClose()
+    setOpen(true)
+  }
+
+  function hideSoon() {
+    cancelClose()
+    closeTimer.current = window.setTimeout(() => setOpen(false), 100)
+  }
+
+  /* Place the tooltip inside the phone frame but above its scroll areas. */
   useLayoutEffect(() => {
-    if (!open || !ref.current) return
+    if (!open || !ref.current || !popupRef.current) return undefined
     const frame = ref.current.closest('[data-frame]')
-    if (!frame) return
-    const t = ref.current.getBoundingClientRect()
-    const f = frame.getBoundingClientRect()
-    setAlignRight(t.left + TOOLTIP_WIDTH > f.right - EDGE_GUTTER)
-  }, [open])
+    if (!frame) return undefined
+
+    function place() {
+      const trigger = ref.current?.getBoundingClientRect()
+      const popup = popupRef.current?.getBoundingClientRect()
+      const bounds = frame.getBoundingClientRect()
+      if (!trigger || !popup) return
+
+      const useAbove = above || trigger.bottom + popup.height + 12 > bounds.bottom
+      const left = Math.min(
+        Math.max(trigger.left, bounds.left + EDGE_GUTTER),
+        bounds.right - TOOLTIP_WIDTH - EDGE_GUTTER
+      )
+      const rawTop = useAbove ? trigger.top - popup.height - 8 : trigger.bottom + 8
+      const top = Math.min(
+        Math.max(rawTop, bounds.top + EDGE_GUTTER),
+        bounds.bottom - popup.height - EDGE_GUTTER
+      )
+      const arrowLeft = Math.min(
+        Math.max(trigger.left + trigger.width / 2 - left - 5, 8),
+        TOOLTIP_WIDTH - 18
+      )
+
+      setPosition({ left, top, above: useAbove, arrowLeft })
+    }
+
+    place()
+    window.addEventListener('resize', place)
+    document.addEventListener('scroll', place, true)
+    return () => {
+      window.removeEventListener('resize', place)
+      document.removeEventListener('scroll', place, true)
+    }
+  }, [above, open])
+
+  const tooltip = open
+    ? createPortal(
+        <span
+          ref={popupRef}
+          id={tooltipId}
+          role="tooltip"
+          onMouseEnter={show}
+          onMouseLeave={hideSoon}
+          style={{
+            width: TOOLTIP_WIDTH,
+            left: position?.left ?? 0,
+            top: position?.top ?? 0,
+            visibility: position ? 'visible' : 'hidden',
+          }}
+          className="anim-row fixed z-[100] rounded-xl border border-line bg-surface p-2.5 text-xs font-normal leading-relaxed text-ink-muted shadow-xl"
+        >
+          <span
+            style={{ left: position?.arrowLeft ?? 8 }}
+            className={`absolute h-2.5 w-2.5 rotate-45 border-line bg-surface ${
+              position?.above
+                ? '-bottom-[5px] border-b border-r'
+                : '-top-[5px] border-l border-t'
+            }`}
+          />
+          {children}
+        </span>,
+        document.body
+      )
+    : null
 
   return (
-    <span ref={ref} className="relative inline-flex align-middle">
+    <span
+      ref={ref}
+      onMouseEnter={show}
+      onMouseLeave={hideSoon}
+      className="relative inline-flex align-middle"
+    >
       <button
         type="button"
         aria-label={label}
+        aria-describedby={open ? tooltipId : undefined}
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
+        onFocus={show}
+        onBlur={hideSoon}
         className={`flex h-[17px] w-[17px] flex-none items-center justify-center rounded-full border text-[10px] font-bold leading-none transition-colors duration-150 ${
           open
             ? 'border-brand-600 bg-brand-600 text-white'
@@ -232,23 +307,7 @@ export function Info({ children, label = 'More information', above = false }) {
       >
         ?
       </button>
-
-      {open && (
-        <span
-          role="tooltip"
-          style={{ width: TOOLTIP_WIDTH }}
-          className={`anim-row absolute z-30 rounded-xl border border-line bg-surface p-2.5 text-xs font-normal leading-relaxed text-ink-muted shadow-xl ${
-            above ? 'bottom-7' : 'top-7'
-          } ${alignRight ? 'right-0' : 'left-0'}`}
-        >
-          <span
-            className={`absolute h-2.5 w-2.5 rotate-45 border-line bg-surface ${
-              above ? '-bottom-[5px] border-b border-r' : '-top-[5px] border-l border-t'
-            } ${alignRight ? 'right-2' : 'left-2'}`}
-          />
-          {children}
-        </span>
-      )}
+      {tooltip}
     </span>
   )
 }

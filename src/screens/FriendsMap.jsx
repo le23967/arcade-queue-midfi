@@ -1,219 +1,261 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
+import L from 'leaflet'
+import { MapContainer, Marker, TileLayer } from 'react-leaflet'
+import 'leaflet/dist/leaflet.css'
 import { Avatar, GameDot, PrimaryButton, Chip } from '../components/ui.jsx'
-import { Plus, Minus, Users, Clock } from '../components/Icons.jsx'
+import { Plus, Minus, Users, Clock, Pin } from '../components/Icons.jsx'
 import { ME_MAP } from '../data.js'
 import { estimateWaitMin, isStale, freshnessLabel } from '../lib/queue.js'
 import { presentFriends } from '../lib/social.js'
-import MapCanvas from './MapCanvas.jsx'
 
-/* Map view.
+const MAP_CENTRE = [-33.88015, 151.20335]
+const START_ZOOM = 15
+const MIN_ZOOM = 2
+const MAX_ZOOM = 19
 
-   Consultation feedback asked for the people to be visible on a map rather
-   than only in a list: friends as avatars, venues as pins, the map zoomable,
-   and the venues enterable from it. It serves the interview request for
-   "seeing where your friends are and all of that" better than a list does.
+const AVATAR_HUES = [
+  ['#eef2ff', '#4338ca'],
+  ['#fff1f2', '#be123c'],
+  ['#ecfdf5', '#047857'],
+  ['#fff7ed', '#c2410c'],
+  ['#f5f3ff', '#6d28d9'],
+  ['#ecfeff', '#0e7490'],
+  ['#fefce8', '#a16207'],
+]
 
-   The list that used to sit under the map has gone. It repeated the pins and
-   left the map too short to read, and a map you cannot move is just a picture.
-   The space it freed goes to the map itself and to a card that carries the
-   action, so tapping a pin ends in going somewhere rather than in a fact.
+const HTML_ESCAPES = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#039;',
+}
 
-   Zoom works the way a Mac user expects: pinch on the trackpad, two finger
-   scroll to pan, drag to pan, and buttons for anyone without a trackpad. */
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (character) => HTML_ESCAPES[character])
+}
 
-const MIN_SCALE = 1
-const MAX_SCALE = 4
+function hueFor(handle) {
+  let value = 0
+  for (let index = 0; index < handle.length; index += 1) {
+    value = (value * 31 + handle.charCodeAt(index)) >>> 0
+  }
+  return AVATAR_HUES[value % AVATAR_HUES.length]
+}
 
-const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
+function makeVenueIcon(arcade, active) {
+  const wait = estimateWaitMin(arcade)
+  const label = escapeHtml(arcade.short)
+  const ariaLabel = escapeHtml(`${arcade.short}, about ${wait} minutes wait`)
+  const dot = active ? 'rgba(255,255,255,0.85)' : arcade.gameColor
+
+  return L.divIcon({
+    className: 'map-venue-marker',
+    iconSize: [140, 58],
+    iconAnchor: [70, 22],
+    html: `
+      <button type="button" class="map-marker-button" aria-label="${ariaLabel}" style="width:140px;display:flex;flex-direction:column;align-items:center;border:0;background:transparent;padding:0;color:inherit;cursor:pointer;font:inherit;">
+        <span class="map-venue-pill" style="display:flex;align-items:center;gap:6px;border:${active ? '0' : '1px solid var(--line)'};border-radius:999px;background:${active ? 'var(--brand-600)' : 'var(--surface)'};padding:6px 12px 6px 9px;color:${active ? '#fff' : 'var(--ink)'};box-shadow:0 8px 20px rgba(24,24,27,0.18);transition:transform 150ms ease,background 150ms ease;">
+          <span style="width:8px;height:8px;flex:none;border-radius:999px;background:${dot};"></span>
+          <span style="white-space:nowrap;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;">${isStale(arcade) ? '~' : ''}${wait}m</span>
+        </span>
+        <span style="margin-top:4px;max-width:136px;overflow:hidden;border-radius:4px;background:rgba(255,255,255,0.86);padding:1px 4px;color:${active ? 'var(--brand-700)' : 'var(--ink-muted)'};font-size:9px;font-weight:700;letter-spacing:0.04em;line-height:13px;text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap;">${label}</span>
+      </button>
+    `,
+  })
+}
+
+function makeFriendIcon(player, arcade, index, count) {
+  const [background, colour] = hueFor(player.handle)
+  const initials =
+    player.handle.replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || '?'
+  const offset = (index - (count - 1) / 2) * 25
+  const ariaLabel = escapeHtml(`${player.handle}, at ${arcade.short}`)
+
+  return L.divIcon({
+    className: 'map-friend-marker',
+    iconSize: [32, 32],
+    iconAnchor: [16 - offset, 55],
+    html: `
+      <button type="button" class="map-marker-button map-avatar" aria-label="${ariaLabel}" style="position:relative;display:flex;width:32px;height:32px;align-items:center;justify-content:center;border:2px solid #fff;border-radius:999px;background:${background};padding:0;color:${colour};box-shadow:0 4px 12px rgba(24,24,27,0.2);cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;transition:transform 150ms ease;">
+        ${escapeHtml(initials)}
+        <span style="position:absolute;right:-2px;bottom:-2px;width:10px;height:10px;border:2px solid #fff;border-radius:999px;background:var(--fresh);"></span>
+      </button>
+    `,
+  })
+}
+
+const YOU_ICON = L.divIcon({
+  className: 'map-you-marker',
+  iconSize: [58, 38],
+  iconAnchor: [29, 8],
+  html: `
+    <div aria-label="Your location" style="display:flex;width:58px;flex-direction:column;align-items:center;">
+      <span style="position:relative;display:flex;width:16px;height:16px;">
+        <span class="anim-ring" style="position:absolute;width:16px;height:16px;border-radius:999px;background:var(--brand-500);"></span>
+        <span style="position:relative;width:16px;height:16px;border:3px solid #fff;border-radius:999px;background:var(--brand-600);box-shadow:0 2px 6px rgba(24,24,27,0.25);"></span>
+      </span>
+      <span style="margin-top:3px;border-radius:4px;background:rgba(255,255,255,0.88);padding:1px 4px;color:var(--brand-700);font-size:9px;font-weight:700;letter-spacing:0.04em;line-height:13px;text-transform:uppercase;white-space:nowrap;">You</span>
+    </div>
+  `,
+})
 
 export default function FriendsMap({ arcades, onOpenPlayer, onOpenArcade, onMessage }) {
-  const [view, setView] = useState({ scale: 1, x: 0, y: 0 })
+  const [map, setMap] = useState(null)
   const [selected, setSelected] = useState(null)
-  const [dragging, setDragging] = useState(false)
-  const boxRef = useRef(null)
-  const drag = useRef(null)
-
+  const [tileState, setTileState] = useState('loading')
+  const tileFailed = useRef(false)
   const here = presentFriends()
 
-  /* Keep the map from being dragged off screen: at scale 1 it cannot move, and
-     past that it can move by however much it overflows. */
-  const clampPan = useCallback((next) => {
-    const el = boxRef.current
-    if (!el) return next
-    const { width, height } = el.getBoundingClientRect()
-    const slackX = (width * (next.scale - 1)) / 2
-    const slackY = (height * (next.scale - 1)) / 2
-    return {
-      ...next,
-      x: clamp(next.x, -slackX, slackX),
-      y: clamp(next.y, -slackY, slackY),
-    }
-  }, [])
-
-  const zoomAt = useCallback(
-    (factor, cx, cy) => {
-      setView((v) => {
-        const el = boxRef.current
-        if (!el) return v
-        const rect = el.getBoundingClientRect()
-        const px = cx ?? rect.width / 2
-        const py = cy ?? rect.height / 2
-        const scale = clamp(v.scale * factor, MIN_SCALE, MAX_SCALE)
-        /* Keep whatever is under the cursor under the cursor. */
-        const originX = rect.width / 2 + v.x
-        const originY = rect.height / 2 + v.y
-        const k = scale / v.scale
-        return clampPan({
-          scale,
-          x: v.x + (px - originX) * (1 - k),
-          y: v.y + (py - originY) * (1 - k),
-        })
-      })
-    },
-    [clampPan]
+  const tileHandlers = useMemo(
+    () => ({
+      loading() {
+        tileFailed.current = false
+        setTileState('loading')
+      },
+      load() {
+        setTileState(tileFailed.current ? 'error' : 'ready')
+      },
+      tileerror() {
+        tileFailed.current = true
+        setTileState('error')
+      },
+    }),
+    []
   )
-
-  /* Attached by hand rather than through onWheel, because the listener has to
-     be non passive to stop the browser zooming the whole page on a pinch. */
-  useEffect(() => {
-    const el = boxRef.current
-    if (!el) return
-
-    function onWheel(e) {
-      e.preventDefault()
-      const rect = el.getBoundingClientRect()
-      const cx = e.clientX - rect.left
-      const cy = e.clientY - rect.top
-
-      // macOS sends a pinch as a wheel event with ctrlKey set.
-      if (e.ctrlKey || e.metaKey) {
-        zoomAt(Math.exp(-e.deltaY * 0.01), cx, cy)
-      } else {
-        setView((v) =>
-          v.scale === 1 ? v : clampPan({ ...v, x: v.x - e.deltaX, y: v.y - e.deltaY })
-        )
-      }
-    }
-
-    el.addEventListener('wheel', onWheel, { passive: false })
-    return () => el.removeEventListener('wheel', onWheel)
-  }, [zoomAt, clampPan])
-
-  function onPointerDown(e) {
-    if (view.scale === 1) return
-    drag.current = { pointerX: e.clientX, pointerY: e.clientY, x: view.x, y: view.y }
-    setDragging(true)
-    e.currentTarget.setPointerCapture(e.pointerId)
-  }
-
-  function onPointerMove(e) {
-    const d = drag.current
-    if (!d) return
-    setView((v) =>
-      clampPan({
-        ...v,
-        x: d.x + (e.clientX - d.pointerX),
-        y: d.y + (e.clientY - d.pointerY),
-      })
-    )
-  }
-
-  function endDrag() {
-    drag.current = null
-    setDragging(false)
-  }
 
   const friendCard = selected?.kind === 'friend' ? selected.player : null
   const venueCard =
-    selected?.kind === 'venue' ? arcades.find((a) => a.id === selected.id) : null
+    selected?.kind === 'venue' ? arcades.find((arcade) => arcade.id === selected.id) : null
+
+  function recentre() {
+    if (!map) return
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    map.setView(MAP_CENTRE, START_ZOOM, { animate: !reduceMotion })
+  }
 
   return (
-    <div className="relative flex-1 overflow-hidden">
-      <div
-        ref={boxRef}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
-        className={`absolute inset-0 touch-none overflow-hidden ${
-          view.scale > 1 ? 'cursor-grab active:cursor-grabbing' : ''
-        }`}
+    <div className="arcade-map relative min-h-0 flex-1 overflow-hidden bg-[#e9e6df]">
+      <style>{`
+        .arcade-map .leaflet-container { font-family: inherit; }
+        .arcade-map .map-marker-button:focus-visible {
+          outline: 3px solid var(--brand-600);
+          outline-offset: 2px;
+        }
+        .arcade-map .map-marker-button:hover .map-venue-pill,
+        .arcade-map .map-avatar:hover { transform: translateY(-1px) scale(1.04); }
+        .arcade-map .map-marker-button:active .map-venue-pill,
+        .arcade-map .map-avatar:active { transform: scale(0.96); }
+        .arcade-map .leaflet-control-attribution {
+          background: rgba(255,255,255,0.82);
+          font-size: 9px;
+          padding: 1px 5px;
+          border-radius: 6px 0 0 0;
+          color: var(--ink-subtle);
+        }
+        .arcade-map .leaflet-control-attribution a { color: var(--ink-muted); }
+      `}</style>
+
+      <MapContainer
+        ref={setMap}
+        center={MAP_CENTRE}
+        zoom={START_ZOOM}
+        minZoom={MIN_ZOOM}
+        maxZoom={MAX_ZOOM}
+        zoomControl={false}
+        scrollWheelZoom
+        worldCopyJump
+        className="h-full w-full"
+        style={{
+          backgroundColor: '#e9e6df',
+          backgroundImage:
+            'linear-gradient(rgba(255,255,255,0.28) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.28) 1px, transparent 1px)',
+          backgroundSize: '32px 32px',
+        }}
       >
-        <div
-          className="absolute inset-0 origin-center will-change-transform"
-          style={{
-            transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
-            transition: dragging ? 'none' : 'transform 180ms var(--ease-out)',
-          }}
-        >
-          <MapCanvas />
+        {/* OpenStreetMap's tile policy requires the credit, so it stays. It is
+            styled down rather than switched off. */}
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          maxNativeZoom={19}
+          eventHandlers={tileHandlers}
+        />
 
-          {arcades.map((a) => (
-            <VenuePin
-              key={a.id}
-              arcade={a}
-              friends={here.filter((p) => p.at === a.id)}
-              scale={view.scale}
-              active={selected?.kind === 'venue' && selected.id === a.id}
-              onPick={() => setSelected({ kind: 'venue', id: a.id })}
-              onPickFriend={(player) => setSelected({ kind: 'friend', player })}
-            />
-          ))}
+        {arcades.map((arcade) => (
+          <VenueMarkers
+            key={arcade.id}
+            arcade={arcade}
+            friends={here.filter((player) => player.at === arcade.id)}
+            active={selected?.kind === 'venue' && selected.id === arcade.id}
+            onPickVenue={() => setSelected({ kind: 'venue', id: arcade.id })}
+            onPickFriend={(player) => setSelected({ kind: 'friend', player })}
+          />
+        ))}
 
-          <YouPin scale={view.scale} />
-        </div>
-      </div>
+        <Marker
+          position={[ME_MAP.lat, ME_MAP.lng]}
+          icon={YOU_ICON}
+          interactive={false}
+          keyboard={false}
+          zIndexOffset={300}
+        />
+      </MapContainer>
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between p-3">
-        <span className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-line bg-surface/90 px-2.5 py-1.5 shadow-sm backdrop-blur">
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-[1000] flex items-start justify-between p-3">
+        <span className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-line bg-surface/95 px-2.5 py-1.5 shadow-sm backdrop-blur">
           <span className="relative flex h-2 w-2">
             <span className="anim-ring absolute inline-flex h-full w-full rounded-full bg-fresh" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-fresh" />
           </span>
-          <span className="text-[11px] font-semibold text-ink">
-            {here.length} out now
-          </span>
+          <span className="text-[11px] font-semibold text-ink">{here.length} out now</span>
         </span>
 
         <span className="pointer-events-auto flex flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-lg">
-          <ZoomButton
-            label="Zoom in"
-            disabled={view.scale >= MAX_SCALE}
-            onClick={() => zoomAt(1.5)}
-          >
+          <ZoomButton label="Zoom in" onClick={() => map?.zoomIn()}>
             <Plus size={16} />
           </ZoomButton>
           <span className="h-px bg-line" />
-          <ZoomButton
-            label="Zoom out"
-            disabled={view.scale <= MIN_SCALE}
-            onClick={() => zoomAt(1 / 1.5)}
-          >
+          <ZoomButton label="Zoom out" onClick={() => map?.zoomOut()}>
             <Minus size={16} />
+          </ZoomButton>
+          <span className="h-px bg-line" />
+          <ZoomButton label="Recentre map" onClick={recentre}>
+            <Pin size={15} />
           </ZoomButton>
         </span>
       </div>
 
-      {view.scale === 1 && (
-        <p className="pointer-events-none absolute inset-x-0 bottom-[132px] text-center text-[10px] font-medium text-ink-subtle">
-          Pinch to zoom, drag to move
-        </p>
+      <a
+        href="https://www.openstreetmap.org/copyright"
+        target="_blank"
+        rel="noreferrer"
+        className="absolute left-3 top-12 z-[1000] rounded bg-surface/90 px-1.5 py-0.5 text-[9px] font-medium text-ink-muted shadow-sm backdrop-blur hover:text-brand-700"
+      >
+        Map data © OpenStreetMap contributors
+      </a>
+
+      {tileState !== 'ready' && (
+        <span
+          role="status"
+          className="pointer-events-none absolute left-3 top-[70px] z-[1000] rounded-full border border-line bg-surface/95 px-2 py-1 text-[10px] font-medium text-ink-muted shadow-sm"
+        >
+          {tileState === 'error' ? 'Map tiles are having trouble loading' : 'Loading map…'}
+        </span>
       )}
 
-      {/* The card is the point of the screen. Tapping anything on the map ends
-          in something you can do, not in a label. */}
-      <div className="absolute inset-x-0 bottom-0 p-3">
+      <div className="absolute inset-x-0 bottom-0 z-[1000] p-3">
         {venueCard ? (
           <VenueCard
             arcade={venueCard}
-            friends={here.filter((p) => p.at === venueCard.id)}
+            friends={here.filter((player) => player.at === venueCard.id)}
             onEnter={() => onOpenArcade(venueCard.id)}
             onClose={() => setSelected(null)}
           />
         ) : friendCard ? (
           <FriendCard
             player={friendCard}
-            arcade={arcades.find((a) => a.id === friendCard.at)}
+            arcade={arcades.find((arcade) => arcade.id === friendCard.at)}
             onJoin={() => onOpenArcade(friendCard.at)}
             onMessage={() => onMessage(friendCard.handle)}
             onProfile={() => onOpenPlayer(friendCard.handle)}
@@ -231,84 +273,50 @@ export default function FriendsMap({ arcades, onOpenPlayer, onOpenArcade, onMess
   )
 }
 
-function VenuePin({ arcade, friends, scale, active, onPick, onPickFriend }) {
-  const wait = estimateWaitMin(arcade)
-  const stale = isStale(arcade)
+function VenueMarkers({ arcade, friends, active, onPickVenue, onPickFriend }) {
+  const venueIcon = useMemo(() => makeVenueIcon(arcade, active), [arcade, active])
+
+  if (!arcade.map?.lat || !arcade.map?.lng) return null
 
   return (
-    <div
-      className="absolute -translate-x-1/2 -translate-y-1/2"
-      style={{ left: `${arcade.map.x * 100}%`, top: `${arcade.map.y * 100}%` }}
-    >
-      <div
-        className="flex flex-col items-center"
-        style={{ transform: `scale(${1 / scale})` }}
-      >
-        {friends.length > 0 && (
-          <div className="mb-1 flex -space-x-2.5">
-            {friends.map((p) => (
-              <button
-                key={p.handle}
-                type="button"
-                onClick={() => onPickFriend(p)}
-                aria-label={`${p.handle}, at ${arcade.short}`}
-                className="rounded-full ring-2 ring-surface transition-transform duration-150 ease-soft hover:z-10 hover:scale-110 active:scale-95"
-              >
-                <Avatar handle={p.handle} size={30} live />
-              </button>
-            ))}
-          </div>
-        )}
-
-        <button
-          type="button"
-          onClick={onPick}
-          aria-label={`${arcade.short}, about ${wait} minutes`}
-          className={`flex items-center gap-1.5 rounded-full py-1.5 pl-2 pr-3 shadow-lg transition-all duration-150 ease-soft hover:scale-105 active:scale-95 ${
-            active
-              ? 'bg-brand-600 text-white ring-4 ring-brand-600/20'
-              : 'border border-line bg-surface text-ink'
-          }`}
-        >
-          {active ? (
-            <span className="h-2 w-2 rounded-full bg-white/80" />
-          ) : (
-            <GameDot color={arcade.gameColor} />
-          )}
-          <span className="whitespace-nowrap font-display text-xs font-bold tabular-nums">
-            {stale ? '~' : ''}
-            {wait}m
-          </span>
-        </button>
-
-        <span
-          className={`mt-1 whitespace-nowrap rounded px-1 text-[9px] font-bold uppercase tracking-wide ${
-            active ? 'text-brand-700' : 'text-ink-muted'
-          }`}
-        >
-          {arcade.short}
-        </span>
-      </div>
-    </div>
+    <>
+      <Marker
+        position={[arcade.map.lat, arcade.map.lng]}
+        icon={venueIcon}
+        keyboard={false}
+        riseOnHover
+        zIndexOffset={active ? 450 : 400}
+        eventHandlers={{ click: onPickVenue }}
+      />
+      {friends.map((player, index) => (
+        <FriendMarker
+          key={player.handle}
+          player={player}
+          arcade={arcade}
+          index={index}
+          count={friends.length}
+          onPick={() => onPickFriend(player)}
+        />
+      ))}
+    </>
   )
 }
 
-function YouPin({ scale }) {
+function FriendMarker({ player, arcade, index, count, onPick }) {
+  const icon = useMemo(
+    () => makeFriendIcon(player, arcade, index, count),
+    [player, arcade, index, count]
+  )
+
   return (
-    <div
-      className="absolute -translate-x-1/2 -translate-y-1/2"
-      style={{ left: `${ME_MAP.x * 100}%`, top: `${ME_MAP.y * 100}%` }}
-    >
-      <div style={{ transform: `scale(${1 / scale})` }} className="flex flex-col items-center">
-        <span className="relative flex h-4 w-4">
-          <span className="anim-ring absolute inline-flex h-full w-full rounded-full bg-brand-500" />
-          <span className="relative inline-flex h-4 w-4 rounded-full border-[3px] border-surface bg-brand-600 shadow" />
-        </span>
-        <span className="mt-1 text-[9px] font-bold uppercase tracking-wide text-brand-700">
-          You
-        </span>
-      </div>
-    </div>
+    <Marker
+      position={[arcade.map.lat, arcade.map.lng]}
+      icon={icon}
+      keyboard={false}
+      riseOnHover
+      zIndexOffset={500 + index}
+      eventHandlers={{ click: onPick }}
+    />
   )
 }
 
@@ -323,29 +331,29 @@ function Card({ children }) {
 function SummaryCard({ friends, arcades, onPick }) {
   return (
     <Card>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <p className="font-display text-sm font-semibold text-ink">
-          {friends.length} in your circle are out
+          {friends.length} friends are out
         </p>
-        <span className="text-[11px] text-ink-subtle">Tap someone to join them</span>
+        <span className="text-right text-[11px] text-ink-subtle">Tap someone to join them</span>
       </div>
       <div className="mt-2.5 flex gap-2">
-        {friends.map((p) => {
-          const at = arcades.find((a) => a.id === p.at)
+        {friends.map((player) => {
+          const arcade = arcades.find((item) => item.id === player.at)
           return (
             <button
-              key={p.handle}
+              key={player.handle}
               type="button"
-              onClick={() => onPick(p)}
+              onClick={() => onPick(player)}
               className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-sunken px-2 py-2 text-left transition-colors duration-150 hover:bg-line/50"
             >
-              <Avatar handle={p.handle} size={30} live />
+              <Avatar handle={player.handle} size={30} live />
               <span className="min-w-0">
                 <span className="block truncate text-xs font-semibold text-ink">
-                  {p.handle}
+                  {player.handle}
                 </span>
                 <span className="block truncate text-[10px] text-ink-muted">
-                  {at?.short}
+                  {arcade?.short}
                 </span>
               </span>
             </button>
@@ -378,25 +386,23 @@ function VenueCard({ arcade, friends, onEnter, onClose }) {
             {arcade.game} &middot; {freshnessLabel(arcade).toLowerCase()}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          className="-mr-1 -mt-1 rounded-full p-1.5 text-ink-subtle transition-colors duration-150 hover:bg-sunken hover:text-ink"
-        >
-          &times;
-        </button>
+        <CloseButton onClick={onClose} />
       </div>
 
       {friends.length > 0 && (
         <div className="mt-2 flex items-center gap-2 rounded-xl bg-fresh-bg px-2.5 py-1.5">
           <span className="flex -space-x-2">
-            {friends.map((p) => (
-              <Avatar key={p.handle} handle={p.handle} size={22} className="ring-2 ring-surface" />
+            {friends.map((player) => (
+              <Avatar
+                key={player.handle}
+                handle={player.handle}
+                size={22}
+                className="ring-2 ring-surface"
+              />
             ))}
           </span>
           <span className="text-[11px] font-medium text-ink">
-            {friends.map((p) => p.handle).join(', ')} here now
+            {friends.map((player) => player.handle).join(', ')} here now
           </span>
         </div>
       )}
@@ -425,21 +431,14 @@ function FriendCard({ player, arcade, onJoin, onMessage, onProfile, onClose }) {
             At {arcade?.short} for {player.sinceMin} min
           </p>
           <div className="mt-1 flex flex-wrap gap-1">
-            {player.games.slice(0, 2).map((g) => (
-              <Chip key={g} tone="quiet">
-                {g}
+            {player.games.slice(0, 2).map((game) => (
+              <Chip key={game} tone="quiet">
+                {game}
               </Chip>
             ))}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          className="-mr-1 -mt-1 rounded-full p-1.5 text-ink-subtle transition-colors duration-150 hover:bg-sunken hover:text-ink"
-        >
-          &times;
-        </button>
+        <CloseButton onClick={onClose} />
       </div>
 
       <div className="mt-2.5 flex gap-2">
@@ -462,16 +461,26 @@ function FriendCard({ player, arcade, onJoin, onMessage, onProfile, onClose }) {
   )
 }
 
-function ZoomButton({ children, label, disabled, onClick }) {
+function CloseButton({ onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Close"
+      className="-mr-1 -mt-1 rounded-full p-1.5 text-ink-subtle transition-colors duration-150 hover:bg-sunken hover:text-ink"
+    >
+      &times;
+    </button>
+  )
+}
+
+function ZoomButton({ children, label, onClick }) {
   return (
     <button
       type="button"
       aria-label={label}
-      disabled={disabled}
       onClick={onClick}
-      className={`flex h-9 w-9 items-center justify-center transition-colors duration-150 ${
-        disabled ? 'text-ink-subtle' : 'text-ink hover:bg-sunken active:bg-line'
-      }`}
+      className="flex h-9 w-9 items-center justify-center text-ink transition-colors duration-150 hover:bg-sunken active:bg-line"
     >
       {children}
     </button>

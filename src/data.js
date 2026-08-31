@@ -59,7 +59,11 @@ export function gameLabel(id) {
    running this app. The rest of the list is filled with unnamed guests, which
    is the honest picture rather than a flattering one.
 
-   `plus: 1` marks a party of two - they hold one machine between them. */
+   `plus: 1` marks a party of two - they hold one machine between them.
+
+   `map` is the venue's real latitude and longitude, used to place it on the
+   map. Presence is still venue level: a pin sits on the building, never on a
+   person's actual position. */
 const q = (cabinets, queue, solo, updatedMinsAgo, updatedAt, roster = []) => ({
   cabinets,
   queue,
@@ -77,7 +81,7 @@ export const ARCADES = [
     suburb: 'Chippendale',
     address: 'Level 2, Central Park Mall, 28 Broadway, Chippendale NSW 2008',
     distanceKm: 0.3,
-    map: { x: 0.20, y: 0.78 },
+    map: { lat: -33.8836, lng: 151.1988 },
     games: {
       maimai: q(2, 7, 2, 2, '12:38 PM', [
         { handle: 'rin_9' },
@@ -97,7 +101,7 @@ export const ARCADES = [
     suburb: 'Haymarket',
     address: 'Level 3, Market City, 9-13 Hay Street, Haymarket NSW 2000',
     distanceKm: 0.7,
-    map: { x: 0.52, y: 0.50 },
+    map: { lat: -33.8794, lng: 151.2035 },
     games: {
       /* Nobody here is on the app, which is exactly why this venue's number is
          41 minutes old. */
@@ -116,7 +120,7 @@ export const ARCADES = [
     suburb: 'Sydney CBD',
     address: '614 George Street, Sydney NSW 2000',
     distanceKm: 1.4,
-    map: { x: 0.80, y: 0.20 },
+    map: { lat: -33.8765, lng: 151.2065 },
     games: {
       maimai: q(5, 10, 4, 6, '12:34 PM', [
         { handle: 'ovo_' },
@@ -132,8 +136,9 @@ export const ARCADES = [
   },
 ]
 
-/* Where you are, for the map. Venue-level only, as everywhere else. */
-export const ME_MAP = { x: 0.12, y: 0.90 }
+/* Where you are, for the map. Venue level only, as everywhere else. This is
+   UTS Broadway, since that is where the interviews were run from. */
+export const ME_MAP = { lat: -33.8832, lng: 151.2006 }
 
 /* The queue ahead of you once you check in. Handles only - players report and
    queue without having to speak to anyone, which matters for the interviewee

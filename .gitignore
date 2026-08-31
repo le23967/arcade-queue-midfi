@@ -7,3 +7,6 @@ dist
 # Participants consented to a university project, not to publication.
 # The findings drawn from them are summarised in README.md instead.
 *.txt
+
+# Course material belongs to the unit, not in a public repo.
+*.pdf
