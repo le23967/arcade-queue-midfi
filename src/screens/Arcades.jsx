@@ -4,13 +4,12 @@ import {
   Body,
   GameDot,
   Info,
-  LiveBadge,
   Screen,
   Seg,
   StaleBadge,
   TopBar,
 } from '../components/ui.jsx'
-import { Chevron, Clock, Users } from '../components/Icons.jsx'
+import { Chevron, Clock } from '../components/Icons.jsx'
 import { GAMES, gameLabel } from '../data.js'
 import {
   bestArcadeId,
@@ -233,7 +232,7 @@ function BestVenue({ arcade, onOpen }) {
             {arcade.name}
           </span>
           <span className="mt-1 block text-xs text-white/75">
-            {arcade.game} · {arcade.suburb}
+            {arcade.game} · <span className="tabular-nums">{arcade.distanceKm.toFixed(1)} km away</span>
           </span>
         </span>
 
@@ -245,13 +244,7 @@ function BestVenue({ arcade, onOpen }) {
         </span>
       </span>
 
-      <span className="relative mt-4 grid grid-cols-3 gap-2">
-        <HeroMetric label="Queue" value={arcade.queue} />
-        <HeroMetric label="Cabinets" value={arcade.cabinets} />
-        <HeroMetric label="Away" value={`${arcade.distanceKm.toFixed(1)} km`} />
-      </span>
-
-      <span className="relative mt-3 flex items-center justify-between rounded-2xl bg-white/10 px-3 py-2.5">
+      <span className="relative mt-4 flex items-center justify-between rounded-2xl bg-white/10 px-3 py-2.5">
         <span className="flex min-w-0 items-center gap-2">
           {friends.length > 0 ? (
             <span className="flex -space-x-2">
@@ -282,15 +275,6 @@ function BestVenue({ arcade, onOpen }) {
   )
 }
 
-function HeroMetric({ label, value }) {
-  return (
-    <span className="rounded-xl border border-white/10 bg-black/10 px-2 py-2">
-      <span className="block font-display text-sm font-bold tabular-nums">{value}</span>
-      <span className="block text-[10px] text-white/65">{label}</span>
-    </span>
-  )
-}
-
 function VenueCard({ arcade, onOpen }) {
   const wait = estimateWaitMin(arcade)
   const stale = isStale(arcade)
@@ -300,64 +284,45 @@ function VenueCard({ arcade, onOpen }) {
     <button
       type="button"
       onClick={() => onOpen(arcade.id)}
-      className="w-[252px] flex-none snap-start rounded-2xl border border-line bg-surface p-3 text-left shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-md active:translate-y-0"
+      className="w-[210px] flex-none snap-start rounded-2xl border border-line bg-surface p-3 text-left shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-md active:translate-y-0"
     >
-      <span className="flex items-start gap-2">
-        <span
-          className="mt-0.5 flex h-9 w-9 flex-none items-center justify-center rounded-xl"
-          style={{ backgroundColor: `${arcade.gameColor}18`, color: arcade.gameColor }}
-        >
-          <GameDot color={arcade.gameColor} className="h-3 w-3" />
+      <span className="flex items-center gap-2">
+        <GameDot color={arcade.gameColor} className="h-2.5 w-2.5" />
+        <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold text-ink">
+          {arcade.short}
         </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate font-display text-sm font-semibold text-ink">
-            {arcade.short}
+        {stale && <StaleBadge />}
+      </span>
+
+      <span className="mt-2 flex items-end justify-between">
+        <span className="text-[11px] text-ink-muted">
+          <span className="tabular-nums">{arcade.distanceKm.toFixed(1)} km</span>
+        </span>
+        <span className="text-right">
+          <span className="block font-display text-2xl font-bold leading-none tabular-nums text-ink">
+            {stale ? '~' : ''}
+            {wait}
           </span>
-          <span className="block truncate text-[11px] text-ink-muted">{arcade.suburb}</span>
+          <span className="text-[9px] uppercase tracking-wide text-ink-subtle">min</span>
         </span>
-        {stale ? <StaleBadge /> : <LiveBadge label="live" />}
       </span>
 
-      <span className="mt-3 grid grid-cols-3 divide-x divide-line rounded-xl bg-sunken py-2">
-        <CardMetric label="Wait" value={`${wait}m`} />
-        <CardMetric label="Queue" value={arcade.queue} />
-        <CardMetric label="Away" value={`${arcade.distanceKm.toFixed(1)} km`} />
-      </span>
-
-      <span className="mt-3 flex items-center justify-between">
-        <span className="flex items-center gap-1.5 text-[11px] text-ink-muted">
-          {friends.length > 0 ? (
-            <>
-              <span className="flex -space-x-1.5">
-                {friends.slice(0, 2).map((friend) => (
-                  <Avatar key={friend.handle} handle={friend.handle} size={20} live />
-                ))}
-              </span>
-              {friends.length} here
-            </>
-          ) : (
-            freshnessLabel(arcade)
-          )}
+      {friends.length > 0 && (
+        <span className="mt-2 flex items-center gap-1.5">
+          <span className="flex -space-x-1.5">
+            {friends.slice(0, 3).map((friend) => (
+              <Avatar key={friend.handle} handle={friend.handle} size={18} live />
+            ))}
+          </span>
+          <span className="text-[11px] text-ink">{friends.length} here</span>
         </span>
-        <Chevron size={15} />
-      </span>
+      )}
     </button>
-  )
-}
-
-function CardMetric({ label, value }) {
-  return (
-    <span className="text-center">
-      <span className="block font-display text-sm font-bold tabular-nums text-ink">{value}</span>
-      <span className="block text-[9px] uppercase tracking-wide text-ink-subtle">{label}</span>
-    </span>
   )
 }
 
 function CompareView({ arcades, onOpen }) {
   const bestId = bestArcadeId(arcades)
-  const maxWait = Math.max(...arcades.map(estimateWaitMin), 1)
-  const anyStale = arcades.some(isStale)
   const rows = [...arcades].sort((a, b) => estimateWaitMin(a) - estimateWaitMin(b))
 
   return (
@@ -371,8 +336,10 @@ function CompareView({ arcades, onOpen }) {
             </p>
           </div>
           <Info>
-            Fresh reports are ranked by estimated wait. Reports older than{' '}
-            {STALE_AFTER_MIN} minutes stay visible, but they cannot be the best option.
+            More cabinets move several groups at once, so a busy arcade can
+            still be the quicker choice. Reports older than {STALE_AFTER_MIN}{' '}
+            minutes stay visible but cannot be the best option, so check one
+            before travelling.
           </Info>
         </div>
 
@@ -382,31 +349,19 @@ function CompareView({ arcades, onOpen }) {
               key={arcade.id}
               arcade={arcade}
               best={arcade.id === bestId}
-              maxWait={maxWait}
               onOpen={onOpen}
             />
           ))}
         </div>
       </section>
-
-      <div className="mt-3 flex items-start gap-2 rounded-2xl border border-brand-200 bg-brand-50 p-3">
-        <div className="mt-0.5 flex h-8 w-8 flex-none items-center justify-center rounded-full bg-brand-600 text-white">
-          <Clock size={15} />
-        </div>
-        <div>
-          <p className="text-xs font-semibold text-brand-700">Why the shortest queue can lose</p>
-          <p className="mt-0.5 text-[11px] leading-relaxed text-ink-muted">
-            More cabinets move several groups at once. That can make a busy arcade the quicker
-            choice.
-            {anyStale && ' One report is old, so check it before travelling.'}
-          </p>
-        </div>
-      </div>
     </Body>
   )
 }
 
-function CompareCard({ arcade, best, maxWait, onOpen }) {
+/* Deliberately sparse. Choosing a venue needs four things: how long, how far,
+   whether friends are there, and whether the number can be trusted. Cabinet
+   counts and exact report ages are a level down, on the detail screen. */
+function CompareCard({ arcade, best, onOpen }) {
   const wait = estimateWaitMin(arcade)
   const stale = isStale(arcade)
   const friends = presentAt(arcade.id)
@@ -415,53 +370,38 @@ function CompareCard({ arcade, best, maxWait, onOpen }) {
     <button
       type="button"
       onClick={() => onOpen(arcade.id)}
-      className={`w-full rounded-2xl border p-3 text-left transition-all duration-150 hover:border-brand-200 active:scale-[0.99] ${
+      className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-all duration-150 hover:border-brand-200 active:scale-[0.99] ${
         best ? 'border-brand-200 bg-brand-50' : 'border-line bg-surface'
       }`}
     >
-      <span className="flex items-center gap-2">
-        <GameDot color={arcade.gameColor} className="h-2.5 w-2.5" />
-        <span className="min-w-0 flex-1 truncate text-xs font-semibold text-ink">
-          {arcade.short}
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-2">
+          <GameDot color={arcade.gameColor} className="h-2.5 w-2.5" />
+          <span className="min-w-0 truncate font-display text-sm font-semibold text-ink">
+            {arcade.short}
+          </span>
+          {best && <BestBadge />}
+          {stale && <StaleBadge />}
         </span>
-        {best && <BestBadge />}
-        {stale && <StaleBadge />}
-      </span>
-
-      <span className="mt-2.5 flex items-end gap-3">
-        <span className="min-w-0 flex-1">
-          <span className="mb-1 flex items-center justify-between text-[10px] text-ink-muted">
-            <span>
-              {arcade.queue} groups · {arcade.cabinets} cabs
+        <span className="mt-1 block text-[11px] text-ink-muted">
+          <span className="tabular-nums">{arcade.distanceKm.toFixed(1)} km</span>
+          {friends.length > 0 && (
+            <span className="text-ink">
+              {' · '}
+              {friends.length} {friends.length === 1 ? 'friend' : 'friends'} here
             </span>
-            <span>{arcade.distanceKm.toFixed(1)} km away</span>
-          </span>
-          <span className="block h-2 overflow-hidden rounded-full bg-line">
-            <span
-              className={`block h-full rounded-full ${stale ? 'bg-stale' : 'bg-brand-500'}`}
-              style={{ width: `${Math.max(12, (wait / maxWait) * 100)}%` }}
-            />
-          </span>
-        </span>
-        <span className="w-12 text-right">
-          <span className="block font-display text-lg font-bold leading-none tabular-nums text-ink">
-            {stale ? '~' : ''}{wait}
-          </span>
-          <span className="text-[9px] uppercase tracking-wide text-ink-subtle">min</span>
+          )}
         </span>
       </span>
 
-      <span className="mt-2 flex items-center justify-between text-[10px] text-ink-muted">
-        <span className="inline-flex items-center gap-1">
-          {friends.length > 0 ? <Users size={12} /> : <Clock size={12} />}
-          {friends.length > 0
-            ? `${friends.length} ${friends.length === 1 ? 'friend' : 'friends'} here`
-            : freshnessLabel(arcade)}
+      <span className="text-right">
+        <span className="block font-display text-2xl font-bold leading-none tabular-nums text-ink">
+          {stale ? '~' : ''}
+          {wait}
         </span>
-        <span className="inline-flex items-center gap-0.5 font-semibold text-ink">
-          Details <Chevron size={12} />
-        </span>
+        <span className="text-[9px] uppercase tracking-wide text-ink-subtle">min</span>
       </span>
+      <Chevron size={16} />
     </button>
   )
 }

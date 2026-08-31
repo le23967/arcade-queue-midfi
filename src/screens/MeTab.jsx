@@ -25,6 +25,8 @@ export default function MeTab({
   sessions,
   visible,
   onVisible,
+  soundOn,
+  onSound,
   onOpenFollows,
   likedCount,
   onOpenLiked,
@@ -181,6 +183,17 @@ export default function MeTab({
                 visible ? 'Your current arcade can be seen.' : 'Your arcade stays private.'
               }
             />
+
+            {/* Sound is on by default, but an arcade is loud and a lecture
+                theatre is not, so it has to be one tap away. */}
+            <div className="mt-2">
+              <Toggle
+                checked={soundOn}
+                onChange={onSound}
+                label={soundOn ? 'Sound on' : 'Sound off'}
+                hint="Short cues when you check in, when you are up, and when you like a clip."
+              />
+            </div>
 
             <div className="mt-2 flex items-start gap-2 rounded-xl bg-sunken px-3 py-2.5">
               <Shield size={15} className="mt-0.5 flex-none text-ink-muted" />

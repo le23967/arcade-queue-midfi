@@ -1,5 +1,6 @@
 import { useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { playSound } from '../lib/sound.js'
 
 /* Shared primitives.
 
@@ -23,6 +24,7 @@ export function TopBar({ title, subtitle, onBack, right }) {
           type="button"
           onClick={onBack}
           aria-label="Back"
+          onPointerDown={() => playSound('back')}
           className="-ml-2 rounded-full p-1.5 text-ink transition-colors duration-150 hover:bg-sunken active:bg-line"
         >
           <BackGlyph />
@@ -66,11 +68,15 @@ export function Body({ children, className = '' }) {
   return <div className={`flex-1 overflow-y-auto ${className}`}>{children}</div>
 }
 
-export function PrimaryButton({ children, className = '', disabled, ...rest }) {
+export function PrimaryButton({ children, className = '', disabled, onClick, ...rest }) {
   return (
     <button
       type="button"
       disabled={disabled}
+      onClick={(e) => {
+        playSound('select')
+        onClick?.(e)
+      }}
       className={`w-full rounded-xl px-4 py-3.5 font-display text-sm font-semibold transition-all duration-150 ease-soft ${
         disabled
           ? 'bg-line text-ink-subtle'
@@ -83,10 +89,14 @@ export function PrimaryButton({ children, className = '', disabled, ...rest }) {
   )
 }
 
-export function SecondaryButton({ children, className = '', ...rest }) {
+export function SecondaryButton({ children, className = '', onClick, ...rest }) {
   return (
     <button
       type="button"
+      onClick={(e) => {
+        playSound('tap')
+        onClick?.(e)
+      }}
       className={`w-full rounded-xl border border-line-strong bg-surface px-4 py-3.5 font-display text-sm font-semibold text-ink transition-all duration-150 ease-soft hover:bg-sunken active:scale-[0.98] ${className}`}
       {...rest}
     >
@@ -96,10 +106,14 @@ export function SecondaryButton({ children, className = '', ...rest }) {
 }
 
 /* A compact action for short, contextual tasks. */
-export function ActionButton({ children, className = '', icon, ...rest }) {
+export function ActionButton({ children, className = '', icon, onClick, ...rest }) {
   return (
     <button
       type="button"
+      onClick={(e) => {
+        playSound('select')
+        onClick?.(e)
+      }}
       className={`inline-flex items-center gap-1.5 rounded-full border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 transition-all duration-150 ease-soft hover:bg-brand-100 active:scale-95 ${className}`}
       {...rest}
     >
@@ -312,10 +326,14 @@ export function Info({ children, label = 'More information', above = false }) {
   )
 }
 
-export function Seg({ on, children, className = '', accent, ...rest }) {
+export function Seg({ on, children, className = '', accent, onClick, ...rest }) {
   return (
     <button
       type="button"
+      onClick={(e) => {
+        playSound('tap')
+        onClick?.(e)
+      }}
       className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-150 ease-soft active:scale-95 ${
         on
           ? 'border-transparent bg-ink text-white'
@@ -406,7 +424,10 @@ function StepButton({ children, label, disabled, onClick }) {
       type="button"
       aria-label={label}
       disabled={disabled}
-      onClick={onClick}
+      onClick={(e) => {
+        playSound('tap')
+        onClick?.(e)
+      }}
       className={`h-9 w-9 rounded-full border text-lg font-semibold leading-none transition-all duration-150 ease-soft ${
         disabled
           ? 'border-line bg-sunken text-ink-subtle'
@@ -424,7 +445,10 @@ export function Toggle({ label, hint, checked, onChange }) {
       type="button"
       role="switch"
       aria-checked={checked}
-      onClick={() => onChange(!checked)}
+      onClick={() => {
+        playSound('tap')
+        onChange(!checked)
+      }}
       className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors duration-150 ${
         checked ? 'border-brand-200 bg-brand-50' : 'border-line bg-surface hover:bg-sunken'
       }`}

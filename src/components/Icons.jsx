@@ -163,6 +163,14 @@ export const Pulse = (p) => (
   </Svg>
 )
 
+export const Crosshair = (p) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="7" />
+    <circle cx="12" cy="12" r="2.2" />
+    <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+  </Svg>
+)
+
 export const Shield = (p) => (
   <Svg {...p}>
     <path d="M12 3.5 19 6v5.5c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9V6Z" />

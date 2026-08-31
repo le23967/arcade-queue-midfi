@@ -1,9 +1,10 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
-import { MapContainer, Marker, TileLayer } from 'react-leaflet'
+import { Circle, MapContainer, Marker, TileLayer } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { Avatar, GameDot, PrimaryButton, Chip } from '../components/ui.jsx'
-import { Plus, Minus, Users, Clock, Pin } from '../components/Icons.jsx'
+import { Plus, Minus, Users, Clock, Pin, Crosshair } from '../components/Icons.jsx'
+import { playSound } from '../lib/sound.js'
 import { ME_MAP } from '../data.js'
 import { estimateWaitMin, isStale, freshnessLabel } from '../lib/queue.js'
 import { presentFriends } from '../lib/social.js'
@@ -85,6 +86,18 @@ function makeFriendIcon(player, arcade, index, count) {
   })
 }
 
+const YOU_ICON_APPROX = L.divIcon({
+  className: 'map-you-marker',
+  iconSize: [70, 38],
+  iconAnchor: [35, 8],
+  html: `
+    <div aria-label="Approximate location" style="display:flex;width:70px;flex-direction:column;align-items:center;">
+      <span style="width:16px;height:16px;border:3px solid #fff;border-radius:999px;background:var(--ink-subtle);box-shadow:0 2px 6px rgba(24,24,27,0.25);"></span>
+      <span style="margin-top:3px;border-radius:4px;background:rgba(255,255,255,0.88);padding:1px 4px;color:var(--ink-muted);font-size:9px;font-weight:700;letter-spacing:0.04em;line-height:13px;text-transform:uppercase;white-space:nowrap;">Approx</span>
+    </div>
+  `,
+})
+
 const YOU_ICON = L.divIcon({
   className: 'map-you-marker',
   iconSize: [58, 38],
@@ -104,8 +117,36 @@ export default function FriendsMap({ arcades, onOpenPlayer, onOpenArcade, onMess
   const [map, setMap] = useState(null)
   const [selected, setSelected] = useState(null)
   const [tileState, setTileState] = useState('loading')
+  /* Real position when the browser gives us one, otherwise the seeded
+     location. `live` says which, so the map never implies a precision it does
+     not have. */
+  const [me, setMe] = useState({ lat: ME_MAP.lat, lng: ME_MAP.lng, accuracy: null, live: false })
+  const [geoState, setGeoState] = useState(() =>
+    typeof navigator !== 'undefined' && navigator.geolocation ? 'locating' : 'unavailable'
+  )
   const tileFailed = useRef(false)
   const here = presentFriends()
+
+  /* Watch rather than read once, so the dot follows you while you walk to the
+     arcade. Venue level privacy is unaffected: this position stays on the
+     device and is never attached to a check-in or shared with anyone. */
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return undefined
+    const id = navigator.geolocation.watchPosition(
+      (pos) => {
+        setMe({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+          live: true,
+        })
+        setGeoState('live')
+      },
+      () => setGeoState('denied'),
+      { enableHighAccuracy: true, maximumAge: 15000, timeout: 10000 }
+    )
+    return () => navigator.geolocation.clearWatch(id)
+  }, [])
 
   const tileHandlers = useMemo(
     () => ({
@@ -130,8 +171,18 @@ export default function FriendsMap({ arcades, onOpenPlayer, onOpenArcade, onMess
 
   function recentre() {
     if (!map) return
+    playSound('tap')
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     map.setView(MAP_CENTRE, START_ZOOM, { animate: !reduceMotion })
+  }
+
+  /* Separate from recentre: one frames all three venues, the other takes you
+     to yourself. */
+  function locateMe() {
+    if (!map) return
+    playSound('tap')
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    map.setView([me.lat, me.lng], Math.max(map.getZoom(), 16), { animate: !reduceMotion })
   }
 
   return (
@@ -193,9 +244,22 @@ export default function FriendsMap({ arcades, onOpenPlayer, onOpenArcade, onMess
           />
         ))}
 
+        {me.live && me.accuracy ? (
+          <Circle
+            center={[me.lat, me.lng]}
+            radius={Math.min(me.accuracy, 220)}
+            pathOptions={{
+              color: 'var(--brand-600)',
+              fillColor: 'var(--brand-500)',
+              fillOpacity: 0.12,
+              weight: 1,
+            }}
+          />
+        ) : null}
+
         <Marker
-          position={[ME_MAP.lat, ME_MAP.lng]}
-          icon={YOU_ICON}
+          position={[me.lat, me.lng]}
+          icon={me.live ? YOU_ICON : YOU_ICON_APPROX}
           interactive={false}
           keyboard={false}
           zIndexOffset={300}
@@ -220,7 +284,15 @@ export default function FriendsMap({ arcades, onOpenPlayer, onOpenArcade, onMess
             <Minus size={16} />
           </ZoomButton>
           <span className="h-px bg-line" />
-          <ZoomButton label="Recentre map" onClick={recentre}>
+          <ZoomButton
+            label={geoState === 'live' ? 'Centre on my location' : 'Find my location'}
+            disabled={geoState === 'unavailable' || geoState === 'denied'}
+            onClick={locateMe}
+          >
+            <Crosshair size={15} />
+          </ZoomButton>
+          <span className="h-px bg-line" />
+          <ZoomButton label="Show all arcades" onClick={recentre}>
             <Pin size={15} />
           </ZoomButton>
         </span>

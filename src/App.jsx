@@ -19,6 +19,7 @@ import CheckedIn from './screens/CheckedIn.jsx'
 import Summary from './screens/Summary.jsx'
 import Directions from './screens/Directions.jsx'
 import Comments from './screens/Comments.jsx'
+import { playSound, isMuted, setMuted } from './lib/sound.js'
 import Message from './screens/Message.jsx'
 import PlanSession from './screens/PlanSession.jsx'
 import Liked from './screens/Liked.jsx'
@@ -86,6 +87,7 @@ export default function App() {
   const [likedIds, setLikedIds] = useState([])
   const [comments, setComments] = useState(CLIP_COMMENTS)
   const [queueOpen, setQueueOpen] = useState(false)
+  const [soundOn, setSoundOn] = useState(() => !isMuted())
   const [messageTo, setMessageTo] = useState(null)
   const [planPreset, setPlanPreset] = useState({})
 
@@ -108,6 +110,7 @@ export default function App() {
   const liked = likedIds.includes(clip.id)
 
   function toggleLike() {
+    if (!likedIds.includes(clip.id)) playSound('like')
     setLikedIds((ids) =>
       ids.includes(clip.id) ? ids.filter((i) => i !== clip.id) : [...ids, clip.id]
     )
@@ -199,6 +202,7 @@ export default function App() {
       checkInAt: Date.now() - DEMO_SESSION_OFFSET_MIN * 60_000,
       waitedMin: estimateWaitMin({ ...target, queue, solo }),
     })
+    playSound('success')
     setView('checkedin')
     setTab('arcades')
   }
@@ -268,7 +272,10 @@ export default function App() {
               session={session}
               sessionArcade={sessionArcade}
               called={called}
-              onCall={() => setCalled(true)}
+              onCall={() => {
+                playSound('alert')
+                setCalled(true)
+              }}
               liked={liked}
               likeCount={clip.likes + (liked ? 1 : 0)}
               onLike={toggleLike}
@@ -351,6 +358,12 @@ export default function App() {
               }}
               likedCount={likedIds.length}
               onOpenLiked={() => setView('liked')}
+              soundOn={soundOn}
+              onSound={(on) => {
+                setMuted(!on)
+                setSoundOn(on)
+                if (on) playSound('select')
+              }}
             />
           )}
 
