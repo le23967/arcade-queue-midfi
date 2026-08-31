@@ -47,18 +47,18 @@ export default function ConfirmQueue({ arcade, onBack, onConfirm }) {
       />
 
       <Body>
-        <div className="border-b border-gray-300 px-4 py-3">
-          <p className="text-sm text-gray-900">
+        <div className="border-b border-line px-4 py-3">
+          <p className="text-sm text-ink">
             {arcade.name} &middot; {arcade.game}
           </p>
-          <p className="text-xs text-gray-600">
+          <p className="text-xs text-ink-muted">
             {freshnessLabel(arcade)}
             {isStale(arcade) && ' — worth a second look'}
           </p>
         </div>
 
         <div className="px-4">
-          <p className="pt-3 text-sm font-semibold text-gray-900">
+          <p className="pt-3 text-sm font-semibold text-ink">
             How many are waiting, not counting you?
           </p>
           <Stepper
@@ -79,21 +79,21 @@ export default function ConfirmQueue({ arcade, onBack, onConfirm }) {
           />
         </div>
 
-        <div className="mx-4 mt-3 rounded-md border border-gray-300 bg-gray-100 px-3 py-2">
-          <p className="text-xs text-gray-600">Once you join</p>
-          <p className="text-lg font-semibold tabular-nums text-gray-900">
+        <div className="mx-4 mt-3 rounded-md border border-line bg-sunken px-3 py-2">
+          <p className="text-xs text-ink-muted">Once you join</p>
+          <p className="text-lg font-semibold tabular-nums text-ink">
             #{queue + 1} &middot; ~{estimateWaitMin(withYou)} min
           </p>
         </div>
 
-        <p className="px-4 py-3 text-xs text-gray-600">
+        <p className="px-4 py-3 text-xs text-ink-muted">
           {changed
             ? 'Your correction replaces the current count for everyone.'
             : 'Leave it as is if the count looks right.'}
         </p>
       </Body>
 
-      <div className="border-t border-gray-300 p-4">
+      <div className="border-t border-line p-4">
         <PrimaryButton onClick={() => onConfirm({ queue, solo: clampedSolo })}>
           Check in
         </PrimaryButton>

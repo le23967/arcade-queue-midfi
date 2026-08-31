@@ -34,22 +34,22 @@ export default function Scan({ arcade, method, onBack, onSuccess }) {
       <Body className="p-4">
         <Placeholder className="h-56 w-full" label="Cabinet — placeholder">
           <div className="flex w-full flex-col items-center gap-2 px-6">
-            <div className="w-full rounded-md border border-gray-400 bg-gray-300 py-1 text-center text-[11px] font-semibold uppercase tracking-wide text-gray-700">
+            <div className="w-full rounded-md border border-line-strong bg-line-strong py-1 text-center text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
               {arcade.game}
             </div>
-            <div className="h-20 w-full rounded-md border border-gray-400 bg-gray-100" />
+            <div className="h-20 w-full rounded-md border border-line-strong bg-sunken" />
             <div className="flex w-full items-center justify-center gap-2">
-              <div className="h-8 w-8 rounded-md border border-gray-400 bg-white" />
-              <div className="h-8 flex-1 rounded-md border border-gray-400 bg-gray-300" />
-              <div className="h-8 w-8 rounded-md border border-gray-400 bg-white" />
+              <div className="h-8 w-8 rounded-md border border-line-strong bg-surface" />
+              <div className="h-8 flex-1 rounded-md border border-line-strong bg-line-strong" />
+              <div className="h-8 w-8 rounded-md border border-line-strong bg-surface" />
             </div>
-            <span className="text-[11px] uppercase tracking-wide text-gray-600">
+            <span className="text-[11px] uppercase tracking-wide text-ink-muted">
               {qr ? 'QR sticker on the panel' : 'NFC reader on the panel'}
             </span>
           </div>
         </Placeholder>
 
-        <p className="mt-4 text-sm text-gray-900">
+        <p className="mt-4 text-sm text-ink">
           {qr
             ? 'Point your camera at the sticker on the cabinet.'
             : 'Hold the top of your phone against the reader.'}
@@ -57,7 +57,7 @@ export default function Scan({ arcade, method, onBack, onSuccess }) {
 
       </Body>
 
-      <div className="space-y-2 border-t border-gray-300 p-4">
+      <div className="space-y-2 border-t border-line p-4">
         <PrimaryButton onClick={onSuccess}>
           Simulate successful {qr ? 'scan' : 'tap'}
         </PrimaryButton>

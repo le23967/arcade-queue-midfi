@@ -1,4 +1,4 @@
-import { gameLabel } from '../data.js'
+import { gameLabel, gameColor } from '../data.js'
 
 /* ---------------------------------------------------------------------------
    Wait estimation.
@@ -36,8 +36,10 @@ export function venueGame(arcade, gameId) {
     suburb: arcade.suburb,
     address: arcade.address,
     distanceKm: arcade.distanceKm,
+    map: arcade.map,
     gameId,
     game: gameLabel(gameId),
+    gameColor: gameColor(gameId),
     ...g,
   }
 }
@@ -137,4 +139,21 @@ export function queueRoster(a, { mePosition = null } = {}) {
 export function rosterKnownCount(a, mePosition = null) {
   const named = Math.min((a.roster ?? []).length, a.queue)
   return mePosition ? named + 1 : named
+}
+
+/* Resolve a venue for display when a specific game is not the point.
+
+   The Circle tab is about people, not about one cabinet, so it must show every
+   venue someone is at - including venues that do not run whatever game is
+   selected over on Arcades. Prefer the selected game, fall back to the first
+   game the venue actually runs. */
+export function resolveVenue(arcade, preferredGameId) {
+  return (
+    venueGame(arcade, preferredGameId) ??
+    venueGame(arcade, Object.keys(arcade.games)[0])
+  )
+}
+
+export function resolveVenues(arcades, preferredGameId) {
+  return arcades.map((a) => resolveVenue(a, preferredGameId)).filter(Boolean)
 }

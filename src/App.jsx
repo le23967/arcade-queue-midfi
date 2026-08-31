@@ -19,6 +19,8 @@ import CheckedIn from './screens/CheckedIn.jsx'
 import Summary from './screens/Summary.jsx'
 import Directions from './screens/Directions.jsx'
 import Comments from './screens/Comments.jsx'
+import Message from './screens/Message.jsx'
+import PlanSession from './screens/PlanSession.jsx'
 import Liked from './screens/Liked.jsx'
 import MeTab from './screens/MeTab.jsx'
 import Friends from './screens/Friends.jsx'
@@ -41,6 +43,7 @@ const CAPTIONS = {
   friends: 'Friends tab',
   follows: 'Followers / Following',
   liked: 'Liked clips',
+  plan: 'Plan a session',
   player: 'Player profile',
   me: 'Me tab',
 }
@@ -50,6 +53,7 @@ const MODAL_CAPTIONS = {
   checkout: 'Screen 7 — Check out confirmation',
   directions: 'Directions — hand-off to the phone’s maps app',
   comments: 'Comments on a clip',
+  message: 'Message a mutual',
 }
 
 /* The summary is only interesting if a session has some length to it, and a
@@ -71,7 +75,7 @@ export default function App() {
   const [notify, setNotify] = useState(true)
   const [reports, setReports] = useState(7)
   const [lastSession, setLastSession] = useState(null)
-  const [friendsSection, setFriendsSection] = useState('here')
+  const [friendsSection, setFriendsSection] = useState('map')
   const [song, setSong] = useState('neon')
   const [playerHandle, setPlayerHandle] = useState(null)
   const [visible, setVisible] = useState(true)
@@ -82,6 +86,8 @@ export default function App() {
   const [likedIds, setLikedIds] = useState([])
   const [comments, setComments] = useState(CLIP_COMMENTS)
   const [queueOpen, setQueueOpen] = useState(false)
+  const [messageTo, setMessageTo] = useState(null)
+  const [planPreset, setPlanPreset] = useState({})
 
   /* Anything that navigates "back to the tab I came from" goes through this,
      so a renamed tab can never strand the view on an id nothing renders. */
@@ -125,6 +131,18 @@ export default function App() {
     setClipIndex(i)
     setTab('watch')
     setView('watch')
+  }
+
+  function openMessage(handle) {
+    setMessageTo(handle)
+    setModal('message')
+  }
+
+  /* Opening a plan from anywhere carries whatever context that place already
+     knows - which venue, which game, who to invite. */
+  function openPlan(preset = {}) {
+    setPlanPreset(preset)
+    setView('plan')
   }
 
   function openPlayer(handle) {
@@ -276,12 +294,29 @@ export default function App() {
           {view === 'friends' && (
             <Friends
               arcades={arcades}
+              game={game}
               section={friendsSection}
               onSection={setFriendsSection}
               song={song}
               onSong={setSong}
               onOpenPlayer={openPlayer}
               onOpenClip={openClip}
+              onOpenArcade={openArcade}
+              onPlan={openPlan}
+              onMessage={openMessage}
+            />
+          )}
+
+          {view === 'plan' && (
+            <PlanSession
+              arcades={rows}
+              preset={planPreset}
+              onBack={() => setView('friends')}
+              onDone={() => {
+                setTab('friends')
+                setFriendsSection('here')
+                setView('friends')
+              }}
             />
           )}
 
@@ -299,6 +334,8 @@ export default function App() {
               arcade={arcades.find((a) => a.id === player.at) ?? null}
               onBack={() => setView(playerBack)}
               onOpenArcade={openArcade}
+              onMessage={openMessage}
+              onPlan={openPlan}
             />
           )}
 
@@ -452,6 +489,10 @@ export default function App() {
           />
         )}
 
+        {modal === 'message' && messageTo && (
+          <Message handle={messageTo} onClose={() => setModal(null)} />
+        )}
+
         {modal === 'directions' && arcade && (
           <Directions arcade={arcade} onCancel={() => setModal(null)} />
         )}
@@ -471,12 +512,12 @@ export default function App() {
 /* SCREEN 7 - Check out confirmation. */
 function CheckoutModal({ arcade, onCancel, onConfirm }) {
   return (
-    <div className="absolute inset-0 z-10 flex items-end bg-gray-900/40">
-      <div className="w-full rounded-t-md border-t border-gray-300 bg-white p-4">
-        <h2 className="text-base font-semibold text-gray-900">
+    <div className="absolute inset-0 z-10 flex items-end bg-ink/40">
+      <div className="w-full rounded-t-md border-t border-line bg-surface p-4">
+        <h2 className="text-base font-semibold text-ink">
           Are you sure you want to check out?
         </h2>
-        <p className="mt-1 text-xs text-gray-600">
+        <p className="mt-1 text-xs text-ink-muted">
           This gives up your place at {arcade.short} and moves everyone behind
           you up one.
         </p>
@@ -491,7 +532,7 @@ function CheckoutModal({ arcade, onCancel, onConfirm }) {
           <button
             type="button"
             onClick={onCancel}
-            className="w-full rounded-md border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-900"
+            className="w-full rounded-md border border-line bg-surface px-4 py-3 text-sm font-semibold text-ink"
           >
             Cancel
           </button>

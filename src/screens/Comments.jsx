@@ -19,19 +19,19 @@ export default function Comments({ clip, comments, onPost, onClose }) {
   }
 
   return (
-    <div className="absolute inset-0 z-10 flex items-end bg-gray-900/40">
-      <div className="flex max-h-[80%] w-full flex-col rounded-t-md border-t border-gray-300 bg-white">
-        <div className="flex items-baseline gap-2 border-b border-gray-300 px-4 py-3">
-          <h2 className="text-base font-semibold text-gray-900">Comments</h2>
-          <span className="text-xs tabular-nums text-gray-600">
+    <div className="absolute inset-0 z-10 flex items-end bg-ink/40">
+      <div className="flex max-h-[80%] w-full flex-col rounded-t-md border-t border-line bg-surface">
+        <div className="flex items-baseline gap-2 border-b border-line px-4 py-3">
+          <h2 className="text-base font-semibold text-ink">Comments</h2>
+          <span className="text-xs tabular-nums text-ink-muted">
             {comments.length}
           </span>
-          <span className="ml-auto text-xs text-gray-600">@{clip.handle}</span>
+          <span className="ml-auto text-xs text-ink-muted">@{clip.handle}</span>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {comments.length === 0 ? (
-            <p className="px-4 py-6 text-center text-sm text-gray-600">
+            <p className="px-4 py-6 text-center text-sm text-ink-muted">
               No comments yet.
             </p>
           ) : (
@@ -39,19 +39,19 @@ export default function Comments({ clip, comments, onPost, onClose }) {
               {comments.map((c) => (
                 <li
                   key={c.id}
-                  className="flex gap-3 border-b border-gray-300 px-4 py-3"
+                  className="flex gap-3 border-b border-line px-4 py-3"
                 >
-                  <span className="h-8 w-8 flex-none rounded-md border border-gray-300 bg-gray-200" />
+                  <span className="h-8 w-8 flex-none rounded-md border border-line bg-sunken" />
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline gap-2">
-                      <span className="text-sm font-semibold text-gray-900">
+                      <span className="text-sm font-semibold text-ink">
                         {c.handle}
                       </span>
-                      <span className="text-xs tabular-nums text-gray-500">
+                      <span className="text-xs tabular-nums text-ink-subtle">
                         {ago(c.minsAgo)}
                       </span>
                     </span>
-                    <span className="block text-sm text-gray-900">{c.text}</span>
+                    <span className="block text-sm text-ink">{c.text}</span>
                   </span>
                 </li>
               ))}
@@ -59,8 +59,8 @@ export default function Comments({ clip, comments, onPost, onClose }) {
           )}
         </div>
 
-        <div className="border-t border-gray-300 p-4">
-          <label className="mb-2 block text-xs text-gray-600" htmlFor="comment">
+        <div className="border-t border-line p-4">
+          <label className="mb-2 block text-xs text-ink-muted" htmlFor="comment">
             Comment as {ME.handle}
           </label>
           <input
@@ -70,7 +70,7 @@ export default function Comments({ clip, comments, onPost, onClose }) {
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && post()}
             placeholder="Say something"
-            className="mb-2 w-full rounded-md border border-gray-400 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500"
+            className="mb-2 w-full rounded-md border border-line-strong px-3 py-2 text-sm text-ink placeholder:text-ink-subtle"
           />
           <div className="space-y-2">
             <PrimaryButton onClick={post} disabled={!canPost}>

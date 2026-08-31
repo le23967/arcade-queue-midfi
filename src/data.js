@@ -24,15 +24,24 @@
    cabinet counts are real.
 --------------------------------------------------------------------------- */
 
-/* Order matters: this is the order the filter chips appear in. */
+/* Order matters: this is the order the filter chips appear in.
+
+   Each game carries its own hue. It is used for dots, bars and borders - never
+   for body text - so a venue row, a filter chip and a map pin all say which
+   game they are about before the label is read, and contrast never depends on
+   the hue. */
 export const GAMES = [
-  { id: 'maimai', label: 'maimai DX' },
-  { id: 'chunithm', label: 'CHUNITHM' },
-  { id: 'sdvx', label: 'Sound Voltex' },
-  { id: 'gitadora', label: 'GITADORA' },
-  { id: 'taiko', label: 'Taiko' },
-  { id: 'ddr', label: 'DDR' },
+  { id: 'maimai', label: 'maimai DX', color: 'var(--game-maimai)' },
+  { id: 'chunithm', label: 'CHUNITHM', color: 'var(--game-chunithm)' },
+  { id: 'sdvx', label: 'Sound Voltex', color: 'var(--game-sdvx)' },
+  { id: 'gitadora', label: 'GITADORA', color: 'var(--game-gitadora)' },
+  { id: 'taiko', label: 'Taiko', color: 'var(--game-taiko)' },
+  { id: 'ddr', label: 'DDR', color: 'var(--game-ddr)' },
 ]
+
+export function gameColor(id) {
+  return GAMES.find((g) => g.id === id)?.color ?? 'var(--ink-subtle)'
+}
 
 export const DEFAULT_GAME = 'maimai'
 
@@ -68,6 +77,7 @@ export const ARCADES = [
     suburb: 'Chippendale',
     address: 'Level 2, Central Park Mall, 28 Broadway, Chippendale NSW 2008',
     distanceKm: 0.3,
+    map: { x: 0.20, y: 0.78 },
     games: {
       maimai: q(2, 7, 2, 2, '12:38 PM', [
         { handle: 'rin_9' },
@@ -87,6 +97,7 @@ export const ARCADES = [
     suburb: 'Haymarket',
     address: 'Level 3, Market City, 9-13 Hay Street, Haymarket NSW 2000',
     distanceKm: 0.7,
+    map: { x: 0.52, y: 0.50 },
     games: {
       /* Nobody here is on the app, which is exactly why this venue's number is
          41 minutes old. */
@@ -105,6 +116,7 @@ export const ARCADES = [
     suburb: 'Sydney CBD',
     address: '614 George Street, Sydney NSW 2000',
     distanceKm: 1.4,
+    map: { x: 0.80, y: 0.20 },
     games: {
       maimai: q(5, 10, 4, 6, '12:34 PM', [
         { handle: 'ovo_' },
@@ -119,6 +131,9 @@ export const ARCADES = [
     },
   },
 ]
+
+/* Where you are, for the map. Venue-level only, as everywhere else. */
+export const ME_MAP = { x: 0.12, y: 0.90 }
 
 /* The queue ahead of you once you check in. Handles only - players report and
    queue without having to speak to anyone, which matters for the interviewee

@@ -15,6 +15,7 @@ export default function Follows({ tabName, onTab, onBack, onOpenPlayer }) {
     <Screen>
       <TopBar
         title="People"
+        subtitle="Who can see you, and who you can see"
         onBack={onBack}
         right={
           <Info >
@@ -24,7 +25,7 @@ export default function Follows({ tabName, onTab, onBack, onOpenPlayer }) {
         }
       />
 
-      <div className="flex gap-2 border-b border-gray-300 px-4 py-2">
+      <div className="flex gap-2 border-b border-line px-4 py-2">
         <Seg on={tabName === 'followers'} onClick={() => onTab('followers')}>
           Followers {followerList().length}
         </Seg>
@@ -43,14 +44,14 @@ export default function Follows({ tabName, onTab, onBack, onOpenPlayer }) {
                 <button
                   type="button"
                   onClick={() => onOpenPlayer(p.handle)}
-                  className="flex w-full items-center gap-3 border-b border-gray-300 px-4 py-3 text-left"
+                  className="flex w-full items-center gap-3 border-b border-line px-4 py-3 text-left"
                 >
-                  <span className="h-9 w-9 flex-none rounded-md border border-gray-300 bg-gray-200" />
+                  <span className="h-9 w-9 flex-none rounded-md border border-line bg-sunken" />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-gray-900">
+                    <span className="block truncate text-sm font-semibold text-ink">
                       {p.handle}
                     </span>
-                    <span className="block truncate text-xs text-gray-600">
+                    <span className="block truncate text-xs text-ink-muted">
                       {p.games.join(' · ')}
                     </span>
                   </span>

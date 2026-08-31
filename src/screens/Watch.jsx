@@ -46,6 +46,7 @@ export default function Watch({
     <Screen>
       <TopBar
         title="Watch"
+        subtitle="Watch your circle play while you wait"
         right={
           <Info >
             Clips from people you follow. Watching is what most players already
@@ -55,7 +56,7 @@ export default function Watch({
         }
       />
 
-      <div className="flex gap-2 border-b border-gray-300 px-4 py-2">
+      <div className="flex gap-2 border-b border-line px-4 py-2">
         <Seg on={scope === 'following'} onClick={() => onScope('following')}>
           Following
         </Seg>
@@ -68,35 +69,35 @@ export default function Watch({
         <button
           type="button"
           onClick={onCall}
-          className="flex w-full items-center gap-2 border-b border-gray-300 bg-gray-100 px-4 py-2 text-left"
+          className="flex w-full items-center gap-2 border-b border-line bg-sunken px-4 py-2 text-left"
         >
           <Bell size={14} />
-          <span className="flex-1 text-xs text-gray-900">
+          <span className="flex-1 text-xs text-ink">
             You&rsquo;re <span className="font-semibold tabular-nums">#{session.position}</span>{' '}
             at {sessionArcade.short} &mdash; we&rsquo;ll pull you out when
             you&rsquo;re up
           </span>
-          <span className="text-xs font-semibold text-gray-900">Simulate</span>
+          <span className="text-xs font-semibold text-ink">Simulate</span>
         </button>
       )}
 
       <Body className="flex flex-col p-3">
         {/* No video asset: the clip is a gray block, as the cabinet and map are. */}
-        <div className="relative flex min-h-[200px] flex-1 flex-col justify-end rounded-md border border-gray-300 bg-gray-200">
-          <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-xs font-medium uppercase tracking-wide text-gray-500">
+        <div className="relative flex min-h-[200px] flex-1 flex-col justify-end rounded-md border border-line bg-sunken">
+          <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-xs font-medium uppercase tracking-wide text-ink-subtle">
             Clip &mdash; placeholder
           </span>
 
-          <span className="absolute right-2 top-2 rounded-md border border-gray-400 bg-white px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-gray-700">
+          <span className="absolute right-2 top-2 rounded-md border border-line-strong bg-surface px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-ink-muted">
             {clip.seconds}s
           </span>
 
-          <div className="m-2 rounded-md border border-gray-300 bg-white px-3 py-2">
-            <p className="text-sm font-semibold text-gray-900">@{clip.handle}</p>
-            <p className="text-xs text-gray-700">
+          <div className="m-2 rounded-md border border-line bg-surface px-3 py-2">
+            <p className="text-sm font-semibold text-ink">@{clip.handle}</p>
+            <p className="text-xs text-ink-muted">
               {clip.song} &middot; {clip.chart}
             </p>
-            <p className="text-xs tabular-nums text-gray-600">
+            <p className="text-xs tabular-nums text-ink-muted">
               {formatAchievement(clip.achievement)} {gradeOf(clip.achievement)}
               {venue && ` · ${venue.short}`} &middot; {ago(clip.postedMin)}
             </p>
@@ -113,7 +114,9 @@ export default function Watch({
             active={liked}
             label={liked ? 'Unlike' : 'Like'}
           >
-            <Heart size={16} filled={liked} />
+            <span className={liked ? 'anim-pop inline-flex' : 'inline-flex'}>
+              <Heart size={16} filled={liked} />
+            </span>
             <span className="tabular-nums">{likeCount}</span>
           </Action>
           <Action onClick={onComments} label="Comments">
@@ -130,7 +133,7 @@ export default function Watch({
           >
             Prev
           </PageButton>
-          <span className="flex-1 text-center text-xs tabular-nums text-gray-600">
+          <span className="flex-1 text-center text-xs tabular-nums text-ink-muted">
             {index + 1} / {clips.length}
           </span>
           <PageButton
@@ -145,8 +148,8 @@ export default function Watch({
   )
 }
 
-/* Liked state is a black fill, not a colour - the palette has one accent and
-   it belongs to primary actions. */
+/* Liked reads in the live colour now that the palette carries more than one
+   accent. */
 function Action({ children, onClick, active, label }) {
   return (
     <button
@@ -154,10 +157,10 @@ function Action({ children, onClick, active, label }) {
       onClick={onClick}
       aria-label={label}
       aria-pressed={active}
-      className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium ${
+      className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-150 ease-soft active:scale-95 ${
         active
-          ? 'border-gray-900 bg-gray-100 text-gray-900'
-          : 'border-gray-300 bg-white text-gray-700'
+          ? 'border-live/30 bg-live-bg text-live'
+          : 'border-line-strong bg-surface text-ink-muted hover:border-ink-subtle'
       }`}
     >
       {children}
@@ -173,8 +176,8 @@ function PageButton({ children, disabled, onClick, flip }) {
       onClick={onClick}
       className={`flex items-center gap-1 rounded-md border px-3 py-2 text-xs font-semibold ${
         disabled
-          ? 'border-gray-300 bg-gray-100 text-gray-400'
-          : 'border-gray-400 bg-white text-gray-900'
+          ? 'border-line bg-sunken text-ink-subtle'
+          : 'border-line-strong bg-surface text-ink'
       }`}
     >
       {flip && <span className="rotate-180">
@@ -194,11 +197,11 @@ function YoureUp({ arcade, position, onGo }) {
       <TopBar title="Watch" />
       <Body className="flex flex-col items-center justify-center p-6 text-center">
         <Bell size={40} />
-        <p className="mt-3 text-2xl font-semibold text-gray-900">You&rsquo;re up</p>
-        <p className="mt-1 text-sm text-gray-700">
+        <p className="mt-3 text-2xl font-semibold text-ink">You&rsquo;re up</p>
+        <p className="mt-1 text-sm text-ink-muted">
           {arcade.name} &middot; position #{position}
         </p>
-        <p className="mt-2 text-xs text-gray-600">
+        <p className="mt-2 text-xs text-ink-muted">
           Paused so you don&rsquo;t miss it.
         </p>
         <div className="mt-6 w-full">

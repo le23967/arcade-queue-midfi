@@ -16,9 +16,9 @@ export default function Directions({ arcade, onCancel }) {
 
   return (
     <Modal title={`Directions to ${arcade.short}`}>
-      <p className="text-sm text-gray-900">{arcade.name}</p>
-      <p className="mt-0.5 text-xs text-gray-600">{arcade.address}</p>
-      <p className="mt-0.5 text-xs tabular-nums text-gray-600">
+      <p className="text-sm text-ink">{arcade.name}</p>
+      <p className="mt-0.5 text-xs text-ink-muted">{arcade.address}</p>
+      <p className="mt-0.5 text-xs tabular-nums text-ink-muted">
         {arcade.distanceKm.toFixed(1)} km away
       </p>
 
@@ -27,7 +27,7 @@ export default function Directions({ arcade, onCancel }) {
           href={`https://maps.apple.com/?q=${query}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="block w-full rounded-md border border-gray-400 bg-white px-4 py-3 text-center text-sm font-semibold text-gray-900"
+          className="block w-full rounded-md border border-line-strong bg-surface px-4 py-3 text-center text-sm font-semibold text-ink"
         >
           Open in Apple Maps
         </a>
@@ -35,7 +35,7 @@ export default function Directions({ arcade, onCancel }) {
           href={`https://www.google.com/maps/search/?api=1&query=${query}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="block w-full rounded-md border border-gray-400 bg-white px-4 py-3 text-center text-sm font-semibold text-gray-900"
+          className="block w-full rounded-md border border-line-strong bg-surface px-4 py-3 text-center text-sm font-semibold text-ink"
         >
           Open in Google Maps
         </a>

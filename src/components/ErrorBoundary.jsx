@@ -26,14 +26,14 @@ export default class ErrorBoundary extends Component {
     if (!this.state.error) return this.props.children
 
     return (
-      <div className="flex h-full flex-col items-center justify-center bg-white p-6 text-center">
-        <p className="text-base font-semibold text-gray-900">
+      <div className="flex h-full flex-col items-center justify-center bg-surface p-6 text-center">
+        <p className="text-base font-semibold text-ink">
           This screen didn&rsquo;t load
         </p>
-        <p className="mt-1 text-xs text-gray-600">
+        <p className="mt-1 text-xs text-ink-muted">
           Pick another tab to carry on.
         </p>
-        <pre className="mt-4 max-h-32 w-full overflow-auto rounded-md border border-gray-300 bg-gray-100 p-2 text-left text-[11px] leading-relaxed text-gray-700">
+        <pre className="mt-4 max-h-32 w-full overflow-auto rounded-md border border-line bg-sunken p-2 text-left text-[11px] leading-relaxed text-ink-muted">
           {String(this.state.error?.message ?? this.state.error)}
         </pre>
       </div>

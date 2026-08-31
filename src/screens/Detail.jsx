@@ -46,6 +46,7 @@ export default function Detail({
     <Screen>
       <TopBar
         title={`${arcade.short} · ${arcade.game}`}
+        subtitle="See the line, then take a place in it"
         onBack={onBack}
         right={stale ? <StaleBadge /> : null}
       />
@@ -57,17 +58,17 @@ export default function Detail({
         <button
           type="button"
           onClick={onDirections}
-          className="flex w-full items-center gap-3 border-b border-gray-300 px-4 py-3 text-left"
+          className="flex w-full items-center gap-3 border-b border-line px-4 py-3 text-left"
         >
-          <span className="text-gray-700">
+          <span className="text-ink-muted">
             <Pin size={18} />
           </span>
           <span className="flex-1">
-            <span className="block text-sm text-gray-900">{arcade.name}</span>
-            <span className="block text-xs text-gray-600">
+            <span className="block text-sm text-ink">{arcade.name}</span>
+            <span className="block text-xs text-ink-muted">
               {arcade.address}
             </span>
-            <span className="block text-xs tabular-nums text-gray-600">
+            <span className="block text-xs tabular-nums text-ink-muted">
               {arcade.distanceKm.toFixed(1)} km &middot; {arcade.cabinets}{' '}
               {arcade.cabinets === 1 ? 'cabinet' : 'cabinets'}
             </span>
@@ -119,16 +120,16 @@ export default function Detail({
           <button
             type="button"
             onClick={onFriends}
-            className="flex w-full items-center gap-3 border-b border-gray-300 px-4 py-3 text-left"
+            className="flex w-full items-center gap-3 border-b border-line px-4 py-3 text-left"
           >
-            <span className="text-gray-700">
+            <span className="text-ink-muted">
               <Users size={18} />
             </span>
             <span className="flex-1">
-              <span className="block text-xs uppercase tracking-wide text-gray-600">
+              <span className="block text-xs uppercase tracking-wide text-ink-muted">
                 People you follow
               </span>
-              <span className="block text-sm font-semibold text-gray-900">
+              <span className="block text-sm font-semibold text-ink">
                 {friendsHere.map((p) => p.handle).join(', ')} here now
               </span>
             </span>
@@ -137,8 +138,8 @@ export default function Detail({
         )}
 
         {otherGames.length > 0 && (
-          <div className="border-b border-gray-300">
-            <p className="px-4 pt-3 text-xs uppercase tracking-wide text-gray-600">
+          <div className="border-b border-line">
+            <p className="px-4 pt-3 text-xs uppercase tracking-wide text-ink-muted">
               Also at this venue
             </p>
             <ul className="px-4 pb-3">
@@ -149,11 +150,11 @@ export default function Detail({
                     onClick={() => onPickGame(g.gameId)}
                     className="flex w-full items-center gap-2 py-1.5 text-left"
                   >
-                    <span className="flex-1 text-sm text-gray-900">{g.game}</span>
-                    <span className="text-xs tabular-nums text-gray-600">
+                    <span className="flex-1 text-sm text-ink">{g.game}</span>
+                    <span className="text-xs tabular-nums text-ink-muted">
                       Q {g.queue}
                     </span>
-                    <span className="w-16 text-right text-sm tabular-nums text-gray-900">
+                    <span className="w-16 text-right text-sm tabular-nums text-ink">
                       ~{estimateWaitMin(g)} min
                     </span>
                     {isStale(g) && <StaleBadge />}
@@ -170,7 +171,7 @@ export default function Detail({
           job, so it lives inside the queue list where the wrong number is
           actually visible, and inside check-in where you are looking at the
           line anyway. */}
-      <div className="border-t border-gray-300 p-4">
+      <div className="border-t border-line p-4">
         <PrimaryButton onClick={onCheckIn}>Check In</PrimaryButton>
       </div>
     </Screen>
@@ -182,44 +183,44 @@ function QueueStat({ arcade, open, onToggle, mePosition, onReport }) {
   const known = rosterKnownCount(arcade, mePosition)
 
   return (
-    <div className="border-b border-gray-300">
+    <div className="border-b border-line">
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={open}
         className="flex w-full items-start gap-3 px-4 py-3 text-left"
       >
-        <span className="mt-0.5 text-gray-700">
+        <span className="mt-0.5 text-ink-muted">
           <Users size={18} />
         </span>
         <span className="flex-1">
-          <span className="block text-xs uppercase tracking-wide text-gray-600">
+          <span className="block text-xs uppercase tracking-wide text-ink-muted">
             Queue
           </span>
-          <span className="block text-lg font-semibold tabular-nums text-gray-900">
+          <span className="block text-lg font-semibold tabular-nums text-ink">
             {arcade.queue} waiting
           </span>
-          <span className="block text-xs text-gray-600">
+          <span className="block text-xs text-ink-muted">
             {pairsOf(arcade)} pair{pairsOf(arcade) === 1 ? '' : 's'} &middot;{' '}
             {arcade.solo} solo
           </span>
         </span>
-        <span className={`mt-1 text-gray-700 ${open ? '-rotate-90' : 'rotate-90'}`}>
+        <span className={`mt-1 text-ink-muted ${open ? '-rotate-90' : 'rotate-90'}`}>
           <Chevron size={18} />
         </span>
       </button>
 
       {open && (
         <>
-          <ol className="border-t border-gray-300">
+          <ol className="border-t border-line">
             {rows.map((r) => (
               <li
                 key={r.position}
-                className={`flex items-start gap-3 border-b border-gray-300 px-4 py-2 last:border-b-0 ${
-                  r.you ? 'bg-gray-100' : ''
+                className={`flex items-start gap-3 border-b border-line px-4 py-2 last:border-b-0 ${
+                  r.you ? 'bg-sunken' : ''
                 }`}
               >
-                <span className="w-4 pt-0.5 text-xs tabular-nums text-gray-600">
+                <span className="w-4 pt-0.5 text-xs tabular-nums text-ink-muted">
                   {r.position}
                 </span>
 
@@ -227,8 +228,8 @@ function QueueStat({ arcade, open, onToggle, mePosition, onReport }) {
                   <span
                     className={`block text-sm ${
                       r.app || r.you
-                        ? 'font-semibold text-gray-900'
-                        : 'text-gray-600'
+                        ? 'font-semibold text-ink'
+                        : 'text-ink-muted'
                     }`}
                   >
                     {r.you
@@ -239,13 +240,13 @@ function QueueStat({ arcade, open, onToggle, mePosition, onReport }) {
                   </span>
                 </span>
 
-                <span className="pt-0.5 text-xs text-gray-600">{r.state}</span>
+                <span className="pt-0.5 text-xs text-ink-muted">{r.state}</span>
               </li>
             ))}
           </ol>
 
           <div className="flex items-center gap-2 px-4 py-2">
-            <p className="flex flex-1 items-start gap-1.5 text-xs text-gray-600">
+            <p className="flex flex-1 items-start gap-1.5 text-xs text-ink-muted">
               <span>
                 <span className="tabular-nums">{known}</span> of{' '}
                 <span className="tabular-nums">{arcade.queue}</span> checked in
@@ -261,7 +262,7 @@ function QueueStat({ arcade, open, onToggle, mePosition, onReport }) {
             <button
               type="button"
               onClick={onReport}
-              className="flex-none rounded-md border border-gray-400 px-2 py-1 text-xs font-medium text-gray-900"
+              className="flex-none rounded-md border border-line-strong px-2 py-1 text-xs font-medium text-ink"
             >
               Update count
             </button>
@@ -274,23 +275,23 @@ function QueueStat({ arcade, open, onToggle, mePosition, onReport }) {
 
 function Stat({ Icon, label, value, children, emphasis, info }) {
   return (
-    <div className="flex items-start gap-3 border-b border-gray-300 px-4 py-3">
-      <span className="mt-0.5 text-gray-700">
+    <div className="flex items-start gap-3 border-b border-line px-4 py-3">
+      <span className="mt-0.5 text-ink-muted">
         <Icon size={18} />
       </span>
       <div className="flex-1">
-        <dt className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-gray-600">
+        <dt className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-ink-muted">
           {label}
           {info && <Info>{info}</Info>}
         </dt>
         <dd
-          className={`text-lg font-semibold tabular-nums text-gray-900 ${
+          className={`text-lg font-semibold tabular-nums text-ink ${
             emphasis ? 'underline decoration-dashed underline-offset-4' : ''
           }`}
         >
           {value}
         </dd>
-        <p className="text-xs text-gray-600">{children}</p>
+        <p className="text-xs text-ink-muted">{children}</p>
       </div>
     </div>
   )

@@ -3,27 +3,58 @@
 @tailwind utilities;
 
 /* ---------------------------------------------------------------------------
-   MID-FI GUARD RAILS
+   DESIGN TOKENS
 
-   These rules are deliberate. A mid-fi prototype is tested for flow and
-   information, not for polish, so the constraints are enforced globally
-   rather than left to discipline:
-
-   - every state change is instant (no transition, no animation)
-   - nothing casts a shadow, glows, or blurs
-
-   If a future contributor adds `transition-*`, `duration-*`, `animate-*`
-   or `shadow-*`, it is overridden here and the prototype stays mid-fi.
+   Week 6 consultation feedback: mid-fidelity is expected to carry colour,
+   type, motion and depth - things should start looking the way they should be.
+   An earlier pass suppressed all four globally, which is what kept the
+   prototype reading as a wireframe. Those suppressions are gone; this is the
+   system that replaces them.
 --------------------------------------------------------------------------- */
-*,
-*::before,
-*::after {
-  transition: none !important;
-  animation: none !important;
-  box-shadow: none !important;
-  text-shadow: none !important;
-  filter: none !important;
-  backdrop-filter: none !important;
+:root {
+  /* Brand */
+  --brand-50: #eef2ff;
+  --brand-100: #e0e7ff;
+  --brand-200: #c7d2fe;
+  --brand-400: #818cf8;
+  --brand-500: #6366f1;
+  --brand-600: #4f46e5;
+  --brand-700: #4338ca;
+
+  /* Surfaces and ink */
+  --page: #f4f4f7;
+  --surface: #ffffff;
+  --sunken: #fafafb;
+  --line: #e4e4e7;
+  --line-strong: #d4d4d8;
+  --ink: #18181b;
+  --ink-muted: #52525b;
+  --ink-subtle: #a1a1aa;
+
+  /* Semantic */
+  --fresh: #059669;
+  --fresh-bg: #ecfdf5;
+  --stale: #b45309;
+  --stale-bg: #fffbeb;
+  --live: #e11d48;
+  --live-bg: #fff1f2;
+
+  /* One hue per game, so the filter and every venue row are scannable.
+     Used as dots, bars and borders - never as body text - so contrast
+     never depends on the hue. */
+  --game-maimai: #e11d48;
+  --game-chunithm: #f59e0b;
+  --game-sdvx: #7c3aed;
+  --game-gitadora: #16a34a;
+  --game-taiko: #ea580c;
+  --game-ddr: #0ea5e9;
+
+  /* Motion */
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur: 200ms;
+  --dur-slow: 320ms;
 }
 
 html {
@@ -31,11 +62,61 @@ html {
 }
 
 body {
-  background-color: #f3f4f6; /* gray-100 */
+  background-color: var(--page);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  color: var(--ink);
 }
 
-/* Keyboard focus stays visible: outline is not box-shadow, so it survives. */
 :focus-visible {
-  outline: 2px solid #111827; /* gray-900 */
-  outline-offset: 1px;
+  outline: 2px solid var(--brand-600);
+  outline-offset: 2px;
+}
+
+/* --- Motion ---------------------------------------------------------------
+   Screens enter, sheets rise, lists stagger, the like button reacts. Kept
+   short so the prototype stays quick to click through in a critique.
+--------------------------------------------------------------------------- */
+@keyframes screen-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes sheet-in {
+  from { transform: translateY(100%); }
+  to   { transform: none; }
+}
+@keyframes scrim-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes row-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes pop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.28); }
+  100% { transform: scale(1); }
+}
+@keyframes pulse-ring {
+  0%   { transform: scale(0.8); opacity: 0.7; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+.anim-screen { animation: screen-in var(--dur) var(--ease-out) both; }
+.anim-sheet  { animation: sheet-in var(--dur-slow) var(--ease-out) both; }
+.anim-scrim  { animation: scrim-in var(--dur) var(--ease) both; }
+.anim-row    { animation: row-in var(--dur) var(--ease-out) both; }
+.anim-pop    { animation: pop var(--dur-slow) var(--ease-out); }
+.anim-ring   { animation: pulse-ring 1.8s var(--ease-out) infinite; }
+
+/* Respect the OS setting: motion is opt-out, never mandatory. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

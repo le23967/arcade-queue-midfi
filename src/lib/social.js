@@ -1,4 +1,10 @@
-import { FRIENDS, FOLLOWERS_ONLY, ME, OLD_SITE_FAVOURITE_CAP } from '../social.js'
+import {
+  FRIENDS,
+  FOLLOWERS_ONLY,
+  ME,
+  OLD_SITE_FAVOURITE_CAP,
+  PLANNED,
+} from '../social.js'
 
 /* maimai grades the achievement percentage, so the leaderboard shows the same
    thing a player would see on the cabinet. */
@@ -88,4 +94,8 @@ export function ago(min) {
   const h = Math.round(min / 60)
   if (h < 24) return `${h}h ago`
   return `${Math.round(h / 24)}d ago`
+}
+
+export function plannedSessions() {
+  return PLANNED
 }

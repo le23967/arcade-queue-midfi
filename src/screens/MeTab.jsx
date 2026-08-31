@@ -19,20 +19,21 @@ export default function MeTab({
 
   return (
     <Screen>
-      <TopBar title="Me" />
+      <TopBar title="Me"
+        subtitle="What you share, and with whom" />
 
       <Body>
-        <div className="flex items-center gap-3 border-b border-gray-300 px-4 py-4">
+        <div className="flex items-center gap-3 border-b border-line px-4 py-4">
           <Placeholder className="h-14 w-14 flex-none" label="" />
           <div>
-            <p className="text-sm font-semibold text-gray-900">{ME.handle}</p>
-            <p className="text-xs text-gray-600">
+            <p className="text-sm font-semibold text-ink">{ME.handle}</p>
+            <p className="text-xs text-ink-muted">
               {ME.games.join(' · ')} &middot; Sydney
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 border-b border-gray-300">
+        <div className="grid grid-cols-2 border-b border-line">
           <Count
             label="Followers"
             value={followers}
@@ -78,9 +79,9 @@ export default function MeTab({
           />
         </div>
 
-        <div className="mx-4 mb-4 flex items-center gap-2 rounded-md border border-gray-300 px-3 py-3">
+        <div className="mx-4 mb-4 flex items-center gap-2 rounded-md border border-line px-3 py-3">
           <Shield size={16} />
-          <span className="flex-1 text-sm font-medium text-gray-900">Location</span>
+          <span className="flex-1 text-sm font-medium text-ink">Location</span>
           <Info above>
             Check-ins are recorded against a venue, not a coordinate. Your
             precise position is never read or stored, your handle is never
@@ -99,14 +100,14 @@ function Count({ label, value, onClick, border }) {
       type="button"
       onClick={onClick}
       className={`flex items-center gap-1 px-4 py-3 text-left ${
-        border ? 'border-l border-gray-300' : ''
+        border ? 'border-l border-line' : ''
       }`}
     >
       <span className="flex-1">
-        <span className="block text-xl font-semibold tabular-nums text-gray-900">
+        <span className="block text-xl font-semibold tabular-nums text-ink">
           {value}
         </span>
-        <span className="block text-xs text-gray-600">{label}</span>
+        <span className="block text-xs text-ink-muted">{label}</span>
       </span>
       <Chevron size={16} />
     </button>
@@ -115,8 +116,8 @@ function Count({ label, value, onClick, border }) {
 
 function Row({ label, children }) {
   return (
-    <div className="border-b border-gray-300 px-4 py-3">
-      <p className="mb-2 text-xs uppercase tracking-wide text-gray-600">{label}</p>
+    <div className="border-b border-line px-4 py-3">
+      <p className="mb-2 text-xs uppercase tracking-wide text-ink-muted">{label}</p>
       {children}
     </div>
   )
@@ -127,11 +128,11 @@ function Nav({ label, value, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center justify-between border-b border-gray-300 px-4 py-3 text-left"
+      className="flex w-full items-center justify-between border-b border-line px-4 py-3 text-left"
     >
-      <span className="text-sm text-gray-600">{label}</span>
+      <span className="text-sm text-ink-muted">{label}</span>
       <span className="flex items-center gap-2">
-        <span className="text-lg font-semibold tabular-nums text-gray-900">
+        <span className="text-lg font-semibold tabular-nums text-ink">
           {value}
         </span>
         <Chevron size={16} />
@@ -142,12 +143,12 @@ function Nav({ label, value, onClick }) {
 
 function Line({ label, value, info }) {
   return (
-    <div className="flex items-center justify-between border-b border-gray-300 px-4 py-3">
-      <span className="flex items-center gap-1.5 text-sm text-gray-600">
+    <div className="flex items-center justify-between border-b border-line px-4 py-3">
+      <span className="flex items-center gap-1.5 text-sm text-ink-muted">
         {label}
         {info && <Info>{info}</Info>}
       </span>
-      <span className="text-lg font-semibold tabular-nums text-gray-900">
+      <span className="text-lg font-semibold tabular-nums text-ink">
         {value}
       </span>
     </div>

@@ -31,12 +31,12 @@ export default function Report({ arcade, onCancel, onSubmit }) {
     return (
       <Modal title="Thank you">
         <div className="flex items-start gap-3">
-          <span className="mt-0.5 text-gray-900">
+          <span className="mt-0.5 text-ink">
             <CheckCircle size={28} />
           </span>
           <div>
-            <p className="text-sm font-semibold text-gray-900">Queue updated</p>
-            <p className="text-xs text-gray-600">
+            <p className="text-sm font-semibold text-ink">Queue updated</p>
+            <p className="text-xs text-ink-muted">
               {arcade.short}: {queue} waiting, ~{preview} min, timestamped now.
             </p>
           </div>
@@ -67,14 +67,14 @@ export default function Report({ arcade, onCancel, onSubmit }) {
         onChange={(v) => setSolo(Math.max(0, Math.min(v, queue)))}
       />
 
-      <div className="mt-3 rounded-md border border-gray-300 bg-gray-100 px-3 py-2">
-        <p className="text-xs text-gray-600">New estimated wait</p>
-        <p className="text-lg font-semibold tabular-nums text-gray-900">
+      <div className="mt-3 rounded-md border border-line bg-sunken px-3 py-2">
+        <p className="text-xs text-ink-muted">New estimated wait</p>
+        <p className="text-lg font-semibold tabular-nums text-ink">
           ~{preview} min
         </p>
       </div>
 
-      <p className="mt-3 flex items-center gap-1.5 text-xs text-gray-600">
+      <p className="mt-3 flex items-center gap-1.5 text-xs text-ink-muted">
         Submitted anonymously
         <Info>
           Nobody has to be asked &ldquo;who&rsquo;s next?&rdquo; and nobody has

@@ -8,13 +8,13 @@ export default function Summary({ arcade, sessionMin, waitedMin, onDone }) {
       <TopBar title="Session" />
 
       <Body>
-        <div className="flex items-center gap-3 border-b border-gray-300 px-4 py-6">
-          <span className="text-gray-900">
+        <div className="flex items-center gap-3 border-b border-line px-4 py-6">
+          <span className="text-ink">
             <CheckCircle size={40} />
           </span>
           <div>
-            <p className="text-lg font-semibold text-gray-900">Checked out</p>
-            <p className="text-sm text-gray-700">{arcade.name}</p>
+            <p className="text-lg font-semibold text-ink">Checked out</p>
+            <p className="text-sm text-ink-muted">{arcade.name}</p>
           </div>
         </div>
 
@@ -24,7 +24,7 @@ export default function Summary({ arcade, sessionMin, waitedMin, onDone }) {
           <Line label="Arcade" value={arcade.short} />
         </dl>
 
-        <p className="flex items-center gap-1.5 px-4 py-4 text-xs text-gray-600">
+        <p className="flex items-center gap-1.5 px-4 py-4 text-xs text-ink-muted">
           Your slot has been freed
           <Info above>
             Checking out immediately is what keeps the running order honest for
@@ -34,7 +34,7 @@ export default function Summary({ arcade, sessionMin, waitedMin, onDone }) {
         </p>
       </Body>
 
-      <div className="border-t border-gray-300 p-4">
+      <div className="border-t border-line p-4">
         <PrimaryButton onClick={onDone}>Back to Arcades</PrimaryButton>
       </div>
     </Screen>
@@ -43,9 +43,9 @@ export default function Summary({ arcade, sessionMin, waitedMin, onDone }) {
 
 function Line({ label, value }) {
   return (
-    <div className="flex items-baseline justify-between border-b border-gray-300 px-4 py-3">
-      <dt className="text-sm text-gray-600">{label}</dt>
-      <dd className="text-lg font-semibold tabular-nums text-gray-900">
+    <div className="flex items-baseline justify-between border-b border-line px-4 py-3">
+      <dt className="text-sm text-ink-muted">{label}</dt>
+      <dd className="text-lg font-semibold tabular-nums text-ink">
         {value}
       </dd>
     </div>

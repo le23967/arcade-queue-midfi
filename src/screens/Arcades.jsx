@@ -1,6 +1,16 @@
-import { Screen, TopBar, Body, BestBadge, StaleBadge, Info, Seg } from '../components/ui.jsx'
+import {
+  Screen,
+  TopBar,
+  Body,
+  BestBadge,
+  StaleBadge,
+  Info,
+  Seg,
+  GameDot,
+  LiveBadge,
+} from '../components/ui.jsx'
 import { GAMES, gameLabel } from '../data.js'
-import { Pin, Chevron } from '../components/Icons.jsx'
+import { Chevron } from '../components/Icons.jsx'
 import {
   estimateWaitMin,
   isStale,
@@ -33,6 +43,7 @@ export default function Arcades({
     <Screen>
       <TopBar
         title="Arcades"
+        subtitle="Pick a game, find where it moves fastest"
         right={
           <Info >
             <b>Queue</b> counts parties waiting, not people &mdash; players who
@@ -46,16 +57,21 @@ export default function Arcades({
 
       {/* Queues belong to a game, not a venue, so the game is picked first and
           every number below is that game's queue at that venue. */}
-      <div className="flex flex-wrap items-center gap-1.5 border-b border-gray-300 px-4 py-2">
-        <span className="mr-0.5 text-xs text-gray-600">Game</span>
+      <div className="flex flex-wrap items-center gap-1.5 border-b border-line px-4 py-2">
+        <span className="mr-0.5 text-xs text-ink-muted">Game</span>
         {GAMES.map((g) => (
-          <Seg key={g.id} on={g.id === game} onClick={() => onGame(g.id)}>
+          <Seg
+            key={g.id}
+            on={g.id === game}
+            accent={g.color}
+            onClick={() => onGame(g.id)}
+          >
             {g.label}
           </Seg>
         ))}
       </div>
 
-      <div className="flex items-center gap-2 border-b border-gray-300 px-4 py-2">
+      <div className="flex items-center gap-2 border-b border-line px-4 py-2">
         <Seg on={view === 'list'} onClick={() => onView('list')}>
           List
         </Seg>
@@ -65,7 +81,7 @@ export default function Arcades({
 
         {view === 'list' && (
           <span className="ml-auto flex items-center gap-1">
-            <span className="text-xs text-gray-600">Sort</span>
+            <span className="text-xs text-ink-muted">Sort</span>
             <Seg on={sort === 'distance'} onClick={() => onSort('distance')}>
               Distance
             </Seg>
@@ -77,7 +93,7 @@ export default function Arcades({
       </div>
 
       {arcades.length < venueCount && (
-        <p className="border-b border-gray-300 px-4 py-2 text-xs text-gray-600">
+        <p className="border-b border-line px-4 py-2 text-xs text-ink-muted">
           <span className="tabular-nums">{arcades.length}</span> of{' '}
           <span className="tabular-nums">{venueCount}</span> arcades run{' '}
           {gameLabel(game)}.
@@ -104,29 +120,29 @@ function ListView({ arcades, sort, onOpen }) {
             <button
               type="button"
               onClick={() => onOpen(a.id)}
-              className="flex w-full items-center gap-3 border-b border-gray-300 px-4 py-3 text-left"
+              className="flex w-full items-center gap-3 border-b border-line px-4 py-3 text-left"
             >
-              <Pin size={18} />
+              <GameDot color={a.gameColor} className="h-2.5 w-2.5" />
 
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-2">
-                  <span className="truncate text-sm font-semibold text-gray-900">
+                  <span className="truncate text-sm font-semibold text-ink">
                     {a.name}
                   </span>
-                  {isStale(a) && <StaleBadge />}
+                  {isStale(a) ? <StaleBadge /> : <LiveBadge label="live" />}
                 </span>
-                <span className="mt-0.5 block text-xs tabular-nums text-gray-700">
+                <span className="mt-0.5 block text-xs tabular-nums text-ink-muted">
                   Q {a.queue} &middot; Solo {a.solo} &middot; {a.cabinets}{' '}
                   {a.cabinets === 1 ? 'cab' : 'cabs'} &middot; ~
                   {estimateWaitMin(a)} min
                 </span>
-                <span className="mt-0.5 block text-xs text-gray-500">
+                <span className="mt-0.5 block text-xs text-ink-subtle">
                   {freshnessLabel(a)}
                 </span>
               </span>
 
               <span className="flex flex-none items-center gap-1">
-                <span className="text-xs tabular-nums text-gray-700">
+                <span className="text-xs tabular-nums text-ink-muted">
                   {a.distanceKm.toFixed(1)} km
                 </span>
                 <Chevron size={16} />
@@ -147,7 +163,7 @@ function CompareView({ arcades, onOpen }) {
     <Body>
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b border-gray-300 text-left">
+          <tr className="border-b border-line text-left">
             <Th className="pl-4">Arcade</Th>
             <Th className="text-right">Queue</Th>
             <Th className="text-right">Solo</Th>
@@ -162,34 +178,34 @@ function CompareView({ arcades, onOpen }) {
               <tr
                 key={a.id}
                 onClick={() => onOpen(a.id)}
-                className={`cursor-pointer border-b border-gray-300 ${
-                  best ? 'bg-gray-100' : ''
+                className={`cursor-pointer border-b border-line transition-colors duration-150 hover:bg-sunken ${
+                  best ? 'bg-brand-50' : ''
                 }`}
               >
                 <td
                   className={`py-3 pl-4 pr-2 border-l-4 ${
-                    best ? 'border-gray-900' : 'border-transparent'
+                    best ? 'border-brand-600' : 'border-transparent'
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-gray-900">
+                    <span className="text-sm font-semibold text-ink">
                       {a.short}
                     </span>
                     {best && <BestBadge />}
                     {stale && <StaleBadge />}
                   </div>
-                  <div className="text-xs tabular-nums text-gray-600">
+                  <div className="text-xs tabular-nums text-ink-muted">
                     {a.cabinets} {a.cabinets === 1 ? 'cab' : 'cabs'} &middot;{' '}
                     {a.distanceKm.toFixed(1)} km
                   </div>
                 </td>
-                <td className="py-3 text-right tabular-nums text-gray-900">
+                <td className="py-3 text-right tabular-nums text-ink">
                   {a.queue}
                 </td>
-                <td className="py-3 text-right tabular-nums text-gray-900">
+                <td className="py-3 text-right tabular-nums text-ink">
                   {a.solo}
                 </td>
-                <td className="py-3 pr-4 text-right font-semibold tabular-nums text-gray-900">
+                <td className="py-3 pr-4 text-right font-semibold tabular-nums text-ink">
                   {estimateWaitMin(a)} min{stale ? '*' : ''}
                 </td>
               </tr>
@@ -199,8 +215,8 @@ function CompareView({ arcades, onOpen }) {
       </table>
 
       <div className="flex items-start gap-1.5 px-4 py-3">
-        <p className="text-xs text-gray-600">
-          <b className="text-gray-900">Best</b> is the shortest wait, not the
+        <p className="text-xs text-ink-muted">
+          <b className="text-ink">Best</b> is the shortest wait, not the
           shortest queue.
           {anyStale && ' * older than 15 min, shown but not ranked.'}
         </p>
@@ -218,7 +234,7 @@ function CompareView({ arcades, onOpen }) {
 function Th({ children, className = '' }) {
   return (
     <th
-      className={`py-2 text-xs font-semibold uppercase tracking-wide text-gray-600 ${className}`}
+      className={`py-2 text-xs font-semibold uppercase tracking-wide text-ink-muted ${className}`}
     >
       {children}
     </th>

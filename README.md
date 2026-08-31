@@ -1,8 +1,13 @@
-# Arcade Comparison — mid-fi prototype
+# Arcade Circle — mid-fi prototype
 
-A functional medium-fidelity web prototype of an arcade comparison app for rhythm-game
-players, built from the lo-fi workflow in `Fig3_LoFi_Prototype_Workflow.jpg` and
-from three field interviews conducted at Sydney arcades.
+A functional medium-fidelity web prototype for the Sydney arcade rhythm-game
+community, built from the lo-fi workflow in `Fig3_LoFi_Prototype_Workflow.jpg`,
+from three field interviews conducted at Sydney arcades, and from Week 6
+consultation feedback.
+
+The project began on queue visibility and has moved on to the connection
+problem underneath it: the queue is still tracked, but the point of the app is
+getting people to the same cabinet at the same time.
 
 Stack: React + Vite + Tailwind CSS.
 
@@ -10,6 +15,7 @@ Stack: React + Vite + Tailwind CSS.
 npm install
 npm run dev
 npm run lint   # catches undefined references before they blank a screen
+npm run build  # also the fastest check that every screen still renders
 ```
 
 `npm run lint` exists for one reason. Twice, a bulk edit across screens dropped
@@ -328,10 +334,13 @@ Sources: [SEGA maimai DX International location finder](https://location.am-all.
 | Watch | tab | Clip feed from people you follow, with your queue position pinned above it. Like and comment on each clip. |
 | Comments | modal | Comment thread on a clip; posting adds to it. |
 | Liked clips | `liked` | Clips you liked, reachable from Me; opening one jumps into the feed at that clip. |
-| Friends — Here now | tab | People you follow who are at an arcade, grouped by venue. |
-| Friends — Activity | tab | What friends did and when: checked in, left, played a set, posted a clip, set a best. |
-| Friends — Scores | tab | Uncapped per-song leaderboard with the official site's 20-favourite line drawn on it. |
-| Player profile | `player` | Games, favourite songs, shared items, scores. No message button. |
+| Circle — Map | tab | Friends as avatars and venues as pins on a drawn map, zoomable, venues enterable. |
+| Circle — Here now | tab | People you follow who are at an arcade, grouped by venue, each row ending in **Join**. |
+| Circle — Activity | tab | What friends did and when, each line ending in the action it enables. |
+| Circle — Scores | tab | Uncapped per-song leaderboard with the official site's 20-favourite line drawn on it. |
+| Plan a session | `plan` | Venue, game, time and who to ask; lands as an invitation on their Circle tab. |
+| Message | modal | Mutual-only, with openers drawn from what the feed actually raises. |
+| Player profile | `player` | Games, favourite songs, shared items, scores, and the actions: join them, plan a session, message. |
 | Followers / Following | `follows` | Roster with the direction of each relationship, reachable from Me. |
 | Directions | modal | Hands off to Apple Maps or Google Maps from the venue address. |
 | Me | tab | Profile, follower counts, visibility toggle and privacy statement. |
@@ -339,47 +348,46 @@ Sources: [SEGA maimai DX International location finder](https://location.am-all.
 The current screen number is printed under the device frame so the prototype can
 be reviewed alongside the lo-fi sheet.
 
-The tab bar is **Arcades · Watch · Friends · Me**. The lo-fi sheet had Home,
-Compare, Maps and Me. Home and Compare merged into Arcades; Watch and Friends
-were added for the social layer; Maps was removed.
+The tab bar is **Circle · Watch · Arcades · Me**. The lo-fi sheet had Home,
+Compare, Maps and Me. Home and Compare merged into Arcades; Watch and Circle
+were added for the social layer; people come first because the project is about
+connection rather than queue-reading.
 
-**Why Maps went.** It showed the same three venues with the same wait times
-plotted on a gray rectangle — it duplicated the list and answered nothing the
-list did not. Handing off is also the better product decision: players choose a
-venue while already moving — *"usually just when I get on the bus"*, *"as I'm on
-the way to the city"* — so at the moment they want directions they want live
-transit and traffic, which the phone's own maps app does properly. Deciding
-**which** arcade is this app's job; getting there is not ours to rebuild.
+**Why the map lives inside Circle.** A standalone Maps tab duplicated the
+venue list and answered nothing it did not. Consultation feedback asked for the
+map back, but for people on it — friends as avatars, venues as pins, zoomable,
+venues enterable — which is a view of the community rather than a second venue
+directory. So it is a view inside Circle. Real routing still hands off to the
+phone's own maps app: players choose a venue while already moving — *"usually
+just when I get on the bus"*, *"as I'm on the way to the city"* — so at that
+moment they want live transit, which the phone does properly.
 
 ---
 
-## Mid-fi constraints
+## Fidelity
 
-Deliberate limits, so the prototype is tested for flow and information rather
-than for polish:
+Week 6 consultation feedback reset what this stage should be. Mid-fidelity is
+expected to carry colour, type, motion and depth: the stage where a design
+starts to resemble the finished product, with high fidelity being where it also
+behaves like it. An earlier pass suppressed all four globally, which left the
+prototype reading as a wireframe. That suppression is gone.
 
-- **Colour** — black, white and `gray-100`–`gray-900` only. `blue-600` is
-  reserved for the single primary action on a screen and appears nowhere else.
-  "Best option" and "Stale" are carried by weight, border and an explicit word,
-  not by colour.
-- **Motion** — none. Every state change, tab switch and modal is instant.
-- **Depth** — no shadows, glows, blurs or gradients.
-- **Assets** — no photography or illustration. The cabinet, the clip, the map
-  and the avatar are gray placeholder blocks; icons are inline single-weight
-  strokes.
-- **Text** — at most one short line of helper text per screen. Rationale,
-  caveats and privacy detail live behind a `?` tooltip, which opens on hover,
-  tap or focus and closes on the same frame. Explanation that does not fit in a
-  tooltip belongs in the code or in this file, not on the screen. An earlier
-  pass put it all on the screen as paragraphs; that reads as documentation,
-  gets skipped, and clutters the layout — the worst of both outcomes. The
-  tooltip measures itself against the frame on open and flips side rather than
-  relying on a hand-set alignment per call site, because a 224px popup anchored
-  to a 16px button will otherwise hang off a 390px screen and get clipped by
-  the scroll container.
-
-The first three are enforced globally in `src/index.css` rather than left to
-discipline, so the prototype cannot drift into hi-fi by accident.
+- **Colour** — an indigo brand for primary actions, semantic tokens for
+  fresh / stale / live, and **one hue per game**. The game hue is used for
+  dots, bars and pins but never for body text, so a venue row or a map pin
+  says which game it is about before the label is read, and contrast never
+  depends on the hue. Tokens live at the top of `src/index.css`.
+- **Type** — Space Grotesk for headings and numbers, Inter for text.
+- **Motion** — screens enter, sheets rise, lists stagger, the like reacts,
+  live indicators pulse. Everything is short, and all of it is disabled under
+  `prefers-reduced-motion`.
+- **Depth** — elevation separates sheets, the tab bar and pins from the page.
+- **Assets** — still no photography. The clip and the map are drawn, and
+  avatars are generated from the handle, so the repo ships no image files.
+- **Text** — at most one short line of helper text per screen; the rest sits
+  behind a `?` tooltip that measures itself against the frame and flips side
+  so it cannot be clipped. Each screen also carries a one-line statement of
+  what it is for, because feedback was that every feature has to answer that.
 
 ---
 

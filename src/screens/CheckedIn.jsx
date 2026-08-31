@@ -36,37 +36,38 @@ export default function CheckedIn({
 }) {
   return (
     <Screen>
-      <TopBar title="Checked In" onBack={onBack} />
+      <TopBar title="Checked In"
+        subtitle="Your place, and who is ahead" onBack={onBack} />
 
       <Body>
-        <div className="flex items-center gap-3 border-b border-gray-300 px-4 py-5">
-          <span className="text-gray-900">
+        <div className="flex items-center gap-3 border-b border-line px-4 py-5">
+          <span className="text-ink">
             <CheckCircle size={40} />
           </span>
           <div>
-            <p className="text-lg font-semibold text-gray-900">Checked In!</p>
-            <p className="text-sm text-gray-700">{arcade.name}</p>
+            <p className="text-lg font-semibold text-ink">Checked In!</p>
+            <p className="text-sm text-ink-muted">{arcade.name}</p>
           </div>
         </div>
 
-        <div className="border-b border-gray-300 px-4 py-4">
-          <p className="text-xs uppercase tracking-wide text-gray-600">
+        <div className="border-b border-line px-4 py-4">
+          <p className="text-xs uppercase tracking-wide text-ink-muted">
             Your position
           </p>
-          <p className="text-3xl font-semibold tabular-nums text-gray-900">
+          <p className="text-3xl font-semibold tabular-nums text-ink">
             #{position}{' '}
-            <span className="text-base font-normal text-gray-600">
+            <span className="text-base font-normal text-ink-muted">
               of {total}
             </span>
           </p>
-          <p className="mt-1 text-xs text-gray-600">
+          <p className="mt-1 text-xs text-ink-muted">
             Roughly {aheadMin} min out, across {arcade.cabinets}{' '}
             {arcade.cabinets === 1 ? 'machine' : 'machines'}.
           </p>
         </div>
 
-        <div className="border-b border-gray-300">
-          <p className="flex items-center gap-1.5 px-4 pt-3 text-xs uppercase tracking-wide text-gray-600">
+        <div className="border-b border-line">
+          <p className="flex items-center gap-1.5 px-4 pt-3 text-xs uppercase tracking-wide text-ink-muted">
             Running order
             <Info>
               Updates as people check in and out, so nobody has to ask who is
@@ -102,7 +103,7 @@ export default function CheckedIn({
         </div>
       </Body>
 
-      <div className="border-t border-gray-300 p-4">
+      <div className="border-t border-line p-4">
         <PrimaryButton onClick={onCheckOut}>Check Out</PrimaryButton>
       </div>
     </Screen>
@@ -118,19 +119,19 @@ function stateAt(n, cabinets) {
 function Row({ n, name, state, you }) {
   return (
     <li
-      className={`flex items-center gap-3 border-t border-gray-300 px-4 py-2 ${
-        you ? 'bg-gray-100' : ''
+      className={`flex items-center gap-3 border-t border-line px-4 py-2 ${
+        you ? 'bg-sunken' : ''
       }`}
     >
-      <span className="w-5 text-xs tabular-nums text-gray-600">{n}</span>
+      <span className="w-5 text-xs tabular-nums text-ink-muted">{n}</span>
       <span
         className={`flex-1 text-sm ${
-          you ? 'font-semibold text-gray-900' : 'text-gray-900'
+          you ? 'font-semibold text-ink' : 'text-ink'
         }`}
       >
         {name}
       </span>
-      <span className="text-xs text-gray-600">{state}</span>
+      <span className="text-xs text-ink-muted">{state}</span>
     </li>
   )
 }

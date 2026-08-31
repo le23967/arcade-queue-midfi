@@ -169,3 +169,34 @@ export const CLIP_COMMENTS = {
   c7: [{ id: 'k8', handle: 'sora', text: 'good recovery at the end', minsAgo: 540 }],
   c8: [],
 }
+
+/* ---------------------------------------------------------------------------
+   Planned sessions.
+
+   Consultation feedback pushed on purpose: knowing where people are is not
+   engagement on its own, and the example given was that knowing where people
+   are only pays off when it lets you arrange to meet them somewhere. So
+   presence ends in a plan - a venue, a game, a time, and who is coming.
+--------------------------------------------------------------------------- */
+export const PLANNED = [
+  {
+    id: 'ps1',
+    host: 'mtsk',
+    venue: 'koko-town-hall',
+    gameId: 'maimai',
+    whenLabel: 'Today, 6:30 PM',
+    note: 'Doubles for the extra song, then dinner',
+    going: ['mtsk', 'yuzu_', 'rin_9'],
+    invitedMe: true,
+  },
+  {
+    id: 'ps2',
+    host: 'nagi',
+    venue: 'central-park',
+    gameId: 'taiko',
+    whenLabel: 'Sunday, 1:00 PM',
+    note: 'Quiet before the weekend rush',
+    going: ['nagi', 'sora'],
+    invitedMe: false,
+  },
+]

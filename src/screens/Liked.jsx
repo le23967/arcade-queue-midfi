@@ -25,6 +25,7 @@ export default function Liked({ likedIds, onBack, onOpenClip }) {
     <Screen>
       <TopBar
         title="Liked clips"
+        subtitle="Runs you saved to come back to"
         onBack={onBack}
         right={
           <Info>
@@ -37,7 +38,7 @@ export default function Liked({ likedIds, onBack, onOpenClip }) {
 
       <Body>
         {clips.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-gray-600">
+          <p className="px-4 py-8 text-center text-sm text-ink-muted">
             Nothing liked yet. Tap the heart on a clip in Watch.
           </p>
         ) : (
@@ -47,19 +48,19 @@ export default function Liked({ likedIds, onBack, onOpenClip }) {
                 <button
                   type="button"
                   onClick={() => onOpenClip(c.id)}
-                  className="flex w-full items-center gap-3 border-b border-gray-300 px-4 py-3 text-left"
+                  className="flex w-full items-center gap-3 border-b border-line px-4 py-3 text-left"
                 >
-                  <span className="flex h-14 w-10 flex-none items-center justify-center rounded-md border border-gray-300 bg-gray-200 text-[10px] tabular-nums text-gray-500">
+                  <span className="flex h-14 w-10 flex-none items-center justify-center rounded-md border border-line bg-sunken text-[10px] tabular-nums text-ink-subtle">
                     {c.seconds}s
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold text-gray-900">
+                    <span className="block text-sm font-semibold text-ink">
                       @{c.handle}
                     </span>
-                    <span className="block truncate text-xs text-gray-700">
+                    <span className="block truncate text-xs text-ink-muted">
                       {c.song} &middot; {c.chart}
                     </span>
-                    <span className="block text-xs tabular-nums text-gray-600">
+                    <span className="block text-xs tabular-nums text-ink-muted">
                       {formatAchievement(c.achievement)} &middot; {ago(c.postedMin)}
                     </span>
                   </span>

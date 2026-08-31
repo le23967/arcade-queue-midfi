@@ -26,9 +26,9 @@ export default function CheckIn({ arcade, onBack, onScan, onManual }) {
       />
 
       <Body>
-        <div className="border-b border-gray-300 px-4 py-3">
-          <p className="text-sm text-gray-900">{arcade.name}</p>
-          <p className="text-xs text-gray-600">
+        <div className="border-b border-line px-4 py-3">
+          <p className="text-sm text-ink">{arcade.name}</p>
+          <p className="text-xs text-ink-muted">
             Joins the running order everyone can see.
           </p>
         </div>
@@ -63,20 +63,20 @@ function Option({ Icon, title, hint, muted, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-3 border-b border-gray-300 px-4 py-4 text-left"
+      className="flex w-full items-center gap-3 border-b border-line px-4 py-4 text-left"
     >
-      <span className={muted ? 'text-gray-500' : 'text-gray-900'}>
+      <span className={muted ? 'text-ink-subtle' : 'text-ink'}>
         <Icon size={22} />
       </span>
       <span className="flex-1">
         <span
           className={`block text-sm font-semibold ${
-            muted ? 'text-gray-600' : 'text-gray-900'
+            muted ? 'text-ink-muted' : 'text-ink'
           }`}
         >
           {title}
         </span>
-        <span className="block text-xs text-gray-600">{hint}</span>
+        <span className="block text-xs text-ink-muted">{hint}</span>
       </span>
       <Chevron size={16} />
     </button>
