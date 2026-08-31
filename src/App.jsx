@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ARCADES, QUEUE_AHEAD, DEFAULT_GAME } from './data.js'
 import {
   estimateWaitMin,
@@ -19,7 +19,7 @@ import CheckedIn from './screens/CheckedIn.jsx'
 import Summary from './screens/Summary.jsx'
 import Directions from './screens/Directions.jsx'
 import Comments from './screens/Comments.jsx'
-import { playSound, isMuted, setMuted } from './lib/sound.js'
+import { playSound, isMuted, setMuted, listenForTaps } from './lib/sound.js'
 import Message from './screens/Message.jsx'
 import PlanSession from './screens/PlanSession.jsx'
 import Liked from './screens/Liked.jsx'
@@ -88,6 +88,10 @@ export default function App() {
   const [comments, setComments] = useState(CLIP_COMMENTS)
   const [queueOpen, setQueueOpen] = useState(false)
   const [soundOn, setSoundOn] = useState(() => !isMuted())
+
+  /* One listener for every button in the prototype, rather than each screen
+     remembering to ask for a sound. */
+  useEffect(() => listenForTaps(), [])
   const [messageTo, setMessageTo] = useState(null)
   const [planPreset, setPlanPreset] = useState({})
 

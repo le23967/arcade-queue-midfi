@@ -257,6 +257,7 @@ function ClipStage({
         <StageAction
           onClick={onLike}
           active={liked}
+          data-sound="none"
           label={liked ? 'Unlike clip' : 'Like clip'}
         >
           <Heart size={15} filled={liked} />
@@ -334,13 +335,14 @@ function ClipStage({
   )
 }
 
-function StageAction({ children, onClick, active, label }) {
+function StageAction({ children, onClick, active, label, ...rest }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={label}
       aria-pressed={active}
+      {...rest}
       className={`flex h-8 items-center gap-1 rounded-full border px-2 text-[10px] font-semibold shadow-lg backdrop-blur-md transition-all duration-150 ease-soft active:scale-95 ${
         active
           ? 'border-rose-300/40 bg-rose-500 text-white'
