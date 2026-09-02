@@ -316,7 +316,7 @@ export function Seg({ on, children, className = '', accent, ...rest }) {
   return (
     <button
       type="button"
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-150 ease-soft active:scale-95 ${
+      className={`inline-flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-150 ease-soft active:scale-95 ${
         on
           ? 'border-transparent bg-ink text-white'
           : 'border-line-strong bg-surface text-ink-muted hover:border-ink-subtle hover:text-ink'

@@ -51,15 +51,15 @@ function makeVenueIcon(arcade, active) {
 
   return L.divIcon({
     className: 'map-venue-marker',
-    iconSize: [140, 58],
-    iconAnchor: [70, 22],
+    iconSize: [168, 58],
+    iconAnchor: [84, 22],
     html: `
-      <button type="button" class="map-marker-button" aria-label="${ariaLabel}" style="width:140px;display:flex;flex-direction:column;align-items:center;border:0;background:transparent;padding:0;color:inherit;cursor:pointer;font:inherit;">
+      <button type="button" class="map-marker-button" aria-label="${ariaLabel}" style="width:168px;display:flex;flex-direction:column;align-items:center;border:0;background:transparent;padding:0;color:inherit;cursor:pointer;font:inherit;">
         <span class="map-venue-pill" style="display:flex;align-items:center;gap:6px;border:${active ? '0' : '1px solid var(--line)'};border-radius:999px;background:${active ? 'var(--brand-600)' : 'var(--surface)'};padding:6px 12px 6px 9px;color:${active ? '#fff' : 'var(--ink)'};box-shadow:0 8px 20px rgba(24,24,27,0.18);transition:transform 150ms ease,background 150ms ease;">
           <span style="width:8px;height:8px;flex:none;border-radius:999px;background:${dot};"></span>
-          <span style="white-space:nowrap;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;">${isStale(arcade) ? '~' : ''}${wait}m</span>
+          <span style="white-space:nowrap;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;">${isStale(arcade) ? '~' : ''}${wait} min wait</span>
         </span>
-        <span style="margin-top:4px;max-width:136px;overflow:hidden;border-radius:4px;background:rgba(255,255,255,0.86);padding:1px 4px;color:${active ? 'var(--brand-700)' : 'var(--ink-muted)'};font-size:9px;font-weight:700;letter-spacing:0.04em;line-height:13px;text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap;">${label}</span>
+        <span style="margin-top:4px;max-width:164px;overflow:hidden;border-radius:4px;background:rgba(255,255,255,0.86);padding:1px 4px;color:${active ? 'var(--brand-700)' : 'var(--ink-muted)'};font-size:9px;font-weight:700;letter-spacing:0.04em;line-height:13px;text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap;">${label}</span>
       </button>
     `,
   })
@@ -538,7 +538,7 @@ function FriendCard({ player, arcade, joined, onJoin, onMessage, onProfile, onCl
           onClick={onJoin}
           className="flex-1 rounded-xl bg-brand-600 py-2.5 font-display text-sm font-semibold text-white shadow-lg shadow-brand-600/25 transition-all duration-150 hover:bg-brand-700 active:scale-[0.98]"
         >
-          {joined ? 'Tell them again' : 'Join them'}
+          {joined ? 'Notify again' : 'Join them'}
         </button>
       </div>
     </Card>

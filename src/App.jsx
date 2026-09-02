@@ -28,6 +28,7 @@ import MeTab from './screens/MeTab.jsx'
 import Friends from './screens/Friends.jsx'
 import Watch from './screens/Watch.jsx'
 import Follows from './screens/Follows.jsx'
+import Messages from './screens/Messages.jsx'
 import PlayerProfile from './screens/PlayerProfile.jsx'
 import { CLIPS, CLIP_COMMENTS } from './social.js'
 import {
@@ -84,6 +85,17 @@ export default function App() {
   /* Which arcade the Here now list was opened from, if any. Null means the
      general, all-arcades view. */
   const [hereVenueId, setHereVenueId] = useState(null)
+  /* Planned sessions you have said yes to. */
+  const [rsvps, setRsvps] = useState([])
+  const [messageOpener, setMessageOpener] = useState('')
+  /* Where back goes. A single "the screen I came from" slot was enough while
+     no two screens could open each other - then the conversation header
+     started opening the profile, and the profile's Message button opened the
+     conversation, and each overwrote the other's slot. Back then bounced
+     between the two forever with no way out but a page reload, which is the
+     trap the evaluation already caught once. A stack cannot do that: every
+     step is recorded, and back unwinds them in order. */
+  const [history, setHistory] = useState([])
 
   /* Anything that navigates "back to the tab I came from" goes through this,
      so a renamed tab can never strand the view on an id nothing renders. */
@@ -99,7 +111,24 @@ export default function App() {
     ? relationshipOf(playerHandle, followingHandles)
     : null
 
-  const [playerBack, setPlayerBack] = useState('friends')
+  /* Going somewhere new records where you were; going back unwinds it. */
+  function push(next) {
+    setHistory((h) => [...h, view])
+    setView(next)
+  }
+
+  function goBack() {
+    const previous = history[history.length - 1] ?? backTab
+    setHistory((h) => h.slice(0, -1))
+    setView(previous)
+  }
+
+  /* A tab is a starting point, not a step, so arriving at one clears the
+     trail behind it. */
+  function goRoot(next) {
+    setHistory([])
+    setView(next)
+  }
 
   const clip = CLIPS[clipIndex]
   const clipComments = comments[clip.id] ?? []
@@ -133,10 +162,19 @@ export default function App() {
 
   /* Messaging stays mutual-only. Following someone who has not followed back
      buys you nothing here, which is the rule the research asked for. */
-  function openMessage(handle) {
-    if (!isMutual(handle, followingHandles)) return
+  function openMessage(handle, opener = '') {
+    const mutual = isMutual(handle, followingHandles)
+    const hasHistory = (conversations[handle] ?? []).length > 0
+    /* Mutual-only still governs who you can reach. It does not govern your own
+       past conversations: unfollowing someone must not turn a thread you can
+       see in your inbox into a row that does nothing when tapped. It opens,
+       and it opens read-only. */
+    if (!mutual && !hasHistory) return
     setMessageTo(handle)
-    setModal('message')
+    /* A button that offers to ask a particular question opens with that
+       question in the box, rather than an empty one. */
+    setMessageOpener(mutual ? opener : '')
+    push('chat')
   }
 
   function sendMessage(handle, text) {
@@ -174,6 +212,14 @@ export default function App() {
     playSound('success')
   }
 
+  /* Saying yes to a session is reversible, so it commits straight away and
+     shows the result, rather than asking first. */
+  function toggleRsvp(id) {
+    setRsvps((list) =>
+      list.includes(id) ? list.filter((s) => s !== id) : [...list, id]
+    )
+  }
+
   function toggleFollow(handle) {
     setFollowingHandles((list) =>
       list.includes(handle) ? list.filter((h) => h !== handle) : [...list, handle]
@@ -187,7 +233,7 @@ export default function App() {
     setHereVenueId(venueId)
     setFriendsSection('here')
     setTab('friends')
-    setView('friends')
+    goRoot('friends')
   }
 
   function pickFriendsSection(next) {
@@ -199,7 +245,7 @@ export default function App() {
      knows - which venue, which game, who to invite. */
   function openPlan(preset = {}) {
     setPlanPreset(preset)
-    setView('plan')
+    push('plan')
   }
 
   /* Back has to land on the screen the profile was opened from, including the
@@ -207,8 +253,7 @@ export default function App() {
      the Me tab, which reads as a failed back. */
   function openPlayer(handle) {
     setPlayerHandle(handle)
-    setPlayerBack(['detail', 'follows'].includes(view) ? view : backTab)
-    setView('player')
+    push('player')
   }
 
   function patchVenueGame(id, gameId, patch) {
@@ -230,7 +275,7 @@ export default function App() {
   function goTab(next) {
     setTab(next)
     setModal(null)
-    setView(next)
+    goRoot(next)
     /* Coming into Circle from the tab bar is the general view, never whatever
        venue you happened to look at earlier. */
     if (next === 'friends') setHereVenueId(null)
@@ -238,7 +283,7 @@ export default function App() {
 
   function openArcade(id) {
     setActiveId(id)
-    setView('detail')
+    push('detail')
   }
 
   /* Check-in carries the count the person just confirmed at the cabinet, so
@@ -263,8 +308,8 @@ export default function App() {
       waitedMin: estimateWaitMin({ ...target, queue, solo }),
     })
     playSound('success')
-    setView('checkedin')
     setTab('arcades')
+    goRoot('checkedin')
   }
 
   function doCheckOut() {
@@ -290,7 +335,7 @@ export default function App() {
     })
     setSession(null)
     setModal(null)
-    setView('summary')
+    goRoot('summary')
   }
 
   const showTabs = ['arcades', 'watch', 'friends', 'me', 'detail'].includes(view)
@@ -342,7 +387,7 @@ export default function App() {
               onGo={() => {
                 setCalled(false)
                 setTab('arcades')
-                setView('checkedin')
+                goRoot('checkedin')
               }}
             />
           )}
@@ -351,7 +396,7 @@ export default function App() {
             <Follows
               tabName={followsTab}
               onTab={setFollowsTab}
-              onBack={() => setView('me')}
+              onBack={goBack}
               onOpenPlayer={openPlayer}
               following={followingHandles}
               onToggleFollow={toggleFollow}
@@ -370,12 +415,36 @@ export default function App() {
               onSong={setSong}
               following={followingHandles}
               joinsSent={joinsSent}
+              rsvps={rsvps}
+              onRsvp={toggleRsvp}
               onOpenPlayer={openPlayer}
               onOpenClip={openClip}
               onOpenArcade={openArcade}
               onJoin={openJoin}
               onPlan={openPlan}
               onMessage={openMessage}
+              onOpenMessages={() => push('messages')}
+              threadCount={Object.keys(conversations).length}
+            />
+          )}
+
+          {view === 'chat' && messageTo && (
+            <Message
+              handle={messageTo}
+              messages={conversations[messageTo] ?? []}
+              opener={messageOpener}
+              mutual={isMutual(messageTo, followingHandles)}
+              onSend={(text) => sendMessage(messageTo, text)}
+              onOpenProfile={() => openPlayer(messageTo)}
+              onBack={goBack}
+            />
+          )}
+
+          {view === 'messages' && (
+            <Messages
+              conversations={conversations}
+              onOpen={openMessage}
+              onBack={goBack}
             />
           )}
 
@@ -383,11 +452,14 @@ export default function App() {
             <PlanSession
               arcades={rows}
               preset={planPreset}
-              onBack={() => setView('friends')}
+              onBack={goBack}
               onDone={() => {
+                /* A new invitation belongs with the other planned ones, not
+                   in the list of who is at an arcade right now. */
+                setHereVenueId(null)
+                setFriendsSection('planned')
                 setTab('friends')
-                setFriendsSection('here')
-                setView('friends')
+                goRoot('friends')
               }}
             />
           )}
@@ -395,7 +467,7 @@ export default function App() {
           {view === 'liked' && (
             <Liked
               likedIds={likedIds}
-              onBack={() => setView('me')}
+              onBack={goBack}
               onOpenClip={openClip}
             />
           )}
@@ -406,7 +478,7 @@ export default function App() {
               relationship={playerRelationship}
               arcade={arcades.find((a) => a.id === player.at) ?? null}
               joinedAt={joinsSent[player.handle] ?? null}
-              onBack={() => setView(playerBack)}
+              onBack={goBack}
               onOpenArcade={openArcade}
               onJoin={openJoin}
               onMessage={openMessage}
@@ -423,11 +495,11 @@ export default function App() {
               onVisible={setVisible}
               onOpenFollows={(t) => {
                 setFollowsTab(t)
-                setView('follows')
+                push('follows')
               }}
               following={followingHandles}
               likedCount={likedIds.length}
-              onOpenLiked={() => setView('liked')}
+              onOpenLiked={() => push('liked')}
               soundOn={soundOn}
               onSound={(on) => {
                 setMuted(!on)
@@ -452,7 +524,7 @@ export default function App() {
                   ? session.position
                   : null
               }
-              onBack={() => setView(backTab)}
+              onBack={goBack}
               onCheckIn={() => setView('checkin')}
               onReport={() => setModal('report')}
               following={followingHandles}
@@ -504,7 +576,7 @@ export default function App() {
               onNotify={setNotify}
               onBack={() => {
                 setTab('arcades')
-                setView('arcades')
+                goRoot('arcades')
               }}
               onCheckOut={() => setModal('checkout')}
             />
@@ -520,7 +592,7 @@ export default function App() {
               waitedMin={lastSession.waitedMin}
               onDone={() => {
                 setTab('arcades')
-                setView('arcades')
+                goRoot('arcades')
               }}
             />
           )}
@@ -537,7 +609,7 @@ export default function App() {
                   arcadeName={sessionArcade.short}
                   position={session.position}
                   total={Math.max(session.position, sessionArcade.queue)}
-                  onOpen={() => setView('checkedin')}
+                  onOpen={() => goRoot('checkedin')}
                 />
               ) : null
             }
@@ -565,15 +637,6 @@ export default function App() {
             clip={clip}
             comments={clipComments}
             onPost={postComment}
-            onClose={() => setModal(null)}
-          />
-        )}
-
-        {modal === 'message' && messageTo && (
-          <Message
-            handle={messageTo}
-            messages={conversations[messageTo] ?? []}
-            onSend={(text) => sendMessage(messageTo, text)}
             onClose={() => setModal(null)}
           />
         )}

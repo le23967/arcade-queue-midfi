@@ -280,7 +280,9 @@ function VenueCard({ arcade, onOpen, following }) {
             {stale ? '~' : ''}
             {wait}
           </span>
-          <span className="text-[9px] uppercase tracking-wide text-ink-subtle">min</span>
+          <span className="whitespace-nowrap text-[9px] uppercase tracking-wide text-ink-subtle">
+            min wait
+          </span>
         </span>
       </span>
 
@@ -372,12 +374,14 @@ function CompareCard({ arcade, best, onOpen, following }) {
         </span>
       </span>
 
-      <span className="text-right">
+      <span className="flex-none text-right">
         <span className="block font-display text-2xl font-bold leading-none tabular-nums text-ink">
           {stale ? '~' : ''}
           {wait}
         </span>
-        <span className="text-[9px] uppercase tracking-wide text-ink-subtle">min</span>
+        <span className="whitespace-nowrap text-[9px] uppercase tracking-wide text-ink-subtle">
+          min wait
+        </span>
       </span>
       <Chevron size={16} />
     </button>

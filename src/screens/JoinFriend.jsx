@@ -83,9 +83,7 @@ export default function JoinFriend({
             </p>
 
             <div className="mt-4 space-y-2">
-              <PrimaryButton onClick={onConfirm}>
-                I&rsquo;m on my way
-              </PrimaryButton>
+              <PrimaryButton onClick={onConfirm}>Notify them</PrimaryButton>
               <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
             </div>
           </div>

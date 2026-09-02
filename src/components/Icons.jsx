@@ -171,6 +171,12 @@ export const Crosshair = (p) => (
   </Svg>
 )
 
+export const Send = (p) => (
+  <Svg {...p}>
+    <path d="M4 11.6 20 4l-7.4 16-2.2-6.4-6.4-2Z" />
+  </Svg>
+)
+
 export const Shield = (p) => (
   <Svg {...p}>
     <path d="M12 3.5 19 6v5.5c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9V6Z" />

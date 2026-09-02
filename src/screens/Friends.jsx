@@ -10,7 +10,7 @@ import {
   ActionButton,
   LiveBadge,
 } from '../components/ui.jsx'
-import { Plus } from '../components/Icons.jsx'
+import { Plus, Comment } from '../components/Icons.jsx'
 import { FRIENDS, SONGS, OLD_SITE_FAVOURITE_CAP, ACTIVITY, PLANNED } from '../social.js'
 import { gameColor, gameLabel } from '../data.js'
 import { resolveVenues } from '../lib/queue.js'
@@ -46,12 +46,16 @@ export default function Friends({
   onSong,
   following,
   joinsSent,
+  rsvps,
+  onRsvp,
   onOpenPlayer,
   onOpenClip,
   onOpenArcade,
   onJoin,
   onPlan,
   onMessage,
+  onOpenMessages,
+  threadCount,
 }) {
   /* Resolved here, once: raw venues carry their queues nested per game, so
      anything reading a wait or a game colour needs the flattened form. */
@@ -62,10 +66,26 @@ export default function Friends({
       <TopBar
         title="Circle"
         right={
-          <Info>
-            Presence is venue level and mutual-only: you appear here to people
-            you follow back, and only while checked in and visible.
-          </Info>
+          <span className="flex items-center gap-1.5">
+            {/* Conversations are with the people on this tab, so this is where
+                the way back to them belongs. */}
+            <button
+              type="button"
+              onClick={onOpenMessages}
+              aria-label={
+                threadCount > 0
+                  ? `Messages, ${threadCount} ${threadCount === 1 ? 'conversation' : 'conversations'}`
+                  : 'Messages'
+              }
+              className="rounded-full p-1.5 text-ink-muted transition-colors duration-150 hover:bg-sunken hover:text-ink"
+            >
+              <Comment size={19} />
+            </button>
+            <Info>
+              Presence is venue level and mutual-only: you appear here to people
+              you follow back, and only while checked in and visible.
+            </Info>
+          </span>
         }
       />
 
@@ -74,7 +94,10 @@ export default function Friends({
           Map
         </Seg>
         <Seg on={section === 'here'} onClick={() => onSection('here')}>
-          Here now
+          Now
+        </Seg>
+        <Seg on={section === 'planned'} onClick={() => onSection('planned')}>
+          Later
         </Seg>
         <Seg on={section === 'activity'} onClick={() => onSection('activity')}>
           Activity
@@ -105,6 +128,15 @@ export default function Friends({
           onOpenPlayer={onOpenPlayer}
           onOpenArcade={onOpenArcade}
           onJoin={onJoin}
+        />
+      )}
+      {section === 'planned' && (
+        <Planned
+          arcades={venues}
+          following={following}
+          rsvps={rsvps}
+          onRsvp={onRsvp}
+          onOpenArcade={onOpenArcade}
           onPlan={onPlan}
         />
       )}
@@ -128,15 +160,11 @@ export default function Friends({
 
 /* Here now.
 
-   Two kinds of thing used to sit in one undivided list. Planned sessions - a
-   time in the future - rendered first, above a live presence list, under a tab
-   called "Here now", so a host who was not at any arcade read as somebody
-   standing in one. There was also nothing on a session row saying how you knew
-   the host.
-
-   So the screen is now two labelled sections, in the same order: what is
-   arranged for later, then who is actually out right now. The live count only
-   ever counts the second one.
+   Planned sessions - a time in the future - used to render first, above the
+   live presence list, inside this same view. Under a tab called "Here now" a
+   host who was not at any arcade read as somebody standing in one. They are
+   now a segment of their own, so this view contains exactly what its name
+   says: people who are at an arcade right now, and nothing else.
 
    The venue filter is the other half of it: opened from an arcade page this
    list stays inside that arcade, because a person who tapped "People you
@@ -150,7 +178,6 @@ function HereNow({
   onOpenPlayer,
   onOpenArcade,
   onJoin,
-  onPlan,
 }) {
   const here = presentFriends(following).filter(
     (p) => !venueId || p.at === venueId
@@ -160,7 +187,6 @@ function HereNow({
     .filter((a) => !venueId || a.id === venueId)
     .map((a) => ({ arcade: a, players: here.filter((p) => p.at === a.id) }))
     .filter((v) => v.players.length > 0)
-  const planned = PLANNED.filter((s) => !venueId || s.venue === venueId)
 
   return (
     <Body>
@@ -184,20 +210,6 @@ function HereNow({
         </div>
       )}
 
-      <Planned
-        sessions={planned}
-        arcades={arcades}
-        following={following}
-        onOpenArcade={onOpenArcade}
-      />
-
-      <div className="flex items-center gap-2 border-b border-line bg-sunken px-4 py-2">
-        <p className="flex-1 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-          Here now
-        </p>
-        <p className="text-[11px] text-ink-subtle">At an arcade right now</p>
-      </div>
-
       <div className="flex items-center gap-2 border-b border-line px-4 py-3">
         <LiveBadge label={`${here.length} out now`} />
         <p className="flex-1 text-xs text-ink-muted">
@@ -210,12 +222,6 @@ function HereNow({
             </>
           )}
         </p>
-        <ActionButton
-          icon={<Plus size={13} />}
-          onClick={() => onPlan(venueId ? { venue: venueId } : {})}
-        >
-          Plan
-        </ActionButton>
       </div>
 
       {venues.length === 0 && (
@@ -239,7 +245,7 @@ function HereNow({
             <span className="flex-1 text-xs tabular-nums text-ink-subtle">
               {players.length} here
             </span>
-            <span className="text-xs font-semibold text-brand-600">Enter</span>
+            <span className="text-xs font-semibold text-brand-600">Open</span>
           </button>
 
           {players.map((p, i) => (
@@ -264,7 +270,7 @@ function HereNow({
                 </span>
               </button>
               {joinsSent?.[p.handle] === arcade.id ? (
-                <Chip tone="brand">On your way</Chip>
+                <Chip tone="brand">Notified</Chip>
               ) : (
                 <ActionButton
                   onClick={() => onJoin(p.handle, arcade.id)}
@@ -283,26 +289,44 @@ function HereNow({
 
 /* Planned sessions.
 
-   Future, not live - which is why the section says so, and why each row states
-   the relationship that put it in front of you rather than leaving the reader
-   to work out who the host is. */
-function Planned({ sessions, arcades, following, onOpenArcade }) {
-  if (sessions.length === 0) return null
+   Future, not live. These used to sit at the top of Here now with no label of
+   their own, so a host who was not at any arcade looked like somebody standing
+   in one - and the row never said how you knew that host either. They are a
+   segment of their own now, and every row states the relationship that put it
+   in front of you. */
+function Planned({ arcades, following, rsvps, onRsvp, onOpenArcade, onPlan }) {
+  const sessions = PLANNED
 
   return (
-    <div className="border-b border-line">
-      <div className="flex items-center gap-2 border-b border-line bg-sunken px-4 py-2">
-        <p className="flex-1 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-          Planned sessions
+    <Body>
+      <div className="flex items-center gap-2 border-b border-line px-4 py-3">
+        <Chip tone="quiet">
+          {sessions.length} {sessions.length === 1 ? 'session' : 'sessions'}
+        </Chip>
+        <p className="flex-1 text-xs text-ink-muted">
+          Arranged for later, not here now
         </p>
-        <p className="text-[11px] text-ink-subtle">Arranged for later</p>
+        <ActionButton icon={<Plus size={13} />} onClick={() => onPlan({})}>
+          Plan
+        </ActionButton>
       </div>
+
+      {sessions.length === 0 && (
+        <p className="px-4 py-6 text-center text-sm text-ink-muted">
+          Nothing planned yet. Pick a venue, a game and a time, and ask whoever
+          you want there.
+        </p>
+      )}
 
       {sessions.map((s) => {
         const venue = arcades.find((a) => a.id === s.venue)
         const rel = relationshipOf(s.host, following)
+        const going = rsvps.includes(s.id)
         return (
-          <div key={s.id} className="flex items-start gap-3 px-4 py-3">
+          <div
+            key={s.id}
+            className="flex items-start gap-3 border-b border-line px-4 py-3"
+          >
             <span className="mt-0.5 flex -space-x-2">
               {s.going.slice(0, 3).map((h) => (
                 <Avatar key={h} handle={h} size={26} className="ring-2 ring-surface" />
@@ -313,16 +337,53 @@ function Planned({ sessions, arcades, following, onOpenArcade }) {
                 <span className="font-semibold">{s.host}</span>
                 <Chip tone="quiet">{s.invitedMe ? 'Invited you' : rel.label}</Chip>
               </p>
-              <p className="flex items-center gap-1.5 text-xs text-ink-muted">
-                <GameDot color={gameColor(s.gameId)} />
-                {venue?.short ?? 'an arcade'} &middot; {gameLabel(s.gameId)} &middot;{' '}
-                {s.whenLabel}
+              {/* A run of text, not a flex row: laying it out with flex let the
+                  venue button be squeezed until its own name broke in half.
+                  Each part is kept whole and the line breaks between them. */}
+              <p className="text-xs leading-snug text-ink-muted">
+                <GameDot
+                  color={gameColor(s.gameId)}
+                  className="mr-1.5 align-middle"
+                />
+                <span className="whitespace-nowrap">
+                  {venue ? (
+                    <button
+                      type="button"
+                      onClick={() => onOpenArcade(s.venue)}
+                      className="font-medium text-brand-600 underline decoration-brand-200 underline-offset-2 hover:decoration-brand-600"
+                    >
+                      {venue.short}
+                    </button>
+                  ) : (
+                    'an arcade'
+                  )}{' '}
+                  &middot;
+                </span>{' '}
+                <span className="whitespace-nowrap">
+                  {gameLabel(s.gameId)} &middot;
+                </span>{' '}
+                <span className="whitespace-nowrap">{s.whenLabel}</span>
               </p>
               <p className="text-xs text-ink-subtle">{s.note}</p>
+              {/* Saying yes has to leave a trace, the same way telling someone
+                  you are on your way does. */}
+              {going && (
+                <p className="text-xs font-medium text-fresh">
+                  {s.host} has been told you&rsquo;re coming &middot;{' '}
+                  {s.going.length + 1} going
+                </p>
+              )}
             </div>
             {s.invitedMe ? (
-              <ActionButton onClick={() => onOpenArcade(s.venue)}>
-                I&rsquo;m in
+              <ActionButton
+                onClick={() => onRsvp(s.id)}
+                aria-label={
+                  going
+                    ? `Cancel going to ${s.host}'s session`
+                    : `Tell ${s.host} you are coming`
+                }
+              >
+                {going ? 'Going' : "I'm in"}
               </ActionButton>
             ) : (
               <Chip tone="quiet">{s.going.length} going</Chip>
@@ -330,7 +391,7 @@ function Planned({ sessions, arcades, following, onOpenArcade }) {
           </div>
         )
       })}
-    </div>
+    </Body>
   )
 }
 
@@ -403,7 +464,11 @@ function Activity({
                     <ActionButton onClick={() => onJoin(e.handle, e.venue)}>
                       Join them
                     </ActionButton>
-                    <ActionButton onClick={() => onMessage(e.handle)}>
+                    <ActionButton
+                      onClick={() =>
+                        onMessage(e.handle, 'How long is the wait really?')
+                      }
+                    >
                       What&rsquo;s it like?
                     </ActionButton>
                   </>
@@ -419,7 +484,11 @@ function Activity({
                   </ActionButton>
                 )}
                 {e.type === 'best' && (
-                  <ActionButton onClick={() => onMessage(e.handle)}>
+                  <ActionButton
+                    onClick={() =>
+                      onMessage(e.handle, 'Nice score, what did you change?')
+                    }
+                  >
                     Send congrats
                   </ActionButton>
                 )}

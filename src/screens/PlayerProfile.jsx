@@ -111,7 +111,7 @@ export default function PlayerProfile({
                 Checked in {player.sinceMin} min ago
               </span>
             </span>
-            <span className="text-xs font-semibold text-fresh">Enter venue</span>
+            <span className="text-xs font-semibold text-fresh">Open</span>
           </button>
         )}
 
