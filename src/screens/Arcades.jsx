@@ -31,6 +31,7 @@ export default function Arcades({
   view,
   onView,
   onOpen,
+  following,
 }) {
   return (
     <Screen>
@@ -66,9 +67,9 @@ export default function Arcades({
       )}
 
       {view === 'list' ? (
-        <DiscoverView arcades={arcades} onOpen={onOpen} />
+        <DiscoverView arcades={arcades} onOpen={onOpen} following={following} />
       ) : (
-        <CompareView arcades={arcades} onOpen={onOpen} />
+        <CompareView arcades={arcades} onOpen={onOpen} following={following} />
       )}
     </Screen>
   )
@@ -128,7 +129,7 @@ function ModeButton({ on, children, onClick }) {
   )
 }
 
-function DiscoverView({ arcades, onOpen }) {
+function DiscoverView({ arcades, onOpen, following }) {
   if (arcades.length === 0) {
     return (
       <Body className="flex items-center justify-center p-6 text-center">
@@ -150,7 +151,7 @@ function DiscoverView({ arcades, onOpen }) {
   return (
     <Body className="bg-page/70">
       <div className="p-3">
-        <BestVenue arcade={best} onOpen={onOpen} />
+        <BestVenue arcade={best} onOpen={onOpen} following={following} />
 
         {others.length > 0 && (
           <section className="mt-4" aria-labelledby="other-options">
@@ -167,7 +168,12 @@ function DiscoverView({ arcades, onOpen }) {
 
             <div className="no-scrollbar -mx-3 flex snap-x gap-2.5 overflow-x-auto px-3 pb-1">
               {others.map((arcade) => (
-                <VenueCard key={arcade.id} arcade={arcade} onOpen={onOpen} />
+                <VenueCard
+                  key={arcade.id}
+                  arcade={arcade}
+                  onOpen={onOpen}
+                  following={following}
+                />
               ))}
             </div>
           </section>
@@ -177,9 +183,9 @@ function DiscoverView({ arcades, onOpen }) {
   )
 }
 
-function BestVenue({ arcade, onOpen }) {
+function BestVenue({ arcade, onOpen, following }) {
   const wait = estimateWaitMin(arcade)
-  const friends = presentAt(arcade.id)
+  const friends = presentAt(arcade.id, following)
 
   return (
     <button
@@ -246,10 +252,10 @@ function BestVenue({ arcade, onOpen }) {
   )
 }
 
-function VenueCard({ arcade, onOpen }) {
+function VenueCard({ arcade, onOpen, following }) {
   const wait = estimateWaitMin(arcade)
   const stale = isStale(arcade)
-  const friends = presentAt(arcade.id)
+  const friends = presentAt(arcade.id, following)
 
   return (
     <button
@@ -292,7 +298,7 @@ function VenueCard({ arcade, onOpen }) {
   )
 }
 
-function CompareView({ arcades, onOpen }) {
+function CompareView({ arcades, onOpen, following }) {
   const bestId = bestArcadeId(arcades)
   const rows = [...arcades].sort((a, b) => estimateWaitMin(a) - estimateWaitMin(b))
 
@@ -321,6 +327,7 @@ function CompareView({ arcades, onOpen }) {
               arcade={arcade}
               best={arcade.id === bestId}
               onOpen={onOpen}
+              following={following}
             />
           ))}
         </div>
@@ -332,10 +339,10 @@ function CompareView({ arcades, onOpen }) {
 /* Deliberately sparse. Choosing a venue needs four things: how long, how far,
    whether friends are there, and whether the number can be trusted. Cabinet
    counts and exact report ages are a level down, on the detail screen. */
-function CompareCard({ arcade, best, onOpen }) {
+function CompareCard({ arcade, best, onOpen, following }) {
   const wait = estimateWaitMin(arcade)
   const stale = isStale(arcade)
-  const friends = presentAt(arcade.id)
+  const friends = presentAt(arcade.id, following)
 
   return (
     <button

@@ -18,6 +18,7 @@ import {
   leaderboard,
   belowOldCap,
   presentFriends,
+  relationshipOf,
   gradeOf,
   formatAchievement,
   ago,
@@ -39,11 +40,16 @@ export default function Friends({
   game,
   section,
   onSection,
+  hereVenueId,
+  onClearVenue,
   song,
   onSong,
+  following,
+  joinsSent,
   onOpenPlayer,
   onOpenClip,
   onOpenArcade,
+  onJoin,
   onPlan,
   onMessage,
 }) {
@@ -81,16 +87,24 @@ export default function Friends({
       {section === 'map' && (
         <FriendsMap
           arcades={venues}
+          following={following}
+          joinsSent={joinsSent}
           onOpenPlayer={onOpenPlayer}
           onOpenArcade={onOpenArcade}
+          onJoin={onJoin}
           onMessage={onMessage}
         />
       )}
       {section === 'here' && (
         <HereNow
           arcades={venues}
+          following={following}
+          venueId={hereVenueId}
+          joinsSent={joinsSent}
+          onClearVenue={onClearVenue}
           onOpenPlayer={onOpenPlayer}
           onOpenArcade={onOpenArcade}
+          onJoin={onJoin}
           onPlan={onPlan}
         />
       )}
@@ -100,6 +114,7 @@ export default function Friends({
           onOpenPlayer={onOpenPlayer}
           onOpenClip={onOpenClip}
           onOpenArcade={onOpenArcade}
+          onJoin={onJoin}
           onPlan={onPlan}
           onMessage={onMessage}
         />
@@ -111,28 +126,104 @@ export default function Friends({
   )
 }
 
-function HereNow({ arcades, onOpenPlayer, onOpenArcade, onPlan }) {
-  const here = presentFriends()
+/* Here now.
+
+   Two kinds of thing used to sit in one undivided list. Planned sessions - a
+   time in the future - rendered first, above a live presence list, under a tab
+   called "Here now", so a host who was not at any arcade read as somebody
+   standing in one. There was also nothing on a session row saying how you knew
+   the host.
+
+   So the screen is now two labelled sections, in the same order: what is
+   arranged for later, then who is actually out right now. The live count only
+   ever counts the second one.
+
+   The venue filter is the other half of it: opened from an arcade page this
+   list stays inside that arcade, because a person who tapped "People you
+   follow" on KOKO was asking about KOKO, not about the city. */
+function HereNow({
+  arcades,
+  following,
+  venueId,
+  joinsSent,
+  onClearVenue,
+  onOpenPlayer,
+  onOpenArcade,
+  onJoin,
+  onPlan,
+}) {
+  const here = presentFriends(following).filter(
+    (p) => !venueId || p.at === venueId
+  )
+  const venue = venueId ? arcades.find((a) => a.id === venueId) : null
   const venues = arcades
+    .filter((a) => !venueId || a.id === venueId)
     .map((a) => ({ arcade: a, players: here.filter((p) => p.at === a.id) }))
     .filter((v) => v.players.length > 0)
+  const planned = PLANNED.filter((s) => !venueId || s.venue === venueId)
 
   return (
     <Body>
-      {/* An invitation is the clearest thing presence can lead to, so it sits
-          at the top rather than buried in a menu. */}
-      <Planned arcades={arcades} onOpenArcade={onOpenArcade} />
+      {venue && (
+        <div className="flex items-center gap-2 border-b border-line bg-brand-50 px-4 py-2.5">
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-display text-sm font-semibold text-ink">
+              {venue.name}
+            </span>
+            <span className="block text-xs text-ink-muted">
+              People you follow here now
+            </span>
+          </span>
+          <button
+            type="button"
+            onClick={onClearVenue}
+            className="flex-none rounded-full border border-brand-200 bg-surface px-3 py-1.5 text-xs font-semibold text-brand-700 transition-colors duration-150 hover:bg-brand-100"
+          >
+            Show all arcades
+          </button>
+        </div>
+      )}
+
+      <Planned
+        sessions={planned}
+        arcades={arcades}
+        following={following}
+        onOpenArcade={onOpenArcade}
+      />
+
+      <div className="flex items-center gap-2 border-b border-line bg-sunken px-4 py-2">
+        <p className="flex-1 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+          Here now
+        </p>
+        <p className="text-[11px] text-ink-subtle">At an arcade right now</p>
+      </div>
 
       <div className="flex items-center gap-2 border-b border-line px-4 py-3">
         <LiveBadge label={`${here.length} out now`} />
         <p className="flex-1 text-xs text-ink-muted">
-          of the <span className="tabular-nums">{FRIENDS.length}</span> people you
-          follow
+          {venue ? (
+            <>at {venue.short}</>
+          ) : (
+            <>
+              of the <span className="tabular-nums">{FRIENDS.length}</span>{' '}
+              people you follow
+            </>
+          )}
         </p>
-        <ActionButton icon={<Plus size={13} />} onClick={() => onPlan({})}>
+        <ActionButton
+          icon={<Plus size={13} />}
+          onClick={() => onPlan(venueId ? { venue: venueId } : {})}
+        >
           Plan
         </ActionButton>
       </div>
+
+      {venues.length === 0 && (
+        <p className="px-4 py-6 text-center text-sm text-ink-muted">
+          Nobody you follow is {venue ? `at ${venue.short}` : 'at an arcade'}{' '}
+          right now.
+        </p>
+      )}
 
       {venues.map(({ arcade, players }) => (
         <div key={arcade.id}>
@@ -172,12 +263,16 @@ function HereNow({ arcades, onOpenPlayer, onOpenArcade, onPlan }) {
                   </span>
                 </span>
               </button>
-              <ActionButton
-                onClick={() => onOpenArcade(arcade.id)}
-                aria-label={`Join ${p.handle} at ${arcade.short}`}
-              >
-                Join
-              </ActionButton>
+              {joinsSent?.[p.handle] === arcade.id ? (
+                <Chip tone="brand">On your way</Chip>
+              ) : (
+                <ActionButton
+                  onClick={() => onJoin(p.handle, arcade.id)}
+                  aria-label={`Tell ${p.handle} you are joining them at ${arcade.short}`}
+                >
+                  Join
+                </ActionButton>
+              )}
             </div>
           ))}
         </div>
@@ -186,13 +281,26 @@ function HereNow({ arcades, onOpenPlayer, onOpenArcade, onPlan }) {
   )
 }
 
-function Planned({ arcades, onOpenArcade }) {
-  if (PLANNED.length === 0) return null
+/* Planned sessions.
+
+   Future, not live - which is why the section says so, and why each row states
+   the relationship that put it in front of you rather than leaving the reader
+   to work out who the host is. */
+function Planned({ sessions, arcades, following, onOpenArcade }) {
+  if (sessions.length === 0) return null
 
   return (
     <div className="border-b border-line">
-      {PLANNED.map((s) => {
+      <div className="flex items-center gap-2 border-b border-line bg-sunken px-4 py-2">
+        <p className="flex-1 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+          Planned sessions
+        </p>
+        <p className="text-[11px] text-ink-subtle">Arranged for later</p>
+      </div>
+
+      {sessions.map((s) => {
         const venue = arcades.find((a) => a.id === s.venue)
+        const rel = relationshipOf(s.host, following)
         return (
           <div key={s.id} className="flex items-start gap-3 px-4 py-3">
             <span className="mt-0.5 flex -space-x-2">
@@ -201,9 +309,9 @@ function Planned({ arcades, onOpenArcade }) {
               ))}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm text-ink">
-                <span className="font-semibold">{s.host}</span> is getting people
-                together
+              <p className="flex flex-wrap items-center gap-1.5 text-sm text-ink">
+                <span className="font-semibold">{s.host}</span>
+                <Chip tone="quiet">{s.invitedMe ? 'Invited you' : rel.label}</Chip>
               </p>
               <p className="flex items-center gap-1.5 text-xs text-ink-muted">
                 <GameDot color={gameColor(s.gameId)} />
@@ -228,7 +336,15 @@ function Planned({ arcades, onOpenArcade }) {
 
 /* Activity. Every line ends in the action it enables, because a feed of facts
    about where people are is not engagement on its own. */
-function Activity({ arcades, onOpenPlayer, onOpenClip, onOpenArcade, onPlan, onMessage }) {
+function Activity({
+  arcades,
+  onOpenPlayer,
+  onOpenClip,
+  onOpenArcade,
+  onJoin,
+  onPlan,
+  onMessage,
+}) {
   const venueName = (id) => arcades.find((a) => a.id === id)?.short ?? 'an arcade'
 
   return (
@@ -284,7 +400,7 @@ function Activity({ arcades, onOpenPlayer, onOpenClip, onOpenArcade, onPlan, onM
 
                 {e.type === 'checkin' && (
                   <>
-                    <ActionButton onClick={() => onOpenArcade(e.venue)}>
+                    <ActionButton onClick={() => onJoin(e.handle, e.venue)}>
                       Join them
                     </ActionButton>
                     <ActionButton onClick={() => onMessage(e.handle)}>

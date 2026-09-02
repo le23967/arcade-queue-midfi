@@ -15,6 +15,9 @@ import {
   isStale,
   freshnessLabel,
   pairsOf,
+  peopleOf,
+  partiesLabel,
+  playersLabel,
   SOLO_TURN_MIN,
   PAIR_TURN_MIN,
 } from '../lib/queue.js'
@@ -38,9 +41,10 @@ export default function Detail({
   queueOpen,
   onToggleQueue,
   mePosition,
+  following,
 }) {
   const stale = isStale(arcade)
-  const friendsHere = presentAt(arcade.id)
+  const friendsHere = presentAt(arcade.id, following)
 
   return (
     <Screen>
@@ -86,8 +90,19 @@ export default function Detail({
             mePosition={mePosition}
             onReport={onReport}
           />
-          <Stat Icon={User} label="Solo" value={String(arcade.solo)}>
-            Single players, queued on their own
+          <Stat
+            Icon={User}
+            label="Solo players"
+            value={String(arcade.solo)}
+            info={
+              <>
+                A solo player and a pair each hold one queue position, so the
+                line is counted in parties. The two are listed separately
+                because a pair holds the machine longer.
+              </>
+            }
+          >
+            One player, one queue position
           </Stat>
           <Stat
             Icon={Clock}
@@ -126,7 +141,7 @@ export default function Detail({
             </span>
             <span className="flex-1">
               <span className="block text-xs uppercase tracking-wide text-ink-muted">
-                People you follow
+                People you follow at {arcade.short}
               </span>
               <span className="block text-sm font-semibold text-ink">
                 {friendsHere.map((p) => p.handle).join(', ')} here now
@@ -151,7 +166,7 @@ export default function Detail({
                   >
                     <span className="flex-1 text-sm text-ink">{g.game}</span>
                     <span className="text-xs tabular-nums text-ink-muted">
-                      Q {g.queue}
+                      {partiesLabel(g.queue)}
                     </span>
                     <span className="w-16 text-right text-sm tabular-nums text-ink">
                       ~{estimateWaitMin(g)} min
@@ -197,11 +212,11 @@ function QueueStat({ arcade, open, onToggle, mePosition, onReport }) {
             Queue
           </span>
           <span className="block text-lg font-semibold tabular-nums text-ink">
-            {arcade.queue} waiting
+            {partiesLabel(arcade.queue)} waiting
           </span>
           <span className="block text-xs text-ink-muted">
             {pairsOf(arcade)} pair{pairsOf(arcade) === 1 ? '' : 's'} &middot;{' '}
-            {arcade.solo} solo
+            {arcade.solo} solo &middot; {playersLabel(peopleOf(arcade))} in total
           </span>
         </span>
         <span className={`mt-1 text-ink-muted ${open ? '-rotate-90' : 'rotate-90'}`}>
@@ -248,8 +263,8 @@ function QueueStat({ arcade, open, onToggle, mePosition, onReport }) {
             <p className="flex flex-1 items-start gap-1.5 text-xs text-ink-muted">
               <span>
                 <span className="tabular-nums">{known}</span> of{' '}
-                <span className="tabular-nums">{arcade.queue}</span> checked in
-                through the app.
+                <span className="tabular-nums">{arcade.queue}</span> parties
+                checked in through the app.
               </span>
               <Info>
                 The queue count comes from reports, so it includes people who

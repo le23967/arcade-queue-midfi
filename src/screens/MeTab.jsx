@@ -29,10 +29,11 @@ export default function MeTab({
   soundOn,
   onSound,
   onOpenFollows,
+  following: followingHandles,
   likedCount,
   onOpenLiked,
 }) {
-  const { followers, following } = followCounts()
+  const { followers, following } = followCounts(followingHandles)
   const safeSessions = Math.max(0, Number(sessions) || 0)
   const safeReports = Math.max(0, Number(reports) || 0)
   const safeLikedCount = Math.max(0, Number(likedCount) || 0)

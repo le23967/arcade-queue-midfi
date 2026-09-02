@@ -5,7 +5,7 @@ import 'leaflet/dist/leaflet.css'
 import { Avatar, GameDot, PrimaryButton, Chip } from '../components/ui.jsx'
 import { Plus, Minus, Users, Clock, Pin, Crosshair } from '../components/Icons.jsx'
 import { ME_MAP } from '../data.js'
-import { estimateWaitMin, isStale, freshnessLabel } from '../lib/queue.js'
+import { estimateWaitMin, isStale, freshnessLabel, partiesLabel } from '../lib/queue.js'
 import { presentFriends } from '../lib/social.js'
 
 const MAP_CENTRE = [-33.88015, 151.20335]
@@ -112,7 +112,15 @@ const YOU_ICON = L.divIcon({
   `,
 })
 
-export default function FriendsMap({ arcades, onOpenPlayer, onOpenArcade, onMessage }) {
+export default function FriendsMap({
+  arcades,
+  following,
+  joinsSent,
+  onOpenPlayer,
+  onOpenArcade,
+  onJoin,
+  onMessage,
+}) {
   const [map, setMap] = useState(null)
   const [selected, setSelected] = useState(null)
   const [tileState, setTileState] = useState('loading')
@@ -124,7 +132,7 @@ export default function FriendsMap({ arcades, onOpenPlayer, onOpenArcade, onMess
     typeof navigator !== 'undefined' && navigator.geolocation ? 'locating' : 'unavailable'
   )
   const tileFailed = useRef(false)
-  const here = presentFriends()
+  const here = presentFriends(following)
 
   /* Watch rather than read once, so the dot follows you while you walk to the
      arcade. Venue level privacy is unaffected: this position stays on the
@@ -325,7 +333,8 @@ export default function FriendsMap({ arcades, onOpenPlayer, onOpenArcade, onMess
           <FriendCard
             player={friendCard}
             arcade={arcades.find((arcade) => arcade.id === friendCard.at)}
-            onJoin={() => onOpenArcade(friendCard.at)}
+            joined={joinsSent?.[friendCard.handle] === friendCard.at}
+            onJoin={() => onJoin(friendCard.handle, friendCard.at)}
             onMessage={() => onMessage(friendCard.handle)}
             onProfile={() => onOpenPlayer(friendCard.handle)}
             onClose={() => setSelected(null)}
@@ -447,7 +456,7 @@ function VenueCard({ arcade, friends, onEnter, onClose }) {
               <Clock size={12} /> ~{estimateWaitMin(arcade)} min
             </span>
             <span className="inline-flex items-center gap-1 tabular-nums">
-              <Users size={12} /> {arcade.queue} waiting
+              <Users size={12} /> {partiesLabel(arcade.queue)}
             </span>
             <span className="tabular-nums">{arcade.distanceKm.toFixed(1)} km</span>
           </p>
@@ -477,15 +486,13 @@ function VenueCard({ arcade, friends, onEnter, onClose }) {
       )}
 
       <div className="mt-2.5">
-        <PrimaryButton onClick={onEnter}>
-          {friends.length > 0 ? 'Join them here' : 'Open this arcade'}
-        </PrimaryButton>
+        <PrimaryButton onClick={onEnter}>Open this arcade</PrimaryButton>
       </div>
     </Card>
   )
 }
 
-function FriendCard({ player, arcade, onJoin, onMessage, onProfile, onClose }) {
+function FriendCard({ player, arcade, joined, onJoin, onMessage, onProfile, onClose }) {
   return (
     <Card>
       <div className="flex items-start gap-3">
@@ -510,6 +517,14 @@ function FriendCard({ player, arcade, onJoin, onMessage, onProfile, onClose }) {
         <CloseButton onClick={onClose} />
       </div>
 
+      {/* Once they have been told, the card says so rather than offering to
+          tell them again. */}
+      {joined && (
+        <p className="mt-2.5 rounded-xl bg-fresh-bg px-2.5 py-1.5 text-[11px] font-medium text-ink">
+          {player.handle} knows you&rsquo;re on your way.
+        </p>
+      )}
+
       <div className="mt-2.5 flex gap-2">
         <button
           type="button"
@@ -523,7 +538,7 @@ function FriendCard({ player, arcade, onJoin, onMessage, onProfile, onClose }) {
           onClick={onJoin}
           className="flex-1 rounded-xl bg-brand-600 py-2.5 font-display text-sm font-semibold text-white shadow-lg shadow-brand-600/25 transition-all duration-150 hover:bg-brand-700 active:scale-[0.98]"
         >
-          Join them
+          {joined ? 'Tell them again' : 'Join them'}
         </button>
       </div>
     </Card>

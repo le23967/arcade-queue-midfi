@@ -57,7 +57,7 @@ export default function CheckedIn({
           <p className="text-3xl font-semibold tabular-nums text-ink">
             #{position}{' '}
             <span className="text-base font-normal text-ink-muted">
-              of {total}
+              of {total} parties
             </span>
           </p>
           <p className="mt-1 text-xs text-ink-muted">

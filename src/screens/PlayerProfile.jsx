@@ -30,24 +30,50 @@ import {
    the venue, or arranging to meet. So the actions are back, scoped to people
    you follow both ways. The stranger case is untouched: nothing here appears
    for someone who has not followed you back, so the original finding still
-   holds where it applied. */
+   holds where it applied.
+
+   Every field below the handle is optional. Someone who follows you and whom
+   you have not followed back is on record as a handle and a game and nothing
+   else, so this screen has to render that person as readily as a mutual whose
+   scores it has had for months. It reads the relationship from explicit state
+   rather than inferring it from which fields happen to be missing. */
 export default function PlayerProfile({
   player,
+  relationship,
   arcade,
+  joinedAt,
   onBack,
   onOpenArcade,
+  onJoin,
   onMessage,
+  onToggleFollow,
   onPlan,
 }) {
+  const rel = relationship ?? {
+    youFollow: false,
+    followsYou: false,
+    mutual: false,
+    label: 'Not connected',
+  }
   const songs = sharedSongs(player)
   const games = sharedGames(player)
-  const mutual = player.followsYou !== false
+  const playerGames = player.games ?? []
+  const playerSongs = player.songs ?? []
+  const joined = joinedAt && arcade && joinedAt === arcade.id
 
   return (
     <Screen>
       <TopBar
         title={player.handle}
-        subtitle={mutual ? 'You follow each other' : 'Follows you'}
+        subtitle={
+          rel.mutual
+            ? 'You follow each other'
+            : rel.youFollow
+              ? 'You follow them'
+              : rel.followsYou
+                ? 'Follows you'
+                : 'Not connected'
+        }
         onBack={onBack}
       />
 
@@ -59,9 +85,12 @@ export default function PlayerProfile({
               {player.handle}
             </p>
             <p className="truncate text-xs text-ink-muted">
-              {player.games.join(' · ')}
+              {playerGames.length > 0 ? playerGames.join(' · ') : 'No games listed'}
             </p>
           </div>
+          <Chip className="ml-auto" tone={rel.mutual ? 'brand' : 'default'}>
+            {rel.label}
+          </Chip>
         </div>
 
         {arcade && (
@@ -108,13 +137,19 @@ export default function PlayerProfile({
         </Section>
 
         <Section title="Favourite songs">
-          <div className="flex flex-wrap gap-1.5">
-            {player.songs?.map((s) => (
-              <Chip key={s} tone={songs.includes(s) ? 'brand' : 'default'}>
-                {s}
-              </Chip>
-            ))}
-          </div>
+          {playerSongs.length === 0 ? (
+            <p className="text-sm text-ink-muted">
+              {player.handle} has not shared any favourites yet.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {playerSongs.map((s) => (
+                <Chip key={s} tone={songs.includes(s) ? 'brand' : 'default'}>
+                  {s}
+                </Chip>
+              ))}
+            </div>
+          )}
         </Section>
 
         {player.scores && (
@@ -150,21 +185,47 @@ export default function PlayerProfile({
       </Body>
 
       {/* The actions the consultation asked for: reach out, join them where
-          they are, or arrange the next one. */}
+          they are, or arrange the next one - all of which need the follow to
+          run both ways first, so a one-way profile offers the follow instead of
+          an action that would quietly do nothing. */}
       <div className="space-y-2 border-t border-line p-4">
-        {arcade ? (
-          <PrimaryButton onClick={() => onOpenArcade(arcade.id)}>
-            Join them at {arcade.short}
-          </PrimaryButton>
+        {rel.mutual ? (
+          <>
+            {joined && (
+              <p className="rounded-xl bg-fresh-bg px-3 py-2 text-xs font-medium text-ink">
+                {player.handle} knows you&rsquo;re on your way to {arcade.short}.
+              </p>
+            )}
+            {arcade ? (
+              <PrimaryButton onClick={() => onJoin(player.handle, arcade.id)}>
+                Join them at {arcade.short}
+              </PrimaryButton>
+            ) : (
+              <PrimaryButton onClick={() => onPlan({ invite: player.handle })}>
+                Plan a session together
+              </PrimaryButton>
+            )}
+            <SecondaryButton onClick={() => onMessage(player.handle)}>
+              Message
+            </SecondaryButton>
+          </>
         ) : (
-          <PrimaryButton onClick={() => onPlan({ invite: player.handle })}>
-            Plan a session together
-          </PrimaryButton>
-        )}
-        {mutual && (
-          <SecondaryButton onClick={() => onMessage(player.handle)}>
-            Message
-          </SecondaryButton>
+          <>
+            <p className="text-xs leading-relaxed text-ink-muted">
+              {rel.youFollow
+                ? `${player.handle} has not followed you back, so you cannot message them or see where they are.`
+                : `Follow ${player.handle} back to message them and see where they play.`}
+            </p>
+            {rel.youFollow ? (
+              <SecondaryButton onClick={() => onToggleFollow(player.handle)}>
+                Following
+              </SecondaryButton>
+            ) : (
+              <PrimaryButton onClick={() => onToggleFollow(player.handle)}>
+                {rel.followsYou ? 'Follow back' : 'Follow'}
+              </PrimaryButton>
+            )}
+          </>
         )}
       </div>
     </Screen>

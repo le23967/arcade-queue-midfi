@@ -7,7 +7,13 @@ import {
   Stepper,
   Info,
 } from '../components/ui.jsx'
-import { estimateWaitMin, freshnessLabel, isStale } from '../lib/queue.js'
+import {
+  estimateWaitMin,
+  freshnessLabel,
+  isStale,
+  pairsOf,
+  partiesLabel,
+} from '../lib/queue.js'
 
 /* Check-in, step two: confirm what you can see.
 
@@ -23,14 +29,21 @@ import { estimateWaitMin, freshnessLabel, isStale } from '../lib/queue.js'
    board failed because anything slower than one tap gets skipped.
 
    The payoff is that every check-in now carries a verified count rather than a
-   blind +1 on top of a number nobody has confirmed. */
+   blind +1 on top of a number nobody has confirmed.
+
+   It asks for pairs and solo players because that is what the arcade page
+   shows, and what a person standing at the cabinet can actually count. Asking
+   for "parties" here and displaying "pairs" there described the same line two
+   different ways - and a solo player is a party but not a pair, so the two
+   readings did not even line up. The party total is derived rather than
+   entered. */
 export default function ConfirmQueue({ arcade, onBack, onConfirm }) {
-  const [queue, setQueue] = useState(arcade.queue)
+  const [pairs, setPairs] = useState(pairsOf(arcade))
   const [solo, setSolo] = useState(arcade.solo)
 
-  const clampedSolo = Math.min(solo, queue)
-  const withYou = { ...arcade, queue: queue + 1, solo: clampedSolo + 1 }
-  const changed = queue !== arcade.queue || clampedSolo !== arcade.solo
+  const queue = pairs + solo
+  const withYou = { ...arcade, queue: queue + 1, solo: solo + 1 }
+  const changed = pairs !== pairsOf(arcade) || solo !== arcade.solo
 
   return (
     <Screen>
@@ -62,27 +75,25 @@ export default function ConfirmQueue({ arcade, onBack, onConfirm }) {
             How many are waiting, not counting you?
           </p>
           <Stepper
-            label="Queue"
-            hint="Parties waiting, not people"
-            value={queue}
-            onChange={(v) => {
-              const next = Math.max(0, v)
-              setQueue(next)
-              if (solo > next) setSolo(next)
-            }}
+            label="Pairs waiting"
+            hint="Two players sharing one queue position"
+            value={pairs}
+            onChange={(v) => setPairs(Math.max(0, v))}
           />
           <Stepper
-            label="Solo"
-            hint="How many of those are one player"
-            value={clampedSolo}
-            onChange={(v) => setSolo(Math.max(0, Math.min(v, queue)))}
+            label="Solo players waiting"
+            hint="One player in one queue position"
+            value={solo}
+            onChange={(v) => setSolo(Math.max(0, v))}
           />
         </div>
 
         <div className="mx-4 mt-3 rounded-md border border-line bg-sunken px-3 py-2">
-          <p className="text-xs text-ink-muted">Once you join</p>
+          <p className="text-xs text-ink-muted">
+            That is {partiesLabel(queue)} waiting
+          </p>
           <p className="text-lg font-semibold tabular-nums text-ink">
-            #{queue + 1} &middot; ~{estimateWaitMin(withYou)} min
+            You&rsquo;d be #{queue + 1} &middot; ~{estimateWaitMin(withYou)} min
           </p>
         </div>
 
@@ -94,7 +105,7 @@ export default function ConfirmQueue({ arcade, onBack, onConfirm }) {
       </Body>
 
       <div className="border-t border-line p-4">
-        <PrimaryButton onClick={() => onConfirm({ queue, solo: clampedSolo })}>
+        <PrimaryButton onClick={() => onConfirm({ queue, solo })}>
           Check in
         </PrimaryButton>
       </div>

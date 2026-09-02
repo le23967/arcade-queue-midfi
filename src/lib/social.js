@@ -22,6 +22,76 @@ export function formatAchievement(a) {
   return `${a.toFixed(4)}%`
 }
 
+/* --- the roster -----------------------------------------------------------
+
+   Two seed lists describe one population: people you already follow, and
+   people who follow you and whom you have not followed back. The second list
+   only ever carried a handle and a game, so anything reading a profile has to
+   treat songs, scores and presence as optional. Normalising both lists into
+   one shape here is what stops an optional field turning into an undefined at
+   the call site. */
+function normalise(person, { followsYou }) {
+  return {
+    handle: person.handle,
+    games: person.games ?? [],
+    songs: person.songs ?? [],
+    scores: person.scores ?? null,
+    at: person.at ?? null,
+    sinceMin: person.sinceMin ?? 0,
+    followsYou,
+  }
+}
+
+const PEOPLE = [
+  ...FRIENDS.map((p) => normalise(p, { followsYou: p.followsYou })),
+  ...FOLLOWERS_ONLY.map((p) => normalise(p, { followsYou: true })),
+]
+
+/* Who you follow when the prototype starts. Follows are App state from here
+   on, because you can now add one from the People screen. */
+export const INITIAL_FOLLOWING = FRIENDS.map((p) => p.handle)
+
+export function allPeople() {
+  return PEOPLE
+}
+
+export function findPerson(handle) {
+  return PEOPLE.find((p) => p.handle === handle) ?? null
+}
+
+/* Relationship is stated explicitly rather than inferred from a missing field,
+   so "we have no data on this person" can never read as "mutual". */
+export function relationshipOf(handle, following = INITIAL_FOLLOWING) {
+  const person = findPerson(handle)
+  const youFollow = following.includes(handle)
+  const followsYou = Boolean(person?.followsYou)
+
+  return {
+    youFollow,
+    followsYou,
+    mutual: youFollow && followsYou,
+    label: youFollow
+      ? followsYou
+        ? 'Mutual'
+        : 'Following'
+      : followsYou
+        ? 'Follows you'
+        : 'Not connected',
+    /* What the follow button should say next. */
+    action: youFollow ? (followsYou ? 'Mutual' : 'Following') : followsYou ? 'Follow back' : 'Follow',
+  }
+}
+
+export function searchPeople(query, following = INITIAL_FOLLOWING) {
+  const q = query.trim().toLowerCase()
+  if (q === '') return []
+  return PEOPLE.filter(
+    (p) =>
+      p.handle.toLowerCase().includes(q) ||
+      p.games.some((g) => g.toLowerCase().includes(q))
+  ).map((p) => ({ ...p, ...relationshipOf(p.handle, following) }))
+}
+
 /* Everyone you follow, plus you, ranked on one song. No cap. */
 export function leaderboard(songId) {
   const rows = [
@@ -46,44 +116,53 @@ export function belowOldCap(rows) {
   return { count: cut.length, hereNow: cut.filter((r) => r.at).length }
 }
 
-export function presentFriends() {
-  return FRIENDS.filter((p) => p.at !== null)
+/* Presence is mutual-only, so it is derived from the live follow state rather
+   than from the seed list: unfollow someone and their pin goes with them. */
+export function presentFriends(following = INITIAL_FOLLOWING) {
+  return PEOPLE.filter(
+    (p) => p.at !== null && p.followsYou && following.includes(p.handle)
+  )
 }
 
-export function presentAt(venueId) {
-  return FRIENDS.filter((p) => p.at === venueId)
+export function presentAt(venueId, following = INITIAL_FOLLOWING) {
+  return presentFriends(following).filter((p) => p.at === venueId)
 }
 
 /* A shared favourite is a reason to talk that neither person had to invent.
-   "if two people have the same favorite song ... they could talk about that" */
+   "if two people have the same favorite song ... they could talk about that"
+
+   Songs and games are optional on a profile, so both helpers fall back to an
+   empty list rather than reading `.filter` off undefined. */
 export function sharedSongs(player) {
-  return player.songs.filter((s) => ME.songs.includes(s))
+  return (player?.songs ?? []).filter((s) => ME.songs.includes(s))
 }
 
 export function sharedGames(player) {
-  return player.games.filter((g) => ME.games.includes(g))
+  return (player?.games ?? []).filter((g) => ME.games.includes(g))
 }
 
 /* --- follows ------------------------------------------------------------ */
 
-export function followingList() {
-  return FRIENDS
+export function followingList(following = INITIAL_FOLLOWING) {
+  return PEOPLE.filter((p) => following.includes(p.handle))
 }
 
-export function followerList() {
-  return [
-    ...FRIENDS.filter((p) => p.followsYou),
-    ...FOLLOWERS_ONLY.map((p) => ({ ...p, followsYou: true, youFollow: false })),
-  ]
+export function followerList(following = INITIAL_FOLLOWING) {
+  return PEOPLE.filter((p) => p.followsYou).map((p) => ({
+    ...p,
+    youFollow: following.includes(p.handle),
+  }))
 }
 
-export function followCounts() {
-  return { following: FRIENDS.length, followers: followerList().length }
+export function followCounts(following = INITIAL_FOLLOWING) {
+  return {
+    following: followingList(following).length,
+    followers: followerList(following).length,
+  }
 }
 
-export function isMutual(handle) {
-  const p = FRIENDS.find((x) => x.handle === handle)
-  return Boolean(p && p.followsYou)
+export function isMutual(handle, following = INITIAL_FOLLOWING) {
+  return relationshipOf(handle, following).mutual
 }
 
 /* --- shared formatting -------------------------------------------------- */

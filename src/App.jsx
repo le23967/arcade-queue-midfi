@@ -21,6 +21,7 @@ import Directions from './screens/Directions.jsx'
 import Comments from './screens/Comments.jsx'
 import { playSound, isMuted, setMuted } from './lib/sound.js'
 import Message from './screens/Message.jsx'
+import JoinFriend from './screens/JoinFriend.jsx'
 import PlanSession from './screens/PlanSession.jsx'
 import Liked from './screens/Liked.jsx'
 import MeTab from './screens/MeTab.jsx'
@@ -28,12 +29,22 @@ import Friends from './screens/Friends.jsx'
 import Watch from './screens/Watch.jsx'
 import Follows from './screens/Follows.jsx'
 import PlayerProfile from './screens/PlayerProfile.jsx'
-import { FRIENDS, FOLLOWERS_ONLY, CLIPS, CLIP_COMMENTS } from './social.js'
+import { CLIPS, CLIP_COMMENTS } from './social.js'
+import {
+  INITIAL_FOLLOWING,
+  findPerson,
+  isMutual,
+  relationshipOf,
+} from './lib/social.js'
 
 /* The summary is only interesting if a session has some length to it, and a
    reviewer clicks through in seconds. Check-in is therefore backdated by the
    42 minutes the sketch shows, and still counts up in real time from there. */
 const DEMO_SESSION_OFFSET_MIN = 42
+
+/* No backend, so delivery is simulated - but deterministically, and only in
+   the one direction a phone can actually confirm on its own. */
+const DELIVERY_DELAY_MS = 1200
 
 export default function App() {
   const [arcades, setArcades] = useState(ARCADES)
@@ -62,6 +73,17 @@ export default function App() {
   const [soundOn, setSoundOn] = useState(() => !isMuted())
   const [messageTo, setMessageTo] = useState(null)
   const [planPreset, setPlanPreset] = useState({})
+  /* Conversations survive closing the sheet, which is the whole point of a
+     thread. Keyed by handle, oldest message first. */
+  const [conversations, setConversations] = useState({})
+  /* Following is state now that it can be changed from the People screen. */
+  const [followingHandles, setFollowingHandles] = useState(INITIAL_FOLLOWING)
+  /* The pending "tell them I'm coming", and the ones already sent. */
+  const [joinTarget, setJoinTarget] = useState(null)
+  const [joinsSent, setJoinsSent] = useState({})
+  /* Which arcade the Here now list was opened from, if any. Null means the
+     general, all-arcades view. */
+  const [hereVenueId, setHereVenueId] = useState(null)
 
   /* Anything that navigates "back to the tab I came from" goes through this,
      so a renamed tab can never strand the view on an id nothing renders. */
@@ -70,10 +92,12 @@ export default function App() {
   const rows = venuesForGame(arcades, game)
   const rawArcade = arcades.find((a) => a.id === activeId) ?? arcades[0]
   const arcade = venueGame(rawArcade, game) ?? rows[0] ?? null
-  const player =
-    FRIENDS.find((p) => p.handle === playerHandle) ??
-    FOLLOWERS_ONLY.find((p) => p.handle === playerHandle) ??
-    null
+  /* One lookup over one normalised roster, so a profile opened from the
+     Followers list carries the same shape as one opened from the map. */
+  const player = playerHandle ? findPerson(playerHandle) : null
+  const playerRelationship = playerHandle
+    ? relationshipOf(playerHandle, followingHandles)
+    : null
 
   const [playerBack, setPlayerBack] = useState('friends')
 
@@ -107,9 +131,68 @@ export default function App() {
     setView('watch')
   }
 
+  /* Messaging stays mutual-only. Following someone who has not followed back
+     buys you nothing here, which is the rule the research asked for. */
   function openMessage(handle) {
+    if (!isMutual(handle, followingHandles)) return
     setMessageTo(handle)
     setModal('message')
+  }
+
+  function sendMessage(handle, text) {
+    const id = `m-${Date.now()}`
+    setConversations((all) => ({
+      ...all,
+      [handle]: [
+        ...(all[handle] ?? []),
+        { id, sender: 'me', text, timestamp: Date.now(), status: 'sent' },
+      ],
+    }))
+    window.setTimeout(() => {
+      setConversations((all) => ({
+        ...all,
+        [handle]: (all[handle] ?? []).map((m) =>
+          m.id === id ? { ...m, status: 'delivered' } : m
+        ),
+      }))
+    }, DELIVERY_DELAY_MS)
+  }
+
+  /* "Join them" is about a person, so it asks before it acts and then says
+     who was told. It never checks anyone in - that is a separate action at the
+     cabinet. */
+  function openJoin(handle, arcadeId) {
+    if (!arcadeId) return
+    setJoinTarget({ handle, arcadeId, sent: false })
+    setModal('join')
+  }
+
+  function confirmJoin() {
+    if (!joinTarget) return
+    setJoinsSent((all) => ({ ...all, [joinTarget.handle]: joinTarget.arcadeId }))
+    setJoinTarget((t) => ({ ...t, sent: true }))
+    playSound('success')
+  }
+
+  function toggleFollow(handle) {
+    setFollowingHandles((list) =>
+      list.includes(handle) ? list.filter((h) => h !== handle) : [...list, handle]
+    )
+  }
+
+  /* Here now is venue-scoped only while you are inside the venue you opened it
+     from. Anything that goes back to Circle on its own terms drops the filter,
+     so the tab is never permanently narrowed. */
+  function openHereAt(venueId) {
+    setHereVenueId(venueId)
+    setFriendsSection('here')
+    setTab('friends')
+    setView('friends')
+  }
+
+  function pickFriendsSection(next) {
+    setHereVenueId(null)
+    setFriendsSection(next)
   }
 
   /* Opening a plan from anywhere carries whatever context that place already
@@ -119,9 +202,12 @@ export default function App() {
     setView('plan')
   }
 
+  /* Back has to land on the screen the profile was opened from, including the
+     two that are not tabs. Opening someone from People used to return you to
+     the Me tab, which reads as a failed back. */
   function openPlayer(handle) {
     setPlayerHandle(handle)
-    setPlayerBack(view === 'detail' ? 'detail' : backTab)
+    setPlayerBack(['detail', 'follows'].includes(view) ? view : backTab)
     setView('player')
   }
 
@@ -145,6 +231,9 @@ export default function App() {
     setTab(next)
     setModal(null)
     setView(next)
+    /* Coming into Circle from the tab bar is the general view, never whatever
+       venue you happened to look at earlier. */
+    if (next === 'friends') setHereVenueId(null)
   }
 
   function openArcade(id) {
@@ -226,6 +315,7 @@ export default function App() {
               view={arcadeView}
               onView={setArcadeView}
               onOpen={openArcade}
+              following={followingHandles}
             />
           )}
 
@@ -263,6 +353,8 @@ export default function App() {
               onTab={setFollowsTab}
               onBack={() => setView('me')}
               onOpenPlayer={openPlayer}
+              following={followingHandles}
+              onToggleFollow={toggleFollow}
             />
           )}
 
@@ -271,12 +363,17 @@ export default function App() {
               arcades={arcades}
               game={game}
               section={friendsSection}
-              onSection={setFriendsSection}
+              onSection={pickFriendsSection}
+              hereVenueId={hereVenueId}
+              onClearVenue={() => setHereVenueId(null)}
               song={song}
               onSong={setSong}
+              following={followingHandles}
+              joinsSent={joinsSent}
               onOpenPlayer={openPlayer}
               onOpenClip={openClip}
               onOpenArcade={openArcade}
+              onJoin={openJoin}
               onPlan={openPlan}
               onMessage={openMessage}
             />
@@ -306,10 +403,14 @@ export default function App() {
           {view === 'player' && player && (
             <PlayerProfile
               player={player}
+              relationship={playerRelationship}
               arcade={arcades.find((a) => a.id === player.at) ?? null}
+              joinedAt={joinsSent[player.handle] ?? null}
               onBack={() => setView(playerBack)}
               onOpenArcade={openArcade}
+              onJoin={openJoin}
               onMessage={openMessage}
+              onToggleFollow={toggleFollow}
               onPlan={openPlan}
             />
           )}
@@ -324,6 +425,7 @@ export default function App() {
                 setFollowsTab(t)
                 setView('follows')
               }}
+              following={followingHandles}
               likedCount={likedIds.length}
               onOpenLiked={() => setView('liked')}
               soundOn={soundOn}
@@ -353,11 +455,8 @@ export default function App() {
               onBack={() => setView(backTab)}
               onCheckIn={() => setView('checkin')}
               onReport={() => setModal('report')}
-              onFriends={() => {
-                setTab('friends')
-                setFriendsSection('here')
-                setView('friends')
-              }}
+              following={followingHandles}
+              onFriends={() => openHereAt(arcade.id)}
             />
           )}
 
@@ -471,7 +570,26 @@ export default function App() {
         )}
 
         {modal === 'message' && messageTo && (
-          <Message handle={messageTo} onClose={() => setModal(null)} />
+          <Message
+            handle={messageTo}
+            messages={conversations[messageTo] ?? []}
+            onSend={(text) => sendMessage(messageTo, text)}
+            onClose={() => setModal(null)}
+          />
+        )}
+
+        {modal === 'join' && joinTarget && (
+          <JoinFriend
+            handle={joinTarget.handle}
+            arcade={arcades.find((a) => a.id === joinTarget.arcadeId) ?? null}
+            sent={joinTarget.sent}
+            onConfirm={confirmJoin}
+            onOpenArcade={() => {
+              setModal(null)
+              openArcade(joinTarget.arcadeId)
+            }}
+            onClose={() => setModal(null)}
+          />
         )}
 
         {modal === 'directions' && arcade && (

@@ -59,6 +59,22 @@ export function pairsOf(a) {
   return Math.max(0, a.queue - a.solo)
 }
 
+/* `queue` is parties, so it is not the number of people standing there. A
+   screen that shows the raw number has to say which of the two it means:
+   "11 waiting" reads as eleven people when it is eleven parties, nine of them
+   pairs - twenty players. Both numbers are useful, neither is optional. */
+export function peopleOf(a) {
+  return pairsOf(a) * 2 + a.solo
+}
+
+export function partiesLabel(n) {
+  return `${n} ${n === 1 ? 'party' : 'parties'}`
+}
+
+export function playersLabel(n) {
+  return `${n} ${n === 1 ? 'player' : 'players'}`
+}
+
 export function estimateWaitMin(a) {
   const load = a.solo * SOLO_TURN_MIN + pairsOf(a) * PAIR_TURN_MIN
   return Math.round(load / Math.max(1, a.cabinets))
