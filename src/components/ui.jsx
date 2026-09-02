@@ -167,8 +167,14 @@ function hueFor(handle) {
   return AVATAR_HUES[n % AVATAR_HUES.length]
 }
 
-export function Avatar({ handle = '?', size = 36, live = false, className = '' }) {
-  const [bg, fg] = hueFor(handle)
+export const AVATAR_HUE_COUNT = AVATAR_HUES.length
+
+/* The colour is derived from the handle so a player is recognisable across
+   screens without the prototype shipping image files. `hue` overrides that for
+   the one person who gets to choose: you. */
+export function Avatar({ handle = '?', size = 36, live = false, hue = null, className = '' }) {
+  const [bg, fg] =
+    hue === null || hue === undefined ? hueFor(handle) : AVATAR_HUES[hue % AVATAR_HUES.length]
   const initials = handle.replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || '?'
 
   return (

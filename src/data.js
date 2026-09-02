@@ -84,12 +84,12 @@ export const ARCADES = [
     map: { lat: -33.8836, lng: 151.1988 },
     games: {
       maimai: q(2, 7, 2, 2, '12:38 PM', [
-        { handle: 'rin_9' },
-        { handle: 'kzt', plus: 1 },
+        { handle: 'rin' },
+        { handle: 'kaz', plus: 1 },
         { handle: 'nori', plus: 1 },
       ]),
-      chunithm: q(1, 2, 1, 9, '12:31 PM', [{ handle: 'yuzu_' }]),
-      sdvx: q(1, 2, 2, 4, '12:36 PM', [{ handle: 'rvn_' }]),
+      chunithm: q(1, 2, 1, 9, '12:31 PM', [{ handle: 'yuzu' }]),
+      sdvx: q(1, 2, 2, 4, '12:36 PM', [{ handle: 'raven' }]),
       taiko: q(2, 0, 0, 12, '12:28 PM'),
       /* No GITADORA and no DDR here - confirmed absent. */
     },
@@ -124,10 +124,10 @@ export const ARCADES = [
     games: {
       maimai: q(5, 10, 4, 6, '12:34 PM', [
         { handle: 'ovo_' },
-        { handle: 'p0lar', plus: 1 },
+        { handle: 'polar', plus: 1 },
         { handle: 'tsuki' },
       ]),
-      chunithm: q(3, 5, 3, 4, '12:36 PM', [{ handle: 'ovo_' }, { handle: 'hnr' }]),
+      chunithm: q(3, 5, 3, 4, '12:36 PM', [{ handle: 'ovo_' }, { handle: 'hana' }]),
       sdvx: q(2, 2, 2, 26, '12:14 PM'),
       gitadora: q(1, 1, 1, 11, '12:29 PM'),
       taiko: q(5, 6, 3, 3, '12:37 PM'),
@@ -144,7 +144,7 @@ export const ME_MAP = { lat: -33.8832, lng: 151.2006 }
    queue without having to speak to anyone, which matters for the interviewee
    who described themselves as "very introverted". (Wednesday interview) */
 export const QUEUE_AHEAD = [
-  { handle: 'rin_9', state: 'Playing now' },
-  { handle: 'kzt', state: 'Next' },
+  { handle: 'rin', state: 'Playing now' },
+  { handle: 'kaz', state: 'Next' },
   { handle: 'ovo / pair', state: 'Waiting' },
 ]

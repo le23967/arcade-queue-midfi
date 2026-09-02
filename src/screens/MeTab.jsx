@@ -22,6 +22,8 @@ import { followCounts } from '../lib/social.js'
 const WEEKLY_GOAL = 4
 
 export default function MeTab({
+  me,
+  onEditProfile,
   reports,
   sessions,
   visible,
@@ -47,20 +49,30 @@ export default function MeTab({
       <Body className="bg-sunken">
         <div className="space-y-3 px-4 py-4 pb-6">
           <section className="overflow-hidden rounded-2xl border border-brand-200 bg-brand-50 shadow-sm">
-            <div className="flex items-center gap-3 p-4">
-              <Avatar handle={ME.handle} size={58} />
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="font-display text-xl font-bold tracking-tight text-ink">
-                    {ME.handle}
-                  </h2>
+            {/* Your handle and colour are yours, so the card that shows them is
+                the control that changes them. */}
+            <button
+              type="button"
+              onClick={onEditProfile}
+              className="flex w-full items-center gap-3 p-4 text-left transition-colors duration-150 hover:bg-brand-100"
+            >
+              <Avatar handle={me.handle} hue={me.hue} size={58} />
+              <span className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="font-display text-xl font-bold tracking-tight text-ink">
+                    {me.handle}
+                  </span>
                   <Chip tone="brand">Sydney</Chip>
-                </div>
-                <p className="mt-0.5 truncate text-xs text-ink-muted">
+                </span>
+                <span className="mt-0.5 block truncate text-xs text-ink-muted">
                   {ME.games.join(' · ')}
-                </p>
-              </div>
-            </div>
+                </span>
+              </span>
+              <span className="flex flex-none items-center gap-1 text-xs font-semibold text-brand-700">
+                Edit
+                <Chevron size={13} />
+              </span>
+            </button>
 
             <div className="border-t border-brand-200 bg-surface/70 px-4 py-3">
               <div className="flex items-end justify-between gap-3">

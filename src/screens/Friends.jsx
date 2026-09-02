@@ -44,6 +44,7 @@ export default function Friends({
   onClearVenue,
   song,
   onSong,
+  me,
   following,
   joinsSent,
   rsvps,
@@ -152,7 +153,7 @@ export default function Friends({
         />
       )}
       {section === 'scores' && (
-        <Scores song={song} onSong={onSong} onOpenPlayer={onOpenPlayer} />
+        <Scores song={song} onSong={onSong} me={me} onOpenPlayer={onOpenPlayer} />
       )}
     </Screen>
   )
@@ -506,7 +507,7 @@ function Activity({
   )
 }
 
-function Scores({ song, onSong, onOpenPlayer }) {
+function Scores({ song, onSong, me, onOpenPlayer }) {
   const rows = leaderboard(song)
   const cut = belowOldCap(rows)
   const current = SONGS.find((s) => s.id === song)
@@ -541,7 +542,12 @@ function Scores({ song, onSong, onOpenPlayer }) {
               }`}
             >
               <span className="w-5 text-xs tabular-nums text-ink-subtle">{r.rank}</span>
-              <Avatar handle={r.me ? 'kntt' : r.handle} size={28} live={Boolean(r.at)} />
+              <Avatar
+                handle={r.me ? me.handle : r.handle}
+                hue={r.me ? me.hue : null}
+                size={28}
+                live={Boolean(r.at)}
+              />
               <span className="min-w-0 flex-1">
                 <span
                   className={`block truncate text-sm ${

@@ -29,8 +29,9 @@ import Friends from './screens/Friends.jsx'
 import Watch from './screens/Watch.jsx'
 import Follows from './screens/Follows.jsx'
 import Messages from './screens/Messages.jsx'
+import EditProfile from './screens/EditProfile.jsx'
 import PlayerProfile from './screens/PlayerProfile.jsx'
-import { CLIPS, CLIP_COMMENTS } from './social.js'
+import { CLIPS, CLIP_COMMENTS, ME } from './social.js'
 import {
   INITIAL_FOLLOWING,
   findPerson,
@@ -61,7 +62,7 @@ export default function App() {
   const [reports, setReports] = useState(7)
   const [lastSession, setLastSession] = useState(null)
   const [friendsSection, setFriendsSection] = useState('map')
-  const [song, setSong] = useState('neon')
+  const [song, setSong] = useState('pandora')
   const [playerHandle, setPlayerHandle] = useState(null)
   const [visible, setVisible] = useState(true)
   const [clipIndex, setClipIndex] = useState(0)
@@ -96,6 +97,9 @@ export default function App() {
      trap the evaluation already caught once. A stack cannot do that: every
      step is recorded, and back unwinds them in order. */
   const [history, setHistory] = useState([])
+  /* Your own handle and avatar colour are the one identity in here you own,
+     so they are state rather than a constant. */
+  const [me, setMe] = useState({ handle: ME.handle, hue: null })
 
   /* Anything that navigates "back to the tab I came from" goes through this,
      so a renamed tab can never strand the view on an id nothing renders. */
@@ -144,7 +148,7 @@ export default function App() {
     setComments((all) => ({
       ...all,
       [clip.id]: [
-        { id: `own-${Date.now()}`, handle: 'kntt', text, minsAgo: 0 },
+        { id: `own-${Date.now()}`, handle: me.handle, text, minsAgo: 0 },
         ...(all[clip.id] ?? []),
       ],
     }))
@@ -413,6 +417,7 @@ export default function App() {
               onClearVenue={() => setHereVenueId(null)}
               song={song}
               onSong={setSong}
+              me={me}
               following={followingHandles}
               joinsSent={joinsSent}
               rsvps={rsvps}
@@ -436,6 +441,17 @@ export default function App() {
               mutual={isMutual(messageTo, followingHandles)}
               onSend={(text) => sendMessage(messageTo, text)}
               onOpenProfile={() => openPlayer(messageTo)}
+              onBack={goBack}
+            />
+          )}
+
+          {view === 'editprofile' && (
+            <EditProfile
+              me={me}
+              onSave={(next) => {
+                setMe(next)
+                goBack()
+              }}
               onBack={goBack}
             />
           )}
@@ -489,6 +505,8 @@ export default function App() {
 
           {view === 'me' && (
             <MeTab
+              me={me}
+              onEditProfile={() => push('editprofile')}
               reports={reports}
               sessions={3}
               visible={visible}
