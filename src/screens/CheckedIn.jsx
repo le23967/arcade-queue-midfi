@@ -3,6 +3,7 @@ import {
   TopBar,
   Body,
   PrimaryButton,
+  SecondaryButton,
   Toggle,
   Info,
 } from '../components/ui.jsx'
@@ -33,7 +34,14 @@ export default function CheckedIn({
   onNotify,
   onBack,
   onCheckOut,
+  onLeaveQueue,
 }) {
+  /* Nothing has been played until a cabinet is free for you, so up to that
+     point checking out is the wrong exit: it would record a session that never
+     happened. Check Out stays the primary action because it is the one the
+     sketch puts on this screen, but it is no longer the only way off it. */
+  const waiting = position > arcade.cabinets
+
   return (
     <Screen>
       <TopBar title="Checked In"
@@ -103,8 +111,13 @@ export default function CheckedIn({
         </div>
       </Body>
 
-      <div className="border-t border-line p-4">
+      <div className="space-y-2 border-t border-line p-4">
         <PrimaryButton onClick={onCheckOut}>Check Out</PrimaryButton>
+        {waiting && (
+          <SecondaryButton onClick={onLeaveQueue}>
+            Leave the queue
+          </SecondaryButton>
+        )}
       </div>
     </Screen>
   )

@@ -7,6 +7,7 @@ import {
   otherGamesAt,
 } from './lib/queue.js'
 import { Frame, TabBar, SessionBanner, TAB_IDS } from './components/Frame.jsx'
+import { PrimaryButton, SecondaryButton } from './components/ui.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 
 import Arcades from './screens/Arcades.jsx'
@@ -358,16 +359,40 @@ export default function App() {
     goRoot('checkedin')
   }
 
-  function doCheckOut() {
+  /* Both ways out of a queue hand the slot back, so both go through here.
+     Check-in counts you as one more solo party, so leaving has to take that
+     back as well. Dropping only the party count turned one of the venue's
+     pairs into a solo player on every pass: at KOKO on maimai, 10 parties
+     with 4 solo came back as 10 with 5, so the running order drew a pair as
+     a single player and the venue lost one of its 16 players. It compounds,
+     and once enough pairs have been converted the wait falls with them. */
+  function releaseQueueSlot() {
     const target = venueGame(
       arcades.find((a) => a.id === session.arcadeId),
       session.gameId
     )
     patchVenueGame(target.id, session.gameId, {
       queue: Math.max(0, target.queue - 1),
+      solo: Math.max(0, target.solo - 1),
       updatedMinsAgo: 0,
       updatedAt: '12:38 PM',
     })
+  }
+
+  /* Leaving the queue is not checking out. Nothing was played, so no session
+     is recorded and there is no summary to show - it drops you back on the
+     venue, where you can queue again or look somewhere else. */
+  function leaveQueue() {
+    releaseQueueSlot()
+    setActiveId(session.arcadeId)
+    setSession(null)
+    setModal(null)
+    setTab('arcades')
+    goRoot('detail')
+  }
+
+  function doCheckOut() {
+    releaseQueueSlot()
 
     const elapsed = Math.max(
       1,
@@ -661,6 +686,7 @@ export default function App() {
                 goRoot('arcades')
               }}
               onCheckOut={() => setModal('checkout')}
+              onLeaveQueue={() => setModal('leavequeue')}
             />
           )}
 
@@ -743,10 +769,22 @@ export default function App() {
         )}
 
         {modal === 'checkout' && sessionArcade && (
-          <CheckoutModal
-            arcade={sessionArcade}
+          <QueueExitSheet
+            title={`Finished playing at ${sessionArcade.short}?`}
+            detail={`Your place goes back and everyone behind you moves up one. How long you played and how long you queued are recorded.`}
+            confirmLabel="Yes, check out"
             onCancel={() => setModal(null)}
             onConfirm={doCheckOut}
+          />
+        )}
+
+        {modal === 'leavequeue' && sessionArcade && session && (
+          <QueueExitSheet
+            title={`Leave the queue at ${sessionArcade.short}?`}
+            detail={`You give up position #${session.position} and everyone behind you moves up one. Nothing is recorded, because you have not played.`}
+            confirmLabel="Yes, leave the queue"
+            onCancel={() => setModal(null)}
+            onConfirm={leaveQueue}
           />
         )}
       </div>
@@ -754,33 +792,24 @@ export default function App() {
   )
 }
 
-/* SCREEN 7 - Check out confirmation. */
-function CheckoutModal({ arcade, onCancel, onConfirm }) {
+/* SCREEN 7 - confirming a way out of the queue.
+
+   Both exits give the slot back, so both ask first. They are not the same
+   thing though: checking out ends a session that happened, while leaving the
+   queue says one never started. From the waiting end of the queue only the
+   second is true, so the copy has to separate them rather than leaving one
+   button to mean both. */
+function QueueExitSheet({ title, detail, confirmLabel, onCancel, onConfirm }) {
   return (
-    <div className="absolute inset-0 z-10 flex items-end bg-ink/40">
-      <div className="w-full rounded-t-md border-t border-line bg-surface p-4">
-        <h2 className="text-base font-semibold text-ink">
-          Are you sure you want to check out?
+    <div className="anim-scrim absolute inset-0 z-10 flex items-end bg-ink/40">
+      <div className="anim-sheet w-full rounded-t-2xl border-t border-line bg-surface p-4 shadow-2xl">
+        <h2 className="font-display text-base font-semibold text-ink">
+          {title}
         </h2>
-        <p className="mt-1 text-xs text-ink-muted">
-          This gives up your place at {arcade.short} and moves everyone behind
-          you up one.
-        </p>
+        <p className="mt-1 text-xs leading-relaxed text-ink-muted">{detail}</p>
         <div className="mt-4 space-y-2">
-          <button
-            type="button"
-            onClick={onConfirm}
-            className="w-full rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white"
-          >
-            Yes, check out
-          </button>
-          <button
-            type="button"
-            onClick={onCancel}
-            className="w-full rounded-md border border-line bg-surface px-4 py-3 text-sm font-semibold text-ink"
-          >
-            Cancel
-          </button>
+          <PrimaryButton onClick={onConfirm}>{confirmLabel}</PrimaryButton>
+          <SecondaryButton onClick={onCancel}>Cancel</SecondaryButton>
         </div>
       </div>
     </div>
