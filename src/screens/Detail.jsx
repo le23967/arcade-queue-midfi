@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   Screen,
   TopBar,
@@ -7,7 +8,7 @@ import {
   StaleBadge,
   Info,
 } from '../components/ui.jsx'
-import { Users, Clock, Chevron, Pin } from '../components/Icons.jsx'
+import { Users, Clock, Chevron, Pin, Bars } from '../components/Icons.jsx'
 import { presentAt } from '../lib/social.js'
 import {
   queueRoster,
@@ -41,7 +42,18 @@ import {
    age - the whole reason the group chat fails is that its answer arrives
    "thirty or forty five minutes" later - so the report age carries a Fresh or
    Stale badge and sits against the number it qualifies, rather than a row
-   below as a timestamp of its own. */
+   below as a timestamp of its own.
+
+   A second pass cut what was left. Anything another screen or the phone
+   itself already holds is gone: the street address, because tapping the row
+   hands off to a maps app that has it; the clock time beside the report age,
+   because the age is the part you judge; and the venue name inside the
+   friends label, because it is in the title bar two rows up. The cabinet
+   count moved rather than went - it is a fact about the venue, so it shares
+   the venue row with the distance instead of sitting under the wait looking
+   like a second measure of it. Other games at the venue are one row until
+   asked for. What is left is the wait, how far away it is, the line, who you
+   know there, and Check In. */
 export default function Detail({
   arcade,
   otherGames,
@@ -81,14 +93,12 @@ export default function Detail({
           </span>
           <span className="flex-1">
             <span className="block text-sm text-ink">{arcade.name}</span>
-            <span className="block text-xs text-ink-muted">
-              {arcade.address}
-            </span>
-            {/* The cabinet count was here too. It belongs with the wait it
-                divides, and saying it twice made it look like a measure of
-                its own. */}
+            {/* How far and how big: two facts about the venue, on the row
+                about the venue, in one line. Under the wait it read as a
+                second measure of the wait, which is what made it noise. */}
             <span className="block text-xs tabular-nums text-ink-muted">
-              {arcade.distanceKm.toFixed(1)} km away
+              {arcade.distanceKm.toFixed(1)} km away &middot; {arcade.cabinets}{' '}
+              {arcade.cabinets === 1 ? 'machine' : 'machines'}
             </span>
           </span>
           <Chevron size={16} />
@@ -116,7 +126,7 @@ export default function Detail({
             </span>
             <span className="flex-1">
               <span className="block text-xs uppercase tracking-wide text-ink-muted">
-                People you follow at {arcade.short}
+                People you follow
               </span>
               <span className="block text-sm font-semibold text-ink">
                 {friendsHere.map((p) => p.handle).join(', ')} here now
@@ -127,42 +137,23 @@ export default function Detail({
         )}
 
         {otherGames.length > 0 && (
-          <div className="border-b border-line">
-            <p className="px-4 pt-3 text-xs uppercase tracking-wide text-ink-muted">
-              Also at this venue
-            </p>
-            <ul className="px-4 pb-3">
-              {otherGames.map((g) => (
-                <li key={g.gameId}>
-                  <button
-                    type="button"
-                    onClick={() => onPickGame(g.gameId)}
-                    className="flex w-full items-center gap-2 py-1.5 text-left"
-                  >
-                    <span className="flex-1 text-sm text-ink">{g.game}</span>
-                    <span className="text-xs tabular-nums text-ink-muted">
-                      {partiesLabel(g.queue)}
-                    </span>
-                    <span className="w-16 text-right text-sm tabular-nums text-ink">
-                      ~{estimateWaitMin(g)} min
-                    </span>
-                    {isStale(g) && <StaleBadge />}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <OtherGames games={otherGames} onPick={onPickGame} />
         )}
 
-      </Body>
+        {/* One primary action. Correcting the count is an occasional,
+            secondary job, so it lives inside the queue list where the wrong
+            number is actually visible, and inside check-in where you are
+            looking at the line anyway.
 
-      {/* One primary action. Correcting the count is an occasional, secondary
-          job, so it lives inside the queue list where the wrong number is
-          actually visible, and inside check-in where you are looking at the
-          line anyway. */}
-      <div className="border-t border-line p-4">
-        <PrimaryButton onClick={onCheckIn}>Check In</PrimaryButton>
-      </div>
+            It sits at the end of the content rather than pinned to the floor,
+            so a short screen does not open with a band of empty white between
+            the last row and the button. `sticky` keeps it on the bottom edge
+            once the queue is expanded and the page actually scrolls, so the
+            action is never scrolled away. */}
+        <div className="sticky bottom-0 border-t border-line bg-surface p-4">
+          <PrimaryButton onClick={onCheckIn}>Check In</PrimaryButton>
+        </div>
+      </Body>
     </Screen>
   )
 }
@@ -198,12 +189,11 @@ function WaitStat({ arcade, stale }) {
         <p className="font-display text-3xl font-bold leading-tight tabular-nums text-ink">
           About {estimateWaitMin(arcade)} min
         </p>
-        <p className="text-xs text-ink-muted">Across {machines}</p>
 
-        <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
           {stale ? <StaleBadge /> : <FreshBadge />}
           <span className="text-xs tabular-nums text-ink-muted">
-            {freshnessLabel(arcade)} &middot; {arcade.updatedAt}
+            {freshnessLabel(arcade)}
           </span>
         </div>
         {stale && (
@@ -212,6 +202,60 @@ function WaitStat({ arcade, stale }) {
           </p>
         )}
       </div>
+    </div>
+  )
+}
+
+/* Other games at this venue.
+
+   Five more rows of queue counts and waits, none of them about the game you
+   opened. They are still one tap away, but they no longer sit under the
+   decision as a second table competing for the same attention. */
+function OtherGames({ games, onPick }) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="border-b border-line">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left"
+      >
+        <span className="text-ink-muted">
+          <Bars size={18} />
+        </span>
+        <span className="flex-1 text-sm text-ink">Also at this venue</span>
+        <span className="text-xs tabular-nums text-ink-muted">
+          {games.length} {games.length === 1 ? 'game' : 'games'}
+        </span>
+        <span className={`text-ink-muted ${open ? '-rotate-90' : 'rotate-90'}`}>
+          <Chevron size={18} />
+        </span>
+      </button>
+
+      {open && (
+        <ul className="border-t border-line px-4 py-1">
+          {games.map((g) => (
+            <li key={g.gameId}>
+              <button
+                type="button"
+                onClick={() => onPick(g.gameId)}
+                className="flex w-full items-center gap-2 py-1.5 text-left"
+              >
+                <span className="flex-1 text-sm text-ink">{g.game}</span>
+                <span className="text-xs tabular-nums text-ink-muted">
+                  {partiesLabel(g.queue)}
+                </span>
+                <span className="w-16 text-right text-sm tabular-nums text-ink">
+                  ~{estimateWaitMin(g)} min
+                </span>
+                {isStale(g) && <StaleBadge />}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
