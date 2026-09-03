@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Screen, TopBar, Body, Seg, Info } from '../components/ui.jsx'
-import { Chevron } from '../components/Icons.jsx'
+import { Chevron, Qr } from '../components/Icons.jsx'
 import {
   followingList,
   followerList,
@@ -27,6 +27,7 @@ export default function Follows({
   onOpenPlayer,
   following,
   onToggleFollow,
+  onAddPerson,
 }) {
   const [query, setQuery] = useState('')
   const searching = query.trim().length > 0
@@ -45,6 +46,28 @@ export default function Follows({
           </Info>
         }
       />
+
+      {/* Typing a username only works if you already know it, letter for
+          letter. Standing next to the person, you do not - so the code comes
+          first and the field is the fallback. */}
+      <button
+        type="button"
+        onClick={onAddPerson}
+        className="flex w-full items-center gap-3 border-b border-line px-4 py-3 text-left transition-colors duration-150 hover:bg-sunken"
+      >
+        <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-brand-50 text-brand-700">
+          <Qr size={18} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-ink">
+            Add someone by code
+          </span>
+          <span className="block text-xs text-ink-muted">
+            Scan theirs, or show yours
+          </span>
+        </span>
+        <Chevron size={16} />
+      </button>
 
       <div className="border-b border-line px-4 py-2">
         <input

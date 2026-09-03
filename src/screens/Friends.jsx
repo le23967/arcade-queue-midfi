@@ -11,7 +11,7 @@ import {
   QuietAction,
   LiveBadge,
 } from '../components/ui.jsx'
-import { Plus, Comment } from '../components/Icons.jsx'
+import { Plus, Comment, Qr } from '../components/Icons.jsx'
 import { FRIENDS, SONGS, OLD_SITE_FAVOURITE_CAP, ACTIVITY, PLANNED } from '../social.js'
 import { gameColor, gameLabel } from '../data.js'
 import { resolveVenues } from '../lib/queue.js'
@@ -19,6 +19,7 @@ import {
   leaderboard,
   belowOldCap,
   presentFriends,
+  playerSignal,
   relationshipOf,
   gradeOf,
   formatAchievement,
@@ -57,6 +58,7 @@ export default function Friends({
   onPlan,
   onMessage,
   onOpenMessages,
+  onAddPerson,
   threadCount,
 }) {
   /* Resolved here, once: raw venues carry their queues nested per game, so
@@ -69,6 +71,17 @@ export default function Friends({
         title="Circle"
         right={
           <span className="flex items-center gap-1.5">
+            {/* Meeting someone is a thing that happens on this tab too, and it
+                happens at an arcade with the person standing there - so the way
+                to add them is in reach, not four steps under Me. */}
+            <button
+              type="button"
+              onClick={onAddPerson}
+              aria-label="Add someone by code"
+              className="rounded-full p-1.5 text-ink-muted transition-colors duration-150 hover:bg-sunken hover:text-ink"
+            >
+              <Qr size={19} />
+            </button>
             {/* Conversations are with the people on this tab, so this is where
                 the way back to them belongs. */}
             <button
@@ -170,7 +183,13 @@ export default function Friends({
 
    The venue filter is the other half of it: opened from an arcade page this
    list stays inside that arcade, because a person who tapped "People you
-   follow" on KOKO was asking about KOKO, not about the city. */
+   follow" on KOKO was asking about KOKO, not about the city.
+
+   Each row also carries one line about the player. Knowing that somebody is
+   at KOKO and plays maimai does not tell you whether you would want to queue
+   next to them, which is the question the list is really being read for. One
+   line is the whole budget: what they just played, or their best grade if the
+   feed has nothing recent on them. */
 function HereNow({
   arcades,
   following,
@@ -250,39 +269,47 @@ function HereNow({
             <span className="text-xs font-semibold text-brand-600">Open</span>
           </button>
 
-          {players.map((p, i) => (
-            <div
-              key={p.handle}
-              className="anim-row flex items-center gap-3 border-b border-line px-4 py-3"
-              style={{ animationDelay: `${i * 40}ms` }}
-            >
-              <button
-                type="button"
-                onClick={() => onOpenPlayer(p.handle)}
-                className="flex min-w-0 flex-1 items-center gap-3 text-left"
+          {players.map((p, i) => {
+            const signal = playerSignal(p.handle)
+            return (
+              <div
+                key={p.handle}
+                className="anim-row flex items-center gap-3 border-b border-line px-4 py-3"
+                style={{ animationDelay: `${i * 40}ms` }}
               >
-                <Avatar handle={p.handle} size={38} live />
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold text-ink">
-                    {p.handle}
-                  </span>
-                  <span className="block truncate text-xs text-ink-muted">
-                    {p.games.join(' · ')} &middot; {p.sinceMin}m
-                  </span>
-                </span>
-              </button>
-              {joinsSent?.[p.handle] === arcade.id ? (
-                <Chip tone="brand">Notified</Chip>
-              ) : (
-                <ActionButton
-                  onClick={() => onJoin(p.handle, arcade.id)}
-                  aria-label={`Tell ${p.handle} you are joining them at ${arcade.short}`}
+                <button
+                  type="button"
+                  onClick={() => onOpenPlayer(p.handle)}
+                  className="flex min-w-0 flex-1 items-center gap-3 text-left"
                 >
-                  Join
-                </ActionButton>
-              )}
-            </div>
-          ))}
+                  <Avatar handle={p.handle} size={38} live />
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold text-ink">
+                      {p.handle}
+                    </span>
+                    <span className="block truncate text-xs text-ink-muted">
+                      {p.games.join(' · ')} &middot; {p.sinceMin}m
+                    </span>
+                    {signal && (
+                      <span className="block truncate text-[11px] text-ink-subtle">
+                        {signal}
+                      </span>
+                    )}
+                  </span>
+                </button>
+                {joinsSent?.[p.handle] === arcade.id ? (
+                  <Chip tone="brand">Notified</Chip>
+                ) : (
+                  <ActionButton
+                    onClick={() => onJoin(p.handle, arcade.id)}
+                    aria-label={`Tell ${p.handle} you are joining them at ${arcade.short}`}
+                  >
+                    Join
+                  </ActionButton>
+                )}
+              </div>
+            )
+          })}
         </div>
       ))}
     </Body>

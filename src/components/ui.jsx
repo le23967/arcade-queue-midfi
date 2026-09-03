@@ -169,6 +169,27 @@ export function LiveBadge({ label = 'Live' }) {
   )
 }
 
+/* Clip artwork.
+
+   There are no video files in this prototype, so a clip has to look like
+   something. Each one gets its own two hues seeded off its id, which means the
+   art is deterministic: the tile in a grid is the same picture as the clip it
+   opens, and it stays the same between runs. Same three layer recipe the feed
+   already used, with the colours pulled out of the hardcode. */
+export function clipArt(clip) {
+  const seed = `${clip.id}-${clip.song ?? ''}`
+  let n = 0
+  for (let i = 0; i < seed.length; i += 1) n = (n * 31 + seed.charCodeAt(i)) >>> 0
+  const a = n % 360
+  const b = (a + 120 + (n % 90)) % 360
+
+  return [
+    `radial-gradient(circle at 16% 14%, hsl(${a} 78% 60% / 0.72), transparent 34%)`,
+    `radial-gradient(circle at 88% 45%, hsl(${b} 74% 55% / 0.46), transparent 32%)`,
+    `linear-gradient(155deg, hsl(${a} 52% 24%) 0%, #100d28 72%)`,
+  ].join(', ')
+}
+
 /* A dot in the game's hue. Cheap, and it makes a list of venues scannable
    before any label is read. */
 export function GameDot({ color, className = '' }) {

@@ -28,6 +28,7 @@ import MeTab from './screens/MeTab.jsx'
 import Friends from './screens/Friends.jsx'
 import Watch from './screens/Watch.jsx'
 import Follows from './screens/Follows.jsx'
+import AddPerson from './screens/AddPerson.jsx'
 import Messages from './screens/Messages.jsx'
 import EditProfile from './screens/EditProfile.jsx'
 import PlayerProfile from './screens/PlayerProfile.jsx'
@@ -396,6 +397,19 @@ export default function App() {
             />
           )}
 
+          {view === 'addperson' && (
+            <AddPerson
+              me={me}
+              following={followingHandles}
+              onFollow={toggleFollow}
+              onBack={goBack}
+              onSearch={() => {
+                setFollowsTab('following')
+                push('follows')
+              }}
+            />
+          )}
+
           {view === 'follows' && (
             <Follows
               tabName={followsTab}
@@ -404,6 +418,7 @@ export default function App() {
               onOpenPlayer={openPlayer}
               following={followingHandles}
               onToggleFollow={toggleFollow}
+              onAddPerson={() => push('addperson')}
             />
           )}
 
@@ -429,6 +444,7 @@ export default function App() {
               onPlan={openPlan}
               onMessage={openMessage}
               onOpenMessages={() => push('messages')}
+              onAddPerson={() => push('addperson')}
               threadCount={Object.keys(conversations).length}
             />
           )}

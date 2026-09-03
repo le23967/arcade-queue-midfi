@@ -1,4 +1,5 @@
 import {
+  ACTIVITY,
   FRIENDS,
   FOLLOWERS_ONLY,
   ME,
@@ -82,6 +83,18 @@ export function relationshipOf(handle, following = INITIAL_FOLLOWING) {
   }
 }
 
+/* Who a scanned code resolves to.
+
+   There is no camera and no second phone, so the scan has to land on somebody
+   real from the seed data. It picks the first person you are not following
+   yet, which is deterministic - the same demo twice runs the same way - and
+   true to the situation the feature is for: the person in front of you is
+   someone the app does not yet connect you to. Null once you follow everyone,
+   and the screen says so rather than inventing a stranger. */
+export function nextUnfollowed(following = INITIAL_FOLLOWING) {
+  return PEOPLE.find((p) => !following.includes(p.handle)) ?? null
+}
+
 export function searchPeople(query, following = INITIAL_FOLLOWING) {
   const q = query.trim().toLowerCase()
   if (q === '') return []
@@ -126,6 +139,24 @@ export function presentFriends(following = INITIAL_FOLLOWING) {
 
 export function presentAt(venueId, following = INITIAL_FOLLOWING) {
   return presentFriends(following).filter((p) => p.at === venueId)
+}
+
+/* What someone has just been playing, if the feed knows.
+
+   A presence row that only says "plays maimai DX" cannot answer the question
+   people actually ask before walking over, which is whether they would want to
+   play with this person. A set somebody finished a few minutes ago answers it
+   in a way a stored number does not: it says what they are doing right now,
+   not what they once managed.
+
+   Nothing new is invented for it - this is the same Activity feed the Circle
+   tab renders. A best-score fallback was tried for the people the feed has
+   nothing recent on and taken back out: a grade is a boast rather than an
+   invitation, and half of it is on the leaderboard anyway. So this returns
+   null for them, and the row simply carries one line less. */
+export function playerSignal(handle) {
+  const played = ACTIVITY.find((e) => e.type === 'played' && e.handle === handle)
+  return played?.songs?.length > 0 ? `Just played ${played.songs[0]}` : null
 }
 
 /* A shared favourite is a reason to talk that neither person had to invent.

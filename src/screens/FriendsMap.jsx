@@ -43,24 +43,73 @@ function hueFor(handle) {
   return AVATAR_HUES[value % AVATAR_HUES.length]
 }
 
+/* The pin carries the wait and nothing else.
+
+   It used to stack a wait pill on top of a separate name label - 58px of
+   marker before the avatars even started - and our three venues land 41px
+   apart one zoom out, so the stacks came down on each other and hid the
+   numbers. The name went, the second row went with it, and what is left is one
+   30px pill about 105px wide. The name is on the card the moment you tap.
+
+   The wait is still spelled out in minutes rather than shortened, which an
+   earlier evaluation asked for.
+
+   The box around the pill is for placing, not for pressing: pointer events are
+   off on it and back on for the pill, so markers standing close together stop
+   stealing each other's taps through invisible padding. The click still
+   reaches Leaflet, which listens on the root and gets it by bubbling. */
+const VENUE_ICON = { width: 160, height: 30 }
+
 function makeVenueIcon(arcade, active) {
   const wait = estimateWaitMin(arcade)
-  const label = escapeHtml(arcade.short)
+  const waitText = escapeHtml(`${isStale(arcade) ? '~' : ''}${wait} min wait`)
   const ariaLabel = escapeHtml(`${arcade.short}, about ${wait} minutes wait`)
-  const dot = active ? 'rgba(255,255,255,0.85)' : arcade.gameColor
+  const dot = active ? 'rgba(255,255,255,0.9)' : arcade.gameColor
 
   return L.divIcon({
     className: 'map-venue-marker',
-    iconSize: [168, 58],
-    iconAnchor: [84, 22],
+    iconSize: [VENUE_ICON.width, VENUE_ICON.height],
+    iconAnchor: [VENUE_ICON.width / 2, VENUE_ICON.height / 2],
     html: `
-      <button type="button" class="map-marker-button" aria-label="${ariaLabel}" style="width:168px;display:flex;flex-direction:column;align-items:center;border:0;background:transparent;padding:0;color:inherit;cursor:pointer;font:inherit;">
-        <span class="map-venue-pill" style="display:flex;align-items:center;gap:6px;border:${active ? '0' : '1px solid var(--line)'};border-radius:999px;background:${active ? 'var(--brand-600)' : 'var(--surface)'};padding:6px 12px 6px 9px;color:${active ? '#fff' : 'var(--ink)'};box-shadow:0 8px 20px rgba(24,24,27,0.18);transition:transform 150ms ease,background 150ms ease;">
-          <span style="width:8px;height:8px;flex:none;border-radius:999px;background:${dot};"></span>
-          <span style="white-space:nowrap;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;">${isStale(arcade) ? '~' : ''}${wait} min wait</span>
-        </span>
-        <span style="margin-top:4px;max-width:164px;overflow:hidden;border-radius:4px;background:rgba(255,255,255,0.86);padding:1px 4px;color:${active ? 'var(--brand-700)' : 'var(--ink-muted)'};font-size:9px;font-weight:700;letter-spacing:0.04em;line-height:13px;text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap;">${label}</span>
-      </button>
+      <div style="display:flex;width:${VENUE_ICON.width}px;height:${VENUE_ICON.height}px;align-items:center;justify-content:center;pointer-events:none;">
+        <button type="button" class="map-marker-button" aria-label="${ariaLabel}" style="display:flex;border:0;background:transparent;padding:0;color:inherit;cursor:pointer;font:inherit;pointer-events:auto;">
+          <span class="map-venue-pill" style="display:flex;align-items:center;gap:6px;border:${active ? '0' : '1px solid var(--line)'};border-radius:999px;background:${active ? 'var(--brand-600)' : 'var(--surface)'};padding:6px 12px 6px 9px;color:${active ? '#fff' : 'var(--ink)'};box-shadow:0 8px 20px rgba(24,24,27,0.18);transition:transform 150ms ease,background 150ms ease;">
+            <span style="width:8px;height:8px;flex:none;border-radius:999px;background:${dot};"></span>
+            <span style="white-space:nowrap;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;">${waitText}</span>
+          </span>
+        </button>
+      </div>
+    `,
+  })
+}
+
+/* Faces stay separate until there are more than two.
+
+   Everybody at a venue shares its coordinate, so the avatars are fanned out
+   sideways to keep off each other, and every extra person widens the row by
+   25px - which is how five of them ended up reaching into the pins either
+   side. Folding past two is the balance: one or two people are worth their own
+   face and their own tap, and beyond that the row would grow without limit, so
+   the third slot becomes a count. */
+const MAX_FACES = 2
+const FACE = 32
+/* Less than a face wide, so the stack overlaps. Elements that are visually
+   connected read as related; a row with gaps in it reads as separate things
+   that happen to be near each other. */
+const FACE_STEP = 24
+const FACE_LIFT = 51
+
+function faceIcon({ html, ariaLabel, index, count }) {
+  const offset = (index - (count - 1) / 2) * FACE_STEP
+
+  return L.divIcon({
+    className: 'map-friend-marker',
+    iconSize: [FACE, FACE],
+    iconAnchor: [FACE / 2 - offset, FACE_LIFT],
+    html: `
+      <div style="display:flex;width:${FACE}px;height:${FACE}px;align-items:center;justify-content:center;">
+        ${html(ariaLabel)}
+      </div>
     `,
   })
 }
@@ -69,18 +118,45 @@ function makeFriendIcon(player, arcade, index, count) {
   const [background, colour] = hueFor(player.handle)
   const initials =
     player.handle.replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || '?'
-  const offset = (index - (count - 1) / 2) * 25
-  const ariaLabel = escapeHtml(`${player.handle}, at ${arcade.short}`)
 
-  return L.divIcon({
-    className: 'map-friend-marker',
-    iconSize: [32, 32],
-    iconAnchor: [16 - offset, 55],
-    html: `
-      <button type="button" class="map-marker-button map-avatar" aria-label="${ariaLabel}" style="position:relative;display:flex;width:32px;height:32px;align-items:center;justify-content:center;border:2px solid #fff;border-radius:999px;background:${background};padding:0;color:${colour};box-shadow:0 4px 12px rgba(24,24,27,0.2);cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;transition:transform 150ms ease;">
+  return faceIcon({
+    ariaLabel: escapeHtml(`${player.handle}, at ${arcade.short}`),
+    index,
+    count,
+    html: (label) => `
+      <button type="button" class="map-marker-button map-avatar" aria-label="${label}" style="position:relative;display:flex;width:${FACE}px;height:${FACE}px;align-items:center;justify-content:center;border:2px solid #fff;border-radius:999px;background:${background};padding:0;color:${colour};box-shadow:0 4px 12px rgba(24,24,27,0.2);cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;transition:transform 150ms ease;">
         ${escapeHtml(initials)}
         <span style="position:absolute;right:-2px;bottom:-2px;width:10px;height:10px;border:2px solid #fff;border-radius:999px;background:var(--fresh);"></span>
       </button>
+    `,
+  })
+}
+
+/* The overflow count, in the shape the rest of the world uses for it.
+
+   This went through two wrong answers first. A filled avatar-coloured circle
+   impersonated a person, so a tap on it went somewhere the shape had not
+   promised. Squaring it off fixed the lie and broke the group: a plate with a
+   border sitting beside two faces reads as an unrelated control, not as the
+   rest of the people.
+
+   The convention settles it. Atlassian, Material, Ant and Fluent all end an
+   avatar group with a numeric avatar - same circle, same size, same ring, in
+   the same stack - and it opens the full list when tapped. That is what people
+   already know from Slack, Figma and Docs, so it is what this should be.
+
+   What keeps it from impersonating a person is colour, not shape: a flat
+   neutral ground and no initials, no presence dot. It is plainly the counter
+   for this group, and tapping it opens the card that names everyone in it. */
+function makeMoreIcon(extra, arcade, index, count) {
+  return faceIcon({
+    ariaLabel: escapeHtml(
+      `${extra} more ${extra === 1 ? 'person' : 'people'} you follow at ${arcade.short}`
+    ),
+    index,
+    count,
+    html: (label) => `
+      <button type="button" class="map-marker-button map-avatar" aria-label="${label}" style="position:relative;display:flex;width:${FACE}px;height:${FACE}px;align-items:center;justify-content:center;border:2px solid #fff;border-radius:999px;background:var(--line);padding:0;color:var(--ink-muted);box-shadow:0 4px 12px rgba(24,24,27,0.2);cursor:pointer;font-family:inherit;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;transition:transform 150ms ease;">+${extra}</button>
     `,
   })
 }
@@ -327,6 +403,7 @@ export default function FriendsMap({
             arcade={venueCard}
             friends={here.filter((player) => player.at === venueCard.id)}
             onEnter={() => onOpenArcade(venueCard.id)}
+            onPickFriend={(player) => setSelected({ kind: 'friend', player })}
             onClose={() => setSelected(null)}
           />
         ) : friendCard ? (
@@ -353,6 +430,9 @@ export default function FriendsMap({
 
 function VenueMarkers({ arcade, friends, active, onPickVenue, onPickFriend }) {
   const venueIcon = useMemo(() => makeVenueIcon(arcade, active), [arcade, active])
+  const faces = friends.slice(0, MAX_FACES)
+  const extra = friends.length - faces.length
+  const slots = faces.length + (extra > 0 ? 1 : 0)
 
   if (!arcade.map?.lat || !arcade.map?.lng) return null
 
@@ -366,26 +446,28 @@ function VenueMarkers({ arcade, friends, active, onPickVenue, onPickFriend }) {
         zIndexOffset={active ? 450 : 400}
         eventHandlers={{ click: onPickVenue }}
       />
-      {friends.map((player, index) => (
-        <FriendMarker
+      {faces.map((player, index) => (
+        <FaceMarker
           key={player.handle}
-          player={player}
           arcade={arcade}
+          icon={makeFriendIcon(player, arcade, index, slots)}
           index={index}
-          count={friends.length}
           onPick={() => onPickFriend(player)}
         />
       ))}
+      {extra > 0 && (
+        <FaceMarker
+          arcade={arcade}
+          icon={makeMoreIcon(extra, arcade, faces.length, slots)}
+          index={faces.length}
+          onPick={onPickVenue}
+        />
+      )}
     </>
   )
 }
 
-function FriendMarker({ player, arcade, index, count, onPick }) {
-  const icon = useMemo(
-    () => makeFriendIcon(player, arcade, index, count),
-    [player, arcade, index, count]
-  )
-
+function FaceMarker({ arcade, icon, index, onPick }) {
   return (
     <Marker
       position={[arcade.map.lat, arcade.map.lng]}
@@ -415,7 +497,11 @@ function SummaryCard({ friends, arcades, onPick }) {
         </p>
         <span className="text-right text-[11px] text-ink-subtle">Tap someone to join them</span>
       </div>
-      <div className="mt-2.5 flex gap-2">
+      {/* Every friend used to share the width, so a busy evening squeezed the
+          names out of their own buttons and left a strip of initials. They keep
+          a readable width now and the row scrolls, the same way the venue cards
+          on Arcades do. */}
+      <div className="no-scrollbar -mx-1 mt-2.5 flex gap-2 overflow-x-auto px-1">
         {friends.map((player) => {
           const arcade = arcades.find((item) => item.id === player.at)
           return (
@@ -423,7 +509,7 @@ function SummaryCard({ friends, arcades, onPick }) {
               key={player.handle}
               type="button"
               onClick={() => onPick(player)}
-              className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-sunken px-2 py-2 text-left transition-colors duration-150 hover:bg-line/50"
+              className="flex min-w-[104px] flex-1 items-center gap-2 rounded-xl bg-sunken px-2 py-2 text-left transition-colors duration-150 hover:bg-line/50"
             >
               <Avatar handle={player.handle} size={30} live />
               <span className="min-w-0">
@@ -442,7 +528,7 @@ function SummaryCard({ friends, arcades, onPick }) {
   )
 }
 
-function VenueCard({ arcade, friends, onEnter, onClose }) {
+function VenueCard({ arcade, friends, onEnter, onPickFriend, onClose }) {
   return (
     <Card>
       <div className="flex items-start gap-2">
@@ -467,21 +553,28 @@ function VenueCard({ arcade, friends, onEnter, onClose }) {
         <CloseButton onClick={onClose} />
       </div>
 
+      {/* Named, and each name opens that person.
+
+          A venue with more than two people you follow folds the rest into a
+          count on the map, so this row is how you reach whoever is behind it.
+          Left as plain text, joining the third person meant a trip back out to
+          the roster along the bottom - a longer way round than the map you
+          were already looking at. */}
       {friends.length > 0 && (
-        <div className="mt-2 flex items-center gap-2 rounded-xl bg-fresh-bg px-2.5 py-1.5">
-          <span className="flex -space-x-2">
-            {friends.map((player) => (
-              <Avatar
-                key={player.handle}
-                handle={player.handle}
-                size={22}
-                className="ring-2 ring-surface"
-              />
-            ))}
-          </span>
-          <span className="text-[11px] font-medium text-ink">
-            {friends.map((player) => player.handle).join(', ')} here now
-          </span>
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 rounded-xl bg-fresh-bg px-2 py-1.5">
+          {friends.map((player) => (
+            <button
+              key={player.handle}
+              type="button"
+              onClick={() => onPickFriend(player)}
+              aria-label={`Open ${player.handle}`}
+              className="flex items-center gap-1.5 rounded-full bg-surface/70 py-0.5 pl-0.5 pr-2 text-[11px] font-medium text-ink transition-colors duration-150 hover:bg-surface active:scale-95"
+            >
+              <Avatar handle={player.handle} size={20} />
+              {player.handle}
+            </button>
+          ))}
+          <span className="text-[11px] text-ink-muted">here now</span>
         </div>
       )}
 

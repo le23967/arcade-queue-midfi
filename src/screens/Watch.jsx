@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Screen, TopBar, Body, Avatar, PrimaryButton } from '../components/ui.jsx'
-import { Bell, Heart, Comment } from '../components/Icons.jsx'
+import { Screen, TopBar, Body, Avatar, PrimaryButton, clipArt } from '../components/ui.jsx'
+import { Bell, Heart, Comment, Chevron } from '../components/Icons.jsx'
 import { CLIPS } from '../social.js'
 import { gradeOf, formatAchievement } from '../lib/social.js'
 
@@ -22,6 +22,19 @@ const NEARBY_LIMIT_KM = 1
 
 const SWIPE = 56
 const REFRESH_PULL = 96
+const HINT_MS = 2800
+
+/* Following and Nearby are on screen permanently, so sideways navigation
+   announces itself. The vertical gesture had nothing: a first-time viewer sees
+   one clip and no reason to think there is a second one. So the first time
+   Watch opens in a session it says "Swipe up for next" once, over the clip,
+   and takes itself away after a few seconds or the moment you do anything.
+
+   Once per session rather than once per mount: the tab remounts this screen
+   every time you come back to it, and a cue that returned each time would be
+   an ad rather than a hint. The flag resets on reload, which is the length of
+   one run through the prototype. */
+let gestureHintShown = false
 
 export default function Watch({
   clips = CLIPS,
@@ -49,8 +62,23 @@ export default function Watch({
 
   const [drag, setDrag] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
+  const [hint, setHint] = useState(!gestureHintShown)
   const gesture = useRef(null)
   const stageRef = useRef(null)
+
+  const dismissHint = useCallback(() => {
+    gestureHintShown = true
+    setHint(false)
+  }, [])
+
+  /* Entering the screen is what spends the one showing, so leaving straight
+     away does not save it up for next time. */
+  useEffect(() => {
+    gestureHintShown = true
+    if (!hint) return undefined
+    const timer = window.setTimeout(() => setHint(false), HINT_MS)
+    return () => window.clearTimeout(timer)
+  }, [hint])
 
   useEffect(() => {
     const nextIndexes = getClipIndexes(scope, clips, arcades)
@@ -115,6 +143,7 @@ export default function Watch({
 
     function onWheel(event) {
       event.preventDefault()
+      dismissHint()
 
       window.clearTimeout(settle)
       settle = window.setTimeout(() => {
@@ -129,6 +158,7 @@ export default function Watch({
     }
 
     function onKey(event) {
+      dismissHint()
       if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') stepRef.current(-1)
       if (event.key === 'ArrowDown' || event.key === 'ArrowRight') stepRef.current(1)
     }
@@ -140,13 +170,14 @@ export default function Watch({
       el.removeEventListener('wheel', onWheel)
       el.removeEventListener('keydown', onKey)
     }
-  }, [])
+  }, [dismissHint])
 
   if (called && session && sessionArcade) {
     return <YoureUp arcade={sessionArcade} position={session.position} onGo={onGo} />
   }
 
   function onPointerDown(event) {
+    dismissHint()
     gesture.current = { x: event.clientX, y: event.clientY, axis: null }
   }
 
@@ -258,6 +289,19 @@ export default function Watch({
           </div>
         )}
 
+        {hint && !empty && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-28 z-30 flex justify-center">
+            <span className="anim-row flex items-center gap-1.5 rounded-full bg-black/50 px-3 py-1.5 text-[11px] font-semibold text-white backdrop-blur">
+              <span className="anim-nudge flex text-white/90">
+                <span className="block -rotate-90">
+                  <Chevron size={13} />
+                </span>
+              </span>
+              Swipe up for next
+            </span>
+          </div>
+        )}
+
         {session && sessionArcade && (
           <button
             type="button"
@@ -353,10 +397,9 @@ function ClipStage({
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
-        style={{
-          backgroundImage:
-            'radial-gradient(circle at 16% 14%, rgba(99, 102, 241, 0.72), transparent 34%), radial-gradient(circle at 88% 45%, rgba(225, 29, 72, 0.44), transparent 32%), linear-gradient(155deg, #21175b 0%, #100d28 72%)',
-        }}
+        /* Per clip rather than one gradient for all of them, so a clip
+           looks like its own thumbnail in Liked. */
+        style={{ backgroundImage: clipArt(clip) }}
       />
       <div
         aria-hidden="true"
