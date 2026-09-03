@@ -220,6 +220,44 @@ export default function App() {
     playSound('success')
   }
 
+  /* Plans change, so telling someone you are coming has to be as undoable as
+     saying yes to a session already is. */
+  function unsendJoin(handle) {
+    setJoinsSent((all) => {
+      const next = { ...all }
+      delete next[handle]
+      return next
+    })
+    setJoinTarget((t) => (t && t.handle === handle ? { ...t, sent: false } : t))
+  }
+
+  /* Sending replaces the session it was opened on, if it was opened on one, so
+     a change leaves one session rather than two. */
+  function savePlan(plan) {
+    setPlanned((list) =>
+      list.some((s) => s.id === plan.id)
+        ? list.map((s) => (s.id === plan.id ? plan : s))
+        : [plan, ...list]
+    )
+  }
+
+  function cancelPlan(id) {
+    setPlanned((list) => list.filter((s) => s.id !== id))
+    setRsvps((list) => list.filter((s) => s !== id))
+  }
+
+  /* Reopens Plan a session on an existing one, with everything already filled
+     in, rather than making people rebuild it from scratch to move it an hour. */
+  function editPlan(session) {
+    openPlan({
+      venue: session.venue,
+      gameId: session.gameId,
+      invited: session.asked ?? [],
+      when: session.when,
+      editingId: session.id,
+    })
+  }
+
   /* Saying yes to a session is reversible, so it commits straight away and
      shows the result, rather than asking first. */
   function toggleRsvp(id) {
@@ -441,6 +479,9 @@ export default function App() {
               planned={planned}
               rsvps={rsvps}
               onRsvp={toggleRsvp}
+              onEditPlan={editPlan}
+              onCancelPlan={cancelPlan}
+              onUnsendJoin={unsendJoin}
               onOpenPlayer={openPlayer}
               onOpenClip={openClip}
               onOpenArcade={openArcade}
@@ -489,7 +530,7 @@ export default function App() {
               arcades={rows}
               preset={planPreset}
               me={me}
-              onPlanned={(plan) => setPlanned((list) => [plan, ...list])}
+              onPlanned={savePlan}
               onBack={goBack}
               onDone={() => {
                 /* A new invitation belongs with the other planned ones, not
@@ -519,6 +560,7 @@ export default function App() {
               onBack={goBack}
               onOpenArcade={openArcade}
               onJoin={openJoin}
+              onUnsendJoin={unsendJoin}
               onMessage={openMessage}
               onToggleFollow={toggleFollow}
               onPlan={openPlan}
@@ -687,6 +729,7 @@ export default function App() {
             arcade={arcades.find((a) => a.id === joinTarget.arcadeId) ?? null}
             sent={joinTarget.sent}
             onConfirm={confirmJoin}
+            onUndo={() => unsendJoin(joinTarget.handle)}
             onOpenArcade={() => {
               setModal(null)
               openArcade(joinTarget.arcadeId)

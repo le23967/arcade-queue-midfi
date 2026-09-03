@@ -17,6 +17,7 @@ export default function JoinFriend({
   arcade,
   sent,
   onConfirm,
+  onUndo,
   onOpenArcade,
   onClose,
 }) {
@@ -58,6 +59,16 @@ export default function JoinFriend({
                 View {venueShort}
               </PrimaryButton>
               <SecondaryButton onClick={onClose}>Close</SecondaryButton>
+              {/* Plans change on the way out of the door, so the last thing
+                  said here is not final. This drops back to the unsent state
+                  rather than closing, so it is clear what it undid. */}
+              <button
+                type="button"
+                onClick={onUndo}
+                className="w-full rounded-lg py-1.5 text-xs font-semibold text-ink-muted transition-colors duration-150 hover:text-ink"
+              >
+                Take it back &mdash; I&rsquo;m not coming
+              </button>
             </div>
           </div>
         ) : (

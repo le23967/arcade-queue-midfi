@@ -195,6 +195,7 @@ export default function FriendsMap({
   onOpenPlayer,
   onOpenArcade,
   onJoin,
+  onUnsendJoin,
   onMessage,
 }) {
   const [map, setMap] = useState(null)
@@ -412,6 +413,7 @@ export default function FriendsMap({
             arcade={arcades.find((arcade) => arcade.id === friendCard.at)}
             joined={joinsSent?.[friendCard.handle] === friendCard.at}
             onJoin={() => onJoin(friendCard.handle, friendCard.at)}
+            onUndoJoin={() => onUnsendJoin?.(friendCard.handle)}
             onMessage={() => onMessage(friendCard.handle)}
             onProfile={() => onOpenPlayer(friendCard.handle)}
             onClose={() => setSelected(null)}
@@ -585,7 +587,16 @@ function VenueCard({ arcade, friends, onEnter, onPickFriend, onClose }) {
   )
 }
 
-function FriendCard({ player, arcade, joined, onJoin, onMessage, onProfile, onClose }) {
+function FriendCard({
+  player,
+  arcade,
+  joined,
+  onJoin,
+  onUndoJoin,
+  onMessage,
+  onProfile,
+  onClose,
+}) {
   return (
     <Card>
       <div className="flex items-start gap-3">
@@ -613,9 +624,18 @@ function FriendCard({ player, arcade, joined, onJoin, onMessage, onProfile, onCl
       {/* Once they have been told, the card says so rather than offering to
           tell them again. */}
       {joined && (
-        <p className="mt-2.5 rounded-xl bg-fresh-bg px-2.5 py-1.5 text-[11px] font-medium text-ink">
-          {player.handle} knows you&rsquo;re on your way.
-        </p>
+        <div className="mt-2.5 flex items-center gap-2 rounded-xl bg-fresh-bg px-2.5 py-1.5">
+          <p className="min-w-0 flex-1 text-[11px] font-medium text-ink">
+            {player.handle} knows you&rsquo;re on your way.
+          </p>
+          <button
+            type="button"
+            onClick={onUndoJoin}
+            className="flex-none rounded-md text-[11px] font-semibold text-ink-muted underline decoration-ink-subtle underline-offset-2 transition-colors duration-150 hover:text-ink"
+          >
+            Take it back
+          </button>
+        </div>
       )}
 
       <div className="mt-2.5 flex gap-2">

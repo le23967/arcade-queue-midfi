@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   Screen,
   TopBar,
@@ -52,6 +53,9 @@ export default function Friends({
   planned,
   rsvps,
   onRsvp,
+  onEditPlan,
+  onCancelPlan,
+  onUnsendJoin,
   onOpenPlayer,
   onOpenClip,
   onOpenArcade,
@@ -131,6 +135,7 @@ export default function Friends({
           onOpenPlayer={onOpenPlayer}
           onOpenArcade={onOpenArcade}
           onJoin={onJoin}
+          onUnsendJoin={onUnsendJoin}
           onMessage={onMessage}
         />
       )}
@@ -144,6 +149,7 @@ export default function Friends({
           onOpenPlayer={onOpenPlayer}
           onOpenArcade={onOpenArcade}
           onJoin={onJoin}
+          onUnsendJoin={onUnsendJoin}
         />
       )}
       {section === 'planned' && (
@@ -153,6 +159,8 @@ export default function Friends({
           following={following}
           rsvps={rsvps}
           onRsvp={onRsvp}
+          onEdit={onEditPlan}
+          onCancel={onCancelPlan}
           onOpenArcade={onOpenArcade}
           onPlan={onPlan}
         />
@@ -201,6 +209,7 @@ function HereNow({
   onOpenPlayer,
   onOpenArcade,
   onJoin,
+  onUnsendJoin,
 }) {
   const here = presentFriends(following).filter(
     (p) => !venueId || p.at === venueId
@@ -299,8 +308,16 @@ function HereNow({
                     )}
                   </span>
                 </button>
+                {/* One button that reports its own state and turns off again,
+                    the same way saying yes to a session does. Notified used to
+                    be a chip, so the only way back was to stop meaning it. */}
                 {joinsSent?.[p.handle] === arcade.id ? (
-                  <Chip tone="brand">Notified</Chip>
+                  <ActionButton
+                    onClick={() => onUnsendJoin?.(p.handle)}
+                    aria-label={`Take back telling ${p.handle} you are coming to ${arcade.short}`}
+                  >
+                    Notified
+                  </ActionButton>
                 ) : (
                   <ActionButton
                     onClick={() => onJoin(p.handle, arcade.id)}
@@ -325,7 +342,22 @@ function HereNow({
    in one - and the row never said how you knew that host either. They are a
    segment of their own now, and every row states what put it in front of you:
    you arranged it, you were invited, or how you know the host. */
-function Planned({ sessions, arcades, following, rsvps, onRsvp, onOpenArcade, onPlan }) {
+function Planned({
+  sessions,
+  arcades,
+  following,
+  rsvps,
+  onRsvp,
+  onEdit,
+  onCancel,
+  onOpenArcade,
+  onPlan,
+}) {
+  /* Calling a session off tells everyone it is off, so the button asks twice
+     rather than opening a dialog over a row this small. One slot is enough:
+     arming a second row disarms the first. */
+  const [confirming, setConfirming] = useState(null)
+
   return (
     <Body>
       <div className="flex items-center gap-2 border-b border-line px-4 py-3">
@@ -404,6 +436,36 @@ function Planned({ sessions, arcades, following, rsvps, onRsvp, onOpenArcade, on
                   {s.host} has been told you&rsquo;re coming &middot;{' '}
                   {s.going.length + 1} going
                 </p>
+              )}
+              {s.mine && (
+                <div className="mt-1.5 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConfirming(null)
+                      onEdit(s)
+                    }}
+                    className="rounded-md text-xs font-semibold text-brand-600 transition-colors duration-150 hover:text-brand-700"
+                  >
+                    Change
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirming !== s.id) {
+                        setConfirming(s.id)
+                        return
+                      }
+                      setConfirming(null)
+                      onCancel(s.id)
+                    }}
+                    className="rounded-md text-xs font-semibold text-ink-muted transition-colors duration-150 hover:text-live"
+                  >
+                    {confirming === s.id
+                      ? 'Tap again to call it off'
+                      : 'Call it off'}
+                  </button>
+                </div>
               )}
             </div>
             {s.invitedMe ? (

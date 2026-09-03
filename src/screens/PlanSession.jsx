@@ -42,18 +42,37 @@ export default function PlanSession({
   /* Computed once, so the options do not shift under the user mid-plan. */
   const [now] = useState(() => new Date())
   const quickPicks = useMemo(() => presetTimes(now), [now])
-  const [when, setWhen] = useState(quickPicks[0])
+  const [when, setWhen] = useState(preset?.when ?? quickPicks[0])
   const [pickerOpen, setPickerOpen] = useState(false)
   const pickerTriggerRef = useRef(null)
-  const [invited, setInvited] = useState(preset?.invite ? [preset.invite] : [])
+  const [invited, setInvited] = useState(
+    preset?.invited ?? (preset?.invite ? [preset.invite] : [])
+  )
   const [sent, setSent] = useState(false)
+
+  /* Reopened on a session that already exists, rather than starting a new one.
+     Sending then replaces it instead of leaving two. */
+  const editing = Boolean(preset?.editingId)
 
   const mutuals = FRIENDS.filter((f) => f.followsYou)
   const arcade = arcades.find((a) => a.id === venue) ?? arcades[0]
+  /* Only the people the list actually shows, so Select all cannot quietly ask
+     someone who is not on screen. */
+  const askable = mutuals.slice(0, 8)
+  const allAsked =
+    askable.length > 0 && askable.every((f) => invited.includes(f.handle))
 
   function toggle(handle) {
     setInvited((v) =>
       v.includes(handle) ? v.filter((h) => h !== handle) : [...v, handle]
+    )
+  }
+
+  function toggleAll() {
+    setInvited((v) =>
+      allAsked
+        ? v.filter((h) => !askable.some((f) => f.handle === h))
+        : [...new Set([...v, ...askable.map((f) => f.handle)])]
     )
   }
 
@@ -71,11 +90,14 @@ export default function PlanSession({
        confirmation screen was the only trace it had ever been sent, and the
        list you were dropped into still held only the seeded sessions. */
     onPlanned?.({
-      id: `ps-${Date.now()}`,
+      id: preset?.editingId ?? `ps-${Date.now()}`,
       mine: true,
       host: me.handle,
       venue,
       gameId,
+      /* The Date is kept as well as the label, so reopening this session for a
+         change can start the picker where it already is. */
+      when,
       whenLabel: formatWhen(when, now),
       /* Asked is not the same as coming: nobody has answered yet. */
       going: [me.handle],
@@ -88,20 +110,24 @@ export default function PlanSession({
   if (sent) {
     return (
       <Screen>
-        <TopBar title="Session planned" onBack={onDone} />
+        <TopBar
+          title={editing ? 'Session updated' : 'Session planned'}
+          onBack={onDone}
+        />
         <Body className="flex flex-col items-center justify-center p-6 text-center">
           <span className="flex h-16 w-16 items-center justify-center rounded-full bg-fresh-bg text-fresh">
             <Check size={32} />
           </span>
           <p className="mt-4 font-display text-xl font-semibold text-ink">
-            Invitation sent
+            {editing ? 'Changes sent' : 'Invitation sent'}
           </p>
           <p className="mt-1 text-sm text-ink-muted">
             {arcade?.short} &middot; {formatWhen(when, now)}
           </p>
           <p className="mt-1 text-xs text-ink-subtle">
-            {invited.length} {invited.length === 1 ? 'person' : 'people'} asked. It
-            shows on their Circle tab.
+            {invited.length} {invited.length === 1 ? 'person' : 'people'}{' '}
+            {editing ? 'told' : 'asked'}. You can change or call it off from
+            Later.
           </p>
           <div className="mt-6 w-full">
             <PrimaryButton onClick={onDone}>Done</PrimaryButton>
@@ -114,8 +140,12 @@ export default function PlanSession({
   return (
     <Screen>
       <TopBar
-        title="Plan a session"
-        subtitle="Turn who's around into a time and a place"
+        title={editing ? 'Change the session' : 'Plan a session'}
+        subtitle={
+          editing
+            ? 'Move it, or change who you asked'
+            : "Turn who's around into a time and a place"
+        }
         onBack={onBack}
       />
 
@@ -187,9 +217,20 @@ export default function PlanSession({
           </div>
         </Section>
 
-        <Section title={`Who, ${invited.length} asked`}>
+        <Section
+          title={`Who, ${invited.length} asked`}
+          action={
+            <button
+              type="button"
+              onClick={toggleAll}
+              className="rounded-md text-xs font-semibold text-brand-600 transition-colors duration-150 hover:text-brand-700"
+            >
+              {allAsked ? 'Clear' : 'Select all'}
+            </button>
+          }
+        >
           <ul className="-mx-1">
-            {mutuals.slice(0, 8).map((f) => {
+            {askable.map((f) => {
               const on = invited.includes(f.handle)
               return (
                 <li key={f.handle}>
@@ -234,7 +275,11 @@ export default function PlanSession({
           </p>
         </div>
         <PrimaryButton disabled={invited.length === 0} onClick={sendInvites}>
-          {invited.length === 0 ? 'Pick who to ask' : `Send to ${invited.length}`}
+          {invited.length === 0
+            ? 'Pick who to ask'
+            : editing
+              ? 'Save changes'
+              : `Send to ${invited.length}`}
         </PrimaryButton>
         <SecondaryButton onClick={onBack}>Cancel</SecondaryButton>
       </div>
@@ -858,12 +903,15 @@ function ChevronGlyph() {
   )
 }
 
-function Section({ title, children }) {
+function Section({ title, action, children }) {
   return (
     <div className="border-b border-line px-4 py-3">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-        {title}
-      </p>
+      <div className="mb-2 flex items-baseline justify-between gap-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+          {title}
+        </p>
+        {action}
+      </div>
       {children}
     </div>
   )

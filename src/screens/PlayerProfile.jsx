@@ -45,6 +45,7 @@ export default function PlayerProfile({
   onBack,
   onOpenArcade,
   onJoin,
+  onUnsendJoin,
   onMessage,
   onToggleFollow,
   onPlan,
@@ -192,9 +193,19 @@ export default function PlayerProfile({
         {rel.mutual ? (
           <>
             {joined && (
-              <p className="rounded-xl bg-fresh-bg px-3 py-2 text-xs font-medium text-ink">
-                {player.handle} knows you&rsquo;re on your way to {arcade.short}.
-              </p>
+              <div className="flex items-center gap-2 rounded-xl bg-fresh-bg px-3 py-2">
+                <p className="min-w-0 flex-1 text-xs font-medium text-ink">
+                  {player.handle} knows you&rsquo;re on your way to{' '}
+                  {arcade.short}.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onUnsendJoin?.(player.handle)}
+                  className="flex-none rounded-md text-xs font-semibold text-ink-muted underline decoration-ink-subtle underline-offset-2 transition-colors duration-150 hover:text-ink"
+                >
+                  Take it back
+                </button>
+              </div>
             )}
             {arcade ? (
               <PrimaryButton onClick={() => onJoin(player.handle, arcade.id)}>
