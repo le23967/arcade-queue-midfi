@@ -419,17 +419,19 @@ function ClipStage({
         </span>
       </div>
 
-      <div className="absolute bottom-28 right-3 z-20 flex flex-col items-center gap-3">
+      <div className="absolute bottom-28 right-1.5 z-20 flex flex-col items-center gap-1">
         <StageAction
           onClick={onLike}
           active={liked}
           label={liked ? 'Unlike clip' : 'Like clip'}
         >
-          <Heart size={15} filled={liked} />
+          {/* Heavier than the default line weight, because a glyph this size
+              drawn at 1.6 reads as thin over moving artwork. */}
+          <Heart size={28} strokeWidth={1.9} filled={liked} />
           <span className="tabular-nums">{likeCount}</span>
         </StageAction>
         <StageAction onClick={onComments} label="Open comments">
-          <Comment size={15} />
+          <Comment size={28} strokeWidth={1.9} />
           <span className="tabular-nums">{commentCount}</span>
         </StageAction>
       </div>
@@ -500,6 +502,11 @@ function ClipStage({
   )
 }
 
+/* The two controls the feed is driven by, so they are sized to be hit without
+   aiming. They were a 15px glyph in a button with no padding, which left a
+   target about 15px across on a screen where everything else is a full-width
+   gesture - well under the 44pt minimum Apple's guidelines set for a touch
+   control. The padding does the work, so the counts stay where they were. */
 function StageAction({ children, onClick, active, label, ...rest }) {
   return (
     <button
@@ -508,7 +515,7 @@ function StageAction({ children, onClick, active, label, ...rest }) {
       aria-label={label}
       aria-pressed={active}
       {...rest}
-      className={`flex flex-col items-center gap-0.5 text-[11px] font-semibold transition-all duration-150 ease-soft active:scale-90 ${
+      className={`flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded-xl px-1.5 text-xs font-semibold transition-all duration-150 ease-soft active:scale-90 ${
         active ? 'text-rose-400' : 'text-white'
       }`}
     >

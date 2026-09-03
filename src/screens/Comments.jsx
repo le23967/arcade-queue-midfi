@@ -101,14 +101,14 @@ export default function Comments({ clip, comments, onPost, onClose }) {
                         : `Like ${c.handle}'s comment`
                     }
                     aria-pressed={liked.includes(c.id)}
-                    className={`flex flex-none flex-col items-center gap-0.5 pt-1 transition-colors duration-150 ${
+                    className={`flex min-w-10 flex-none flex-col items-center gap-0.5 rounded-lg px-1.5 py-1.5 transition-colors duration-150 ${
                       liked.includes(c.id) ? 'text-live' : 'text-ink-subtle hover:text-ink-muted'
                     }`}
                   >
                     <span className={liked.includes(c.id) ? 'anim-pop' : ''}>
-                      <Heart size={15} filled={liked.includes(c.id)} />
+                      <Heart size={18} filled={liked.includes(c.id)} />
                     </span>
-                    <span className="text-[10px] tabular-nums">
+                    <span className="text-[11px] tabular-nums">
                       {likeCount(c) + (liked.includes(c.id) ? 1 : 0)}
                     </span>
                   </button>
