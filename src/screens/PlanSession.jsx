@@ -36,7 +36,6 @@ export default function PlanSession({ arcades, preset, onBack, onDone }) {
   const [now] = useState(() => new Date())
   const quickPicks = useMemo(() => presetTimes(now), [now])
   const [when, setWhen] = useState(quickPicks[0])
-  const [draftWhen, setDraftWhen] = useState(quickPicks[0])
   const [pickerOpen, setPickerOpen] = useState(false)
   const pickerTriggerRef = useRef(null)
   const [invited, setInvited] = useState(preset?.invite ? [preset.invite] : [])
@@ -58,7 +57,6 @@ export default function PlanSession({ arcades, preset, onBack, onDone }) {
 
   function sendInvites() {
     if (when.getTime() <= Date.now()) {
-      setDraftWhen(when)
       setPickerOpen(true)
       return
     }
@@ -129,10 +127,7 @@ export default function PlanSession({ arcades, preset, onBack, onDone }) {
           <button
             ref={pickerTriggerRef}
             type="button"
-            onClick={() => {
-              setDraftWhen(when)
-              setPickerOpen(true)
-            }}
+            onClick={() => setPickerOpen(true)}
             aria-label={`Choose date and time. Currently ${formatWhen(when, now)}`}
             className="flex w-full items-center gap-3 rounded-2xl border border-brand-200 bg-brand-50 px-3 py-3 text-left transition-all duration-150 hover:border-brand-400 hover:bg-brand-100 active:scale-[0.99]"
           >
@@ -228,13 +223,11 @@ export default function PlanSession({ arcades, preset, onBack, onDone }) {
 
       {pickerOpen && (
         <DateTimeSheet
-          value={draftWhen}
+          initial={when}
           now={now}
-          onChange={setDraftWhen}
           onCancel={closePicker}
-          onDone={() => {
-            if (draftWhen.getTime() <= Date.now()) return
-            setWhen(draftWhen)
+          onDone={(picked) => {
+            setWhen(picked)
             closePicker()
           }}
         />
@@ -347,12 +340,16 @@ function withPeriod(date, period) {
   return next
 }
 
-function DateTimeSheet({ value, now, onChange, onCancel, onDone }) {
+function DateTimeSheet({ initial, now, onCancel, onDone }) {
   const titleId = useId()
   const dateInputId = useId()
   const dialogRef = useRef(null)
+  /* The draft is held here rather than on the screen underneath. It used to
+     live on Plan a session, so every number a wheel passed re-rendered the
+     venue chips, the game chips and all eight invitee avatars as well. */
+  const [value, setValue] = useState(initial)
   const [currentTime, setCurrentTime] = useState(() => new Date())
-  const [dateInput, setDateInput] = useState(() => dateKey(value))
+  const [dateInput, setDateInput] = useState(() => dateKey(initial))
   const [timeEntriesValid, setTimeEntriesValid] = useState({
     hour: true,
     minute: true,
@@ -430,7 +427,7 @@ function DateTimeSheet({ value, now, onChange, onCancel, onDone }) {
   function finish() {
     const latest = new Date()
     setCurrentTime(latest)
-    if (dateComplete && timeComplete && value.getTime() > latest.getTime()) onDone()
+    if (dateComplete && timeComplete && value.getTime() > latest.getTime()) onDone(value)
   }
 
   return (
@@ -491,7 +488,7 @@ function DateTimeSheet({ value, now, onChange, onCancel, onDone }) {
             onChange={(event) => {
               const next = event.target.value
               setDateInput(next)
-              if (next) onChange(dateFromKey(next, value))
+              if (next) setValue(dateFromKey(next, value))
             }}
             className="h-11 w-full rounded-xl border border-line-strong bg-surface px-3 font-display text-sm font-semibold text-ink outline-none transition-colors duration-150 focus:border-brand-500"
           />
@@ -508,7 +505,7 @@ function DateTimeSheet({ value, now, onChange, onCancel, onDone }) {
               value={value.getHours() % 12 || 12}
               min={1}
               max={12}
-              onChange={(next) => onChange(withHour(value, next))}
+              onChange={(next) => setValue((current) => withHour(current, next))}
               onValidityChange={(valid) =>
                 setTimeEntriesValid((state) =>
                   state.hour === valid ? state : { ...state, hour: valid }
@@ -527,7 +524,7 @@ function DateTimeSheet({ value, now, onChange, onCancel, onDone }) {
               value={value.getMinutes()}
               min={0}
               max={59}
-              onChange={(next) => onChange(withMinute(value, next))}
+              onChange={(next) => setValue((current) => withMinute(current, next))}
               onValidityChange={(valid) =>
                 setTimeEntriesValid((state) =>
                   state.minute === valid ? state : { ...state, minute: valid }
@@ -548,7 +545,7 @@ function DateTimeSheet({ value, now, onChange, onCancel, onDone }) {
                         key={period.value}
                         type="button"
                         aria-pressed={on}
-                        onClick={() => onChange(withPeriod(value, period.value))}
+                        onClick={() => setValue(withPeriod(value, period.value))}
                         className={`rounded-lg text-xs font-semibold transition-colors duration-150 ${
                           on
                             ? 'bg-surface text-brand-700 shadow-sm'
@@ -581,6 +578,17 @@ function DateTimeSheet({ value, now, onChange, onCancel, onDone }) {
 const WHEEL_ROW_HEIGHT = 40
 const formatWheelValue = (number) => String(number).padStart(2, '0')
 
+/* A wheel where the browser owns the scroll position.
+
+   Writing scrollTop back from an effect cancels the platform's momentum the
+   moment the two disagree about where the list is, which is what made a flick
+   stall. The position is sampled once a frame instead, and only written back
+   for a change that did not come from this wheel.
+
+   The centred row also paints its own number now. Drawing it from the input
+   overlay instead left the digit a render behind the scroll, so it arrived
+   late and read as the number itself stuttering; the input stays transparent
+   until it is focused for typing. */
 function WheelColumn({
   label,
   options,
@@ -592,7 +600,10 @@ function WheelColumn({
 }) {
   const listRef = useRef(null)
   const inputRef = useRef(null)
-  const scrollDriven = useRef(false)
+  const frame = useRef(0)
+  const settle = useRef(0)
+  const holding = useRef(false)
+  const reported = useRef(value)
   const [text, setText] = useState(() => formatWheelValue(value))
   const number = Number(text)
   const valid = text !== '' && Number.isInteger(number) && number >= min && number <= max
@@ -602,54 +613,119 @@ function WheelColumn({
   )
 
   useEffect(() => {
+    reported.current = value
     if (document.activeElement !== inputRef.current) {
       setText(formatWheelValue(value))
     }
   }, [value])
 
   useEffect(() => {
-    /* Native momentum and scroll snapping should finish a gesture themselves.
-       Re-centering on every scroll-driven state update would fight the finger. */
-    if (scrollDriven.current) {
-      scrollDriven.current = false
-      return
-    }
-
-    listRef.current?.scrollTo({
-      top: activeIndex * WHEEL_ROW_HEIGHT,
-    })
+    const list = listRef.current
+    if (!list || holding.current) return
+    const top = activeIndex * WHEEL_ROW_HEIGHT
+    if (Math.abs(list.scrollTop - top) > 1) list.scrollTop = top
   }, [activeIndex])
 
-  function choose(index) {
-    const nextIndex = Math.min(Math.max(index, 0), options.length - 1)
-    const next = options[nextIndex].value
-    setText(formatWheelValue(next))
+  useEffect(
+    () => () => {
+      window.cancelAnimationFrame(frame.current)
+      window.clearTimeout(settle.current)
+    },
+    []
+  )
+
+  function sampleScroll() {
+    frame.current = 0
+    const list = listRef.current
+    if (!list) return
+    const index = Math.min(
+      Math.max(Math.round(list.scrollTop / WHEEL_ROW_HEIGHT), 0),
+      options.length - 1
+    )
+    const next = options[index].value
+    if (next === reported.current) return
+    reported.current = next
     onValidityChange(true)
     onChange(next)
   }
 
+  /* Keep the re-centring effect off for a beat after the last scroll event, so
+     the snap at the end of a flick finishes on its own terms. */
+  function hold(ms) {
+    holding.current = true
+    window.clearTimeout(settle.current)
+    settle.current = window.setTimeout(() => {
+      holding.current = false
+    }, ms)
+  }
+
+  function handleScroll() {
+    hold(160)
+    if (!frame.current) frame.current = window.requestAnimationFrame(sampleScroll)
+  }
+
+  /* Anything that sets the value from outside the gesture moves the list here
+     rather than leaving it to the effect, which would jump instead of glide. */
+  function glideTo(next, smooth) {
+    const index = Math.max(0, options.findIndex((option) => option.value === next))
+    /* An explicit smooth behaviour overrides the CSS scroll-behaviour that the
+       reduced-motion block sets, so the setting has to be read here. */
+    const glide =
+      smooth && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    hold(glide ? 500 : 160)
+    reported.current = next
+    listRef.current?.scrollTo({
+      top: index * WHEEL_ROW_HEIGHT,
+      behavior: glide ? 'smooth' : 'auto',
+    })
+    setText(formatWheelValue(next))
+    onValidityChange(true)
+    if (next !== value) onChange(next)
+  }
+
+  function choose(index) {
+    const nextIndex = Math.min(Math.max(index, 0), options.length - 1)
+    glideTo(options[nextIndex].value, true)
+  }
+
   function commit() {
     if (valid) {
-      setText(formatWheelValue(number))
-      onChange(number)
-    } else {
-      setText(formatWheelValue(value))
+      glideTo(number, false)
+      return
     }
+    setText(formatWheelValue(value))
     onValidityChange(true)
   }
 
   function step(direction) {
     const start = valid ? number : value
-    const next = Math.min(Math.max(start + direction, min), max)
-    setText(formatWheelValue(next))
-    onValidityChange(true)
-    onChange(next)
+    glideTo(Math.min(Math.max(start + direction, min), max), false)
   }
 
   function beginTyping() {
     inputRef.current?.focus({ preventScroll: true })
     inputRef.current?.select()
   }
+
+  /* The rows carry no per-row handler, so a pass over sixty minutes does not
+     rebuild sixty closures. The click is read off the row that was hit. */
+  const rows = useMemo(
+    () =>
+      options.map((option, index) => (
+        <div
+          key={option.value}
+          data-index={index}
+          className={`flex h-10 snap-center items-center justify-center truncate px-1 text-center tabular-nums ${
+            index === activeIndex
+              ? 'cursor-text font-display text-sm font-semibold text-ink'
+              : 'cursor-pointer text-xs text-ink-muted'
+          }`}
+        >
+          {option.label}
+        </div>
+      )),
+    [options, activeIndex]
+  )
 
   return (
     <div className="min-w-0">
@@ -665,40 +741,17 @@ function WheelColumn({
           aria-hidden="true"
           onPointerDown={() => inputRef.current?.blur()}
           onWheel={() => inputRef.current?.blur()}
-          onScroll={(event) => {
-            const nextIndex = Math.min(
-              Math.max(Math.round(event.currentTarget.scrollTop / WHEEL_ROW_HEIGHT), 0),
-              options.length - 1
-            )
-            if (nextIndex !== activeIndex) {
-              const next = options[nextIndex].value
-              scrollDriven.current = true
-              setText(formatWheelValue(next))
-              onValidityChange(true)
-              onChange(next)
-            }
+          onScroll={handleScroll}
+          onClick={(event) => {
+            const row = event.target.closest('[data-index]')
+            if (!row) return
+            const index = Number(row.dataset.index)
+            if (index === activeIndex) beginTyping()
+            else choose(index)
           }}
           className="no-scrollbar relative z-10 h-[120px] touch-pan-y snap-y snap-mandatory overflow-y-auto overscroll-contain py-10"
         >
-          {options.map((option, index) => {
-            const selected = index === activeIndex
-            return (
-              <div
-                key={option.value}
-                onClick={() => {
-                  if (selected) beginTyping()
-                  else choose(index)
-                }}
-                className={`flex h-10 snap-center items-center justify-center truncate px-1 text-center tabular-nums transition-colors duration-150 ${
-                  selected
-                    ? 'cursor-text font-display text-sm font-semibold text-transparent'
-                    : 'cursor-pointer text-xs text-ink-muted'
-                }`}
-              >
-                {option.label}
-              </div>
-            )
-          })}
+          {rows}
         </div>
         <input
           ref={inputRef}
@@ -742,7 +795,7 @@ function WheelColumn({
               choose(options.length - 1)
             }
           }}
-          className="pointer-events-none absolute left-1/2 top-1/2 z-30 h-9 w-[calc(100%-0.5rem)] max-w-20 -translate-x-1/2 -translate-y-1/2 rounded-md border border-transparent bg-transparent px-1 text-center font-display text-base font-semibold tabular-nums text-ink outline-none transition-colors duration-150 focus:border-brand-500 focus:bg-surface"
+          className="pointer-events-none absolute left-1/2 top-1/2 z-30 h-9 w-[calc(100%-0.5rem)] max-w-20 -translate-x-1/2 -translate-y-1/2 rounded-md border border-transparent bg-transparent px-1 text-center font-display text-base font-semibold tabular-nums text-transparent caret-brand-600 outline-none focus:border-brand-500 focus:bg-surface focus:text-ink"
         />
       </div>
     </div>
