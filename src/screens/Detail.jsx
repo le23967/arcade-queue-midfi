@@ -3,10 +3,11 @@ import {
   TopBar,
   Body,
   PrimaryButton,
+  FreshBadge,
   StaleBadge,
   Info,
 } from '../components/ui.jsx'
-import { Users, User, Clock, Refresh, Chevron, Pin } from '../components/Icons.jsx'
+import { Users, Clock, Chevron, Pin } from '../components/Icons.jsx'
 import { presentAt } from '../lib/social.js'
 import {
   queueRoster,
@@ -20,15 +21,27 @@ import {
   playersLabel,
   SOLO_TURN_MIN,
   PAIR_TURN_MIN,
+  STALE_AFTER_MIN,
 } from '../lib/queue.js'
 
 /* SCREEN 3 - Detail.
 
-   Sketch stats kept as-is (Queue / Solo / Wait / Updated). The "Updated" row
-   is promoted from a footnote to a first-class stat with its own confirm
-   action, because staleness is the failure mode the current workaround has:
-   asking the group chat takes "thirty or forty five minutes" to answer, if it
-   answers at all. */
+   The sketch listed Queue, Solo, Wait and Updated as four stats of the same
+   size, and a heuristic evaluation found the obvious problem with that:
+   "there are a lot of queue numbers; which one should I actually use?".
+
+   Only one of them answers the question this screen exists for, so the wait
+   is the only number set at display size and it comes first. The queue
+   breakdown sits under it, because a player who knows how a maimai line works
+   still wants the pairs and the solo count. Solo lost its own row: the
+   breakdown already says it, and the same number twice is what made the
+   screen look like it held more measures than it does.
+
+   Freshness moved with the wait. A queue number is worth nothing without its
+   age - the whole reason the group chat fails is that its answer arrives
+   "thirty or forty five minutes" later - so the report age carries a Fresh or
+   Stale badge and sits against the number it qualifies, rather than a row
+   below as a timestamp of its own. */
 export default function Detail({
   arcade,
   otherGames,
@@ -48,13 +61,13 @@ export default function Detail({
 
   return (
     <Screen>
-      <TopBar
-        title={`${arcade.short} · ${arcade.game}`}
-        onBack={onBack}
-        right={stale ? <StaleBadge /> : null}
-      />
+      {/* The badge used to sit up here as well. One state, stated once, next
+          to the number it applies to. */}
+      <TopBar title={`${arcade.short} · ${arcade.game}`} onBack={onBack} />
 
       <Body>
+        <WaitStat arcade={arcade} stale={stale} />
+
         {/* Tapping the address hands off to the phone's own maps app. We say
             which arcade to go to; routing, transit and traffic are not ours to
             rebuild. */}
@@ -71,64 +84,26 @@ export default function Detail({
             <span className="block text-xs text-ink-muted">
               {arcade.address}
             </span>
+            {/* The cabinet count was here too. It belongs with the wait it
+                divides, and saying it twice made it look like a measure of
+                its own. */}
             <span className="block text-xs tabular-nums text-ink-muted">
-              {arcade.distanceKm.toFixed(1)} km &middot; {arcade.cabinets}{' '}
-              {arcade.cabinets === 1 ? 'cabinet' : 'cabinets'}
+              {arcade.distanceKm.toFixed(1)} km away
             </span>
           </span>
           <Chevron size={16} />
         </button>
 
-        <dl>
-          {/* The count on its own says how long the line is but not who is in
-              it. Expanding names the parties that checked in through the app
-              and leaves the rest as guests, which is the honest split. */}
-          <QueueStat
-            arcade={arcade}
-            open={queueOpen}
-            onToggle={onToggleQueue}
-            mePosition={mePosition}
-            onReport={onReport}
-          />
-          <Stat
-            Icon={User}
-            label="Solo players"
-            value={String(arcade.solo)}
-            info={
-              <>
-                A solo player and a pair each hold one queue position, so the
-                line is counted in parties. The two are listed separately
-                because a pair holds the machine longer.
-              </>
-            }
-          >
-            One player, one queue position
-          </Stat>
-          <Stat
-            Icon={Clock}
-            label="Wait"
-            value={`~${estimateWaitMin(arcade)} min`}
-            info={
-              <>
-                {arcade.solo} solo &times; {SOLO_TURN_MIN} min + {pairsOf(arcade)}{' '}
-                pair{pairsOf(arcade) === 1 ? '' : 's'} &times; {PAIR_TURN_MIN} min,
-                divided by {arcade.cabinets}{' '}
-                {arcade.cabinets === 1 ? 'machine' : 'machines'}. A pair holds the
-                machine longer because pairing buys an extra song.
-              </>
-            }
-          >
-            Across {arcade.cabinets} {arcade.cabinets === 1 ? 'machine' : 'machines'}
-          </Stat>
-          <Stat
-            Icon={Refresh}
-            label="Updated"
-            value={arcade.updatedAt}
-            emphasis={stale}
-          >
-            {freshnessLabel(arcade)}
-          </Stat>
-        </dl>
+        {/* The count on its own says how long the line is but not who is in
+            it. Expanding names the parties that checked in through the app
+            and leaves the rest as guests, which is the honest split. */}
+        <QueueStat
+          arcade={arcade}
+          open={queueOpen}
+          onToggle={onToggleQueue}
+          mePosition={mePosition}
+          onReport={onReport}
+        />
 
         {friendsHere.length > 0 && (
           <button
@@ -192,6 +167,55 @@ export default function Detail({
   )
 }
 
+/* The decision value.
+
+   Everything else on this screen either explains this number or acts on it,
+   so nothing else is set at this size. The badge answers the second half of
+   the question - how old the number is allowed to get before it stops being
+   worth anything - using the same 15 minute threshold the ranking already
+   applies, so a stale venue reads the same here as it does on Arcades. */
+function WaitStat({ arcade, stale }) {
+  const pairs = pairsOf(arcade)
+  const machines = `${arcade.cabinets} ${arcade.cabinets === 1 ? 'machine' : 'machines'}`
+
+  return (
+    <div className="flex items-start gap-3 border-b border-line px-4 py-4">
+      <span className="mt-1 text-ink-muted">
+        <Clock size={18} />
+      </span>
+      <div className="flex-1">
+        <p className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-ink-muted">
+          Estimated wait
+          <Info>
+            {arcade.solo} solo &times; {SOLO_TURN_MIN} min + {pairs} pair
+            {pairs === 1 ? '' : 's'} &times; {PAIR_TURN_MIN} min, divided by{' '}
+            {machines}. A pair holds one queue position like a solo player, but
+            holds the machine longer, because pairing buys an extra song.
+            Reports older than {STALE_AFTER_MIN} min are marked stale: still
+            here, but not ranked as fastest.
+          </Info>
+        </p>
+        <p className="font-display text-3xl font-bold leading-tight tabular-nums text-ink">
+          About {estimateWaitMin(arcade)} min
+        </p>
+        <p className="text-xs text-ink-muted">Across {machines}</p>
+
+        <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+          {stale ? <StaleBadge /> : <FreshBadge />}
+          <span className="text-xs tabular-nums text-ink-muted">
+            {freshnessLabel(arcade)} &middot; {arcade.updatedAt}
+          </span>
+        </div>
+        {stale && (
+          <p className="mt-1 text-xs text-stale">
+            Left out of Fastest now until someone updates it.
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function QueueStat({ arcade, open, onToggle, mePosition, onReport }) {
   const rows = queueRoster(arcade, { mePosition })
   const known = rosterKnownCount(arcade, mePosition)
@@ -207,11 +231,13 @@ function QueueStat({ arcade, open, onToggle, mePosition, onReport }) {
         <span className="mt-0.5 text-ink-muted">
           <Users size={18} />
         </span>
+        {/* Secondary by design: the same three facts as before, one step down
+            in size, so they support the wait instead of competing with it. */}
         <span className="flex-1">
           <span className="block text-xs uppercase tracking-wide text-ink-muted">
             Queue
           </span>
-          <span className="block text-lg font-semibold tabular-nums text-ink">
+          <span className="block text-sm font-semibold tabular-nums text-ink">
             {partiesLabel(arcade.queue)} waiting
           </span>
           <span className="block text-xs text-ink-muted">
@@ -283,30 +309,6 @@ function QueueStat({ arcade, open, onToggle, mePosition, onReport }) {
           </div>
         </>
       )}
-    </div>
-  )
-}
-
-function Stat({ Icon, label, value, children, emphasis, info }) {
-  return (
-    <div className="flex items-start gap-3 border-b border-line px-4 py-3">
-      <span className="mt-0.5 text-ink-muted">
-        <Icon size={18} />
-      </span>
-      <div className="flex-1">
-        <dt className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-ink-muted">
-          {label}
-          {info && <Info>{info}</Info>}
-        </dt>
-        <dd
-          className={`text-lg font-semibold tabular-nums text-ink ${
-            emphasis ? 'underline decoration-dashed underline-offset-4' : ''
-          }`}
-        >
-          {value}
-        </dd>
-        <p className="text-xs text-ink-muted">{children}</p>
-      </div>
     </div>
   )
 }

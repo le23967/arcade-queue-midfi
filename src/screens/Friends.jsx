@@ -8,6 +8,7 @@ import {
   Avatar,
   GameDot,
   ActionButton,
+  QuietAction,
   LiveBadge,
 } from '../components/ui.jsx'
 import { Plus, Comment } from '../components/Icons.jsx'
@@ -397,7 +398,14 @@ function Planned({ arcades, following, rsvps, onRsvp, onOpenArcade, onPlan }) {
 }
 
 /* Activity. Every line ends in the action it enables, because a feed of facts
-   about where people are is not engagement on its own. */
+   about where people are is not engagement on its own.
+
+   One action per row carries the weight. A check-in offers two things - go
+   there, or ask the person what the line is actually like - and they were
+   drawn as matching buttons, which is what made the feed read as "a lot of
+   different things I can press". Joining is the reason the row is in front of
+   you, so it keeps the button and the question becomes a text action beside
+   it. Nothing was dropped; only one of them is now the obvious one. */
 function Activity({
   arcades,
   onOpenPlayer,
@@ -462,16 +470,20 @@ function Activity({
 
                 {e.type === 'checkin' && (
                   <>
-                    <ActionButton onClick={() => onJoin(e.handle, e.venue)}>
+                    <ActionButton
+                      onClick={() => onJoin(e.handle, e.venue)}
+                      aria-label={`Tell ${e.handle} you are joining them at ${venueName(e.venue)}`}
+                    >
                       Join them
                     </ActionButton>
-                    <ActionButton
+                    <QuietAction
                       onClick={() =>
                         onMessage(e.handle, 'How long is the wait really?')
                       }
+                      aria-label={`Ask ${e.handle} what the wait is like`}
                     >
                       What&rsquo;s it like?
-                    </ActionButton>
+                    </QuietAction>
                   </>
                 )}
                 {e.type === 'checkout' && (

@@ -109,6 +109,24 @@ export function ActionButton({ children, className = '', icon, ...rest }) {
   )
 }
 
+/* The second action on a row.
+
+   Same tap target as ActionButton, a fraction of the weight. A row that ends
+   in two identical buttons reads as a choice between equals, which is what
+   made the activity feed feel busy; a row that ends in a button and a text
+   action reads as one next step with an option behind it. */
+export function QuietAction({ children, className = '', ...rest }) {
+  return (
+    <button
+      type="button"
+      className={`inline-flex items-center rounded-md px-1 py-1.5 text-xs font-medium text-ink-muted underline decoration-line-strong underline-offset-2 transition-colors duration-150 hover:text-ink hover:decoration-ink-subtle ${className}`}
+      {...rest}
+    >
+      {children}
+    </button>
+  )
+}
+
 export function BestBadge() {
   return (
     <span className="inline-flex items-center rounded-full bg-brand-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
@@ -122,6 +140,19 @@ export function StaleBadge() {
     <span className="inline-flex items-center gap-1 rounded-full bg-stale-bg px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-stale">
       <span className="h-1.5 w-1.5 rounded-full bg-stale" />
       Stale
+    </span>
+  )
+}
+
+/* The other half of StaleBadge, so age reads as a state rather than as a
+   number the user has to hold a threshold against. Same shape, semantic
+   colour, static dot - LiveBadge pulses because presence is happening now,
+   while a report only sits there getting older. */
+export function FreshBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-fresh-bg px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-fresh">
+      <span className="h-1.5 w-1.5 rounded-full bg-fresh" />
+      Fresh
     </span>
   )
 }
