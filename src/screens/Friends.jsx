@@ -12,7 +12,7 @@ import {
   LiveBadge,
 } from '../components/ui.jsx'
 import { Plus, Comment, Qr } from '../components/Icons.jsx'
-import { FRIENDS, SONGS, OLD_SITE_FAVOURITE_CAP, ACTIVITY, PLANNED } from '../social.js'
+import { FRIENDS, SONGS, OLD_SITE_FAVOURITE_CAP, ACTIVITY } from '../social.js'
 import { gameColor, gameLabel } from '../data.js'
 import { resolveVenues } from '../lib/queue.js'
 import {
@@ -49,6 +49,7 @@ export default function Friends({
   me,
   following,
   joinsSent,
+  planned,
   rsvps,
   onRsvp,
   onOpenPlayer,
@@ -147,6 +148,7 @@ export default function Friends({
       )}
       {section === 'planned' && (
         <Planned
+          sessions={planned}
           arcades={venues}
           following={following}
           rsvps={rsvps}
@@ -321,11 +323,9 @@ function HereNow({
    Future, not live. These used to sit at the top of Here now with no label of
    their own, so a host who was not at any arcade looked like somebody standing
    in one - and the row never said how you knew that host either. They are a
-   segment of their own now, and every row states the relationship that put it
-   in front of you. */
-function Planned({ arcades, following, rsvps, onRsvp, onOpenArcade, onPlan }) {
-  const sessions = PLANNED
-
+   segment of their own now, and every row states what put it in front of you:
+   you arranged it, you were invited, or how you know the host. */
+function Planned({ sessions, arcades, following, rsvps, onRsvp, onOpenArcade, onPlan }) {
   return (
     <Body>
       <div className="flex items-center gap-2 border-b border-line px-4 py-3">
@@ -349,7 +349,8 @@ function Planned({ arcades, following, rsvps, onRsvp, onOpenArcade, onPlan }) {
 
       {sessions.map((s) => {
         const venue = arcades.find((a) => a.id === s.venue)
-        const rel = relationshipOf(s.host, following)
+        /* Your own sessions have no relationship to state. */
+        const rel = s.mine ? null : relationshipOf(s.host, following)
         const going = rsvps.includes(s.id)
         return (
           <div
@@ -363,8 +364,10 @@ function Planned({ arcades, following, rsvps, onRsvp, onOpenArcade, onPlan }) {
             </span>
             <div className="min-w-0 flex-1">
               <p className="flex flex-wrap items-center gap-1.5 text-sm text-ink">
-                <span className="font-semibold">{s.host}</span>
-                <Chip tone="quiet">{s.invitedMe ? 'Invited you' : rel.label}</Chip>
+                <span className="font-semibold">{s.mine ? 'You' : s.host}</span>
+                <Chip tone={s.mine ? 'brand' : 'quiet'}>
+                  {s.mine ? 'You planned this' : s.invitedMe ? 'Invited you' : rel.label}
+                </Chip>
               </p>
               {/* A run of text, not a flex row: laying it out with flex let the
                   venue button be squeezed until its own name broke in half.
@@ -393,7 +396,7 @@ function Planned({ arcades, following, rsvps, onRsvp, onOpenArcade, onPlan }) {
                 </span>{' '}
                 <span className="whitespace-nowrap">{s.whenLabel}</span>
               </p>
-              <p className="text-xs text-ink-subtle">{s.note}</p>
+              {s.note && <p className="text-xs text-ink-subtle">{s.note}</p>}
               {/* Saying yes has to leave a trace, the same way telling someone
                   you are on your way does. */}
               {going && (
@@ -414,6 +417,10 @@ function Planned({ arcades, following, rsvps, onRsvp, onOpenArcade, onPlan }) {
               >
                 {going ? 'Going' : "I'm in"}
               </ActionButton>
+            ) : s.mine ? (
+              <Chip tone="quiet">
+                {s.asked.length} asked
+              </Chip>
             ) : (
               <Chip tone="quiet">{s.going.length} going</Chip>
             )}

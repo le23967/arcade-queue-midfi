@@ -32,7 +32,7 @@ import AddPerson from './screens/AddPerson.jsx'
 import Messages from './screens/Messages.jsx'
 import EditProfile from './screens/EditProfile.jsx'
 import PlayerProfile from './screens/PlayerProfile.jsx'
-import { CLIPS, CLIP_COMMENTS, ME } from './social.js'
+import { CLIPS, CLIP_COMMENTS, ME, PLANNED } from './social.js'
 import {
   INITIAL_FOLLOWING,
   findPerson,
@@ -89,6 +89,9 @@ export default function App() {
   const [hereVenueId, setHereVenueId] = useState(null)
   /* Planned sessions you have said yes to. */
   const [rsvps, setRsvps] = useState([])
+  /* Every session on Later, seeded with the ones you were invited to. Sessions
+     you arrange are added here, so the invitation has somewhere to land. */
+  const [planned, setPlanned] = useState(PLANNED)
   const [messageOpener, setMessageOpener] = useState('')
   /* Where back goes. A single "the screen I came from" slot was enough while
      no two screens could open each other - then the conversation header
@@ -435,6 +438,7 @@ export default function App() {
               me={me}
               following={followingHandles}
               joinsSent={joinsSent}
+              planned={planned}
               rsvps={rsvps}
               onRsvp={toggleRsvp}
               onOpenPlayer={openPlayer}
@@ -484,6 +488,8 @@ export default function App() {
             <PlanSession
               arcades={rows}
               preset={planPreset}
+              me={me}
+              onPlanned={(plan) => setPlanned((list) => [plan, ...list])}
               onBack={goBack}
               onDone={() => {
                 /* A new invitation belongs with the other planned ones, not

@@ -11,7 +11,7 @@ import {
 } from '../components/ui.jsx'
 import { Check } from '../components/Icons.jsx'
 import { GAMES } from '../data.js'
-import { FRIENDS } from '../social.js'
+import { FRIENDS, ME } from '../social.js'
 
 /* Plan a session.
 
@@ -29,7 +29,14 @@ import { FRIENDS } from '../social.js'
    be typed or moved with phone-style wheels. Common times remain as clearly
    labelled shortcuts rather than being mixed with the custom choice. */
 
-export default function PlanSession({ arcades, preset, onBack, onDone }) {
+export default function PlanSession({
+  arcades,
+  preset,
+  me = ME,
+  onPlanned,
+  onBack,
+  onDone,
+}) {
   const [venue, setVenue] = useState(preset?.venue ?? arcades[0]?.id)
   const [gameId, setGameId] = useState(preset?.gameId ?? 'maimai')
   /* Computed once, so the options do not shift under the user mid-plan. */
@@ -60,6 +67,21 @@ export default function PlanSession({ arcades, preset, onBack, onDone }) {
       setPickerOpen(true)
       return
     }
+    /* The invitation has to land on Later as well. Without this the
+       confirmation screen was the only trace it had ever been sent, and the
+       list you were dropped into still held only the seeded sessions. */
+    onPlanned?.({
+      id: `ps-${Date.now()}`,
+      mine: true,
+      host: me.handle,
+      venue,
+      gameId,
+      whenLabel: formatWhen(when, now),
+      /* Asked is not the same as coming: nobody has answered yet. */
+      going: [me.handle],
+      asked: invited,
+      invitedMe: false,
+    })
     setSent(true)
   }
 
