@@ -141,7 +141,7 @@ export default function PlanSession({ arcades, preset, onBack, onDone }) {
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-xs font-semibold text-brand-700">
-                Choose your date &amp; time
+                Choose your date and time
               </span>
               <span className="mt-0.5 block truncate text-sm font-semibold text-ink">
                 {formatWhen(when, now)}
@@ -379,13 +379,13 @@ function DateTimeSheet({ value, now, onChange, onCancel, onDone }) {
   const dateComplete = Boolean(dateInput)
   const timeComplete = timeEntriesValid.hour && timeEntriesValid.minute
   const future = dateComplete && timeComplete && value.getTime() > currentTime.getTime()
-  const hint = !dateComplete
+  const error = !dateComplete
     ? 'Type or choose a date to continue.'
     : !timeComplete
       ? 'Enter an hour from 1–12 and a minute from 00–59.'
-      : future
-        ? 'Type the fields, or swipe the hour and minute wheels.'
-        : 'Choose a time in the future to continue.'
+      : !future
+        ? 'Choose a time in the future to continue.'
+        : ''
 
   useEffect(() => {
     function onKeyDown(event) {
@@ -458,7 +458,7 @@ function DateTimeSheet({ value, now, onChange, onCancel, onDone }) {
             Cancel
           </button>
           <h2 id={titleId} className="text-center font-display text-sm font-semibold text-ink">
-            Choose date &amp; time
+            Choose date and time
           </h2>
           <button
             type="button"
@@ -477,14 +477,9 @@ function DateTimeSheet({ value, now, onChange, onCancel, onDone }) {
         <div className="px-4 pt-3">
           <label
             htmlFor={dateInputId}
-            className="mb-1.5 flex items-baseline justify-between gap-2"
+            className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-ink-muted"
           >
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
-              Date
-            </span>
-            <span className="text-[10px] text-ink-subtle">
-              Type or open the calendar
-            </span>
+            Date
           </label>
           <input
             id={dateInputId}
@@ -503,15 +498,13 @@ function DateTimeSheet({ value, now, onChange, onCancel, onDone }) {
         </div>
 
         <div className="px-4 pt-3">
-          <div className="mb-1.5 flex items-baseline justify-between gap-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
-              Time
-            </p>
-            <p className="text-[10px] text-ink-subtle">Type hour and minute</p>
-          </div>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
+            Time
+          </p>
           <div className="grid grid-cols-[minmax(0,1fr)_12px_minmax(0,1fr)_104px] items-end gap-2">
-            <NumberEntry
+            <WheelColumn
               label="Hour"
+              options={hours}
               value={value.getHours() % 12 || 12}
               min={1}
               max={12}
@@ -523,13 +516,14 @@ function DateTimeSheet({ value, now, onChange, onCancel, onDone }) {
               }
             />
             <span
-              className="flex h-11 items-center justify-center pb-0.5 font-display text-lg font-semibold text-ink-muted"
+              className="flex h-[120px] items-center justify-center font-display text-lg font-semibold text-ink-muted"
               aria-hidden="true"
             >
               :
             </span>
-            <NumberEntry
+            <WheelColumn
               label="Minute"
+              options={minutes}
               value={value.getMinutes()}
               min={0}
               max={59}
@@ -540,150 +534,78 @@ function DateTimeSheet({ value, now, onChange, onCancel, onDone }) {
                 )
               }
             />
-            <fieldset>
+            <fieldset className="min-w-0">
               <legend className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-subtle">
                 AM/PM
               </legend>
-              <div className="grid h-11 grid-cols-2 rounded-xl bg-sunken p-1">
-                {periods.map((period) => {
-                  const selected = value.getHours() >= 12 ? 'PM' : 'AM'
-                  const on = period.value === selected
-                  return (
-                    <button
-                      key={period.value}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => onChange(withPeriod(value, period.value))}
-                      className={`rounded-lg text-xs font-semibold transition-colors duration-150 ${
-                        on
-                          ? 'bg-surface text-brand-700 shadow-sm'
-                          : 'text-ink-muted hover:text-ink'
-                      }`}
-                    >
-                      {period.label}
-                    </button>
-                  )
-                })}
+              <div className="flex h-[120px] items-center rounded-xl bg-sunken p-1">
+                <div className="grid h-11 w-full grid-cols-2 rounded-xl bg-surface/50 p-1">
+                  {periods.map((period) => {
+                    const selected = value.getHours() >= 12 ? 'PM' : 'AM'
+                    const on = period.value === selected
+                    return (
+                      <button
+                        key={period.value}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => onChange(withPeriod(value, period.value))}
+                        className={`rounded-lg text-xs font-semibold transition-colors duration-150 ${
+                          on
+                            ? 'bg-surface text-brand-700 shadow-sm'
+                            : 'text-ink-muted hover:text-ink'
+                        }`}
+                      >
+                        {period.label}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
             </fieldset>
           </div>
         </div>
 
-        <div className="px-4 pt-3">
-          <div className="mb-1.5 flex items-center gap-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
-              Or scroll
-            </p>
-            <span className="h-px flex-1 bg-line" />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <WheelColumn
-              label="Scroll hour"
-              shortLabel="Hour"
-              options={hours}
-              value={value.getHours() % 12 || 12}
-              onChange={(next) => onChange(withHour(value, next))}
-            />
-            <WheelColumn
-              label="Scroll minute"
-              shortLabel="Minute"
-              options={minutes}
-              value={value.getMinutes()}
-              onChange={(next) => onChange(withMinute(value, next))}
-            />
-          </div>
-        </div>
-
-        <p
-          className={`px-4 pt-2 text-center text-[11px] ${
-            future ? 'text-ink-muted' : 'font-medium text-live'
-          }`}
-          role={future ? undefined : 'alert'}
-        >
-          {hint}
-        </p>
+        {error && (
+          <p
+            className="px-4 pt-2 text-center text-[11px] font-medium text-live"
+            role="alert"
+          >
+            {error}
+          </p>
+        )}
       </div>
     </div>
   )
 }
 
-function NumberEntry({ label, value, min, max, onChange, onValidityChange }) {
+const WHEEL_ROW_HEIGHT = 40
+const formatWheelValue = (number) => String(number).padStart(2, '0')
+
+function WheelColumn({
+  label,
+  options,
+  value,
+  min,
+  max,
+  onChange,
+  onValidityChange,
+}) {
+  const listRef = useRef(null)
   const inputRef = useRef(null)
-  const format = (number) => String(number).padStart(2, '0')
-  const [text, setText] = useState(() => format(value))
+  const scrollDriven = useRef(false)
+  const [text, setText] = useState(() => formatWheelValue(value))
   const number = Number(text)
   const valid = text !== '' && Number.isInteger(number) && number >= min && number <= max
-
-  useEffect(() => {
-    if (document.activeElement !== inputRef.current) setText(format(value))
-  }, [value])
-
-  function commit() {
-    const number = Number(text)
-    if (text !== '' && Number.isInteger(number) && number >= min && number <= max) {
-      onChange(number)
-      setText(format(number))
-      onValidityChange(true)
-    } else {
-      setText(format(value))
-      onValidityChange(true)
-    }
-  }
-
-  return (
-    <label className="min-w-0">
-      <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-subtle">
-        {label}
-      </span>
-      <input
-        ref={inputRef}
-        type="text"
-        inputMode="numeric"
-        pattern="[0-9]*"
-        maxLength={2}
-        value={text}
-        required
-        aria-invalid={!valid}
-        aria-label={`${label}, type a number from ${min} to ${max}`}
-        onFocus={(event) => event.currentTarget.select()}
-        onChange={(event) => {
-          const next = event.target.value.replace(/\D/g, '').slice(0, 2)
-          setText(next)
-          const number = Number(next)
-          onValidityChange(
-            next !== '' && Number.isInteger(number) && number >= min && number <= max
-          )
-        }}
-        onBlur={commit}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') event.currentTarget.blur()
-          if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-            event.preventDefault()
-            const direction = event.key === 'ArrowUp' ? 1 : -1
-            const current = Number(text)
-            const safe = Number.isInteger(current) ? current : value
-            const next = Math.min(Math.max(safe + direction, min), max)
-            setText(format(next))
-            onChange(next)
-            onValidityChange(true)
-          }
-        }}
-        className="h-11 w-full rounded-xl border border-line-strong bg-surface px-2 text-center font-display text-lg font-semibold tabular-nums text-ink outline-none transition-colors duration-150 focus:border-brand-500"
-      />
-    </label>
-  )
-}
-
-const WHEEL_ROW_HEIGHT = 40
-
-function WheelColumn({ label, shortLabel = label, options, value, onChange }) {
-  const listRef = useRef(null)
-  const scrollDriven = useRef(false)
-  const optionId = useId().replaceAll(':', '')
   const activeIndex = Math.max(
     0,
     options.findIndex((option) => option.value === value)
   )
+
+  useEffect(() => {
+    if (document.activeElement !== inputRef.current) {
+      setText(formatWheelValue(value))
+    }
+  }, [value])
 
   useEffect(() => {
     /* Native momentum and scroll snapping should finish a gesture themselves.
@@ -700,13 +622,39 @@ function WheelColumn({ label, shortLabel = label, options, value, onChange }) {
 
   function choose(index) {
     const nextIndex = Math.min(Math.max(index, 0), options.length - 1)
-    onChange(options[nextIndex].value)
+    const next = options[nextIndex].value
+    setText(formatWheelValue(next))
+    onValidityChange(true)
+    onChange(next)
+  }
+
+  function commit() {
+    if (valid) {
+      setText(formatWheelValue(number))
+      onChange(number)
+    } else {
+      setText(formatWheelValue(value))
+    }
+    onValidityChange(true)
+  }
+
+  function step(direction) {
+    const start = valid ? number : value
+    const next = Math.min(Math.max(start + direction, min), max)
+    setText(formatWheelValue(next))
+    onValidityChange(true)
+    onChange(next)
+  }
+
+  function beginTyping() {
+    inputRef.current?.focus({ preventScroll: true })
+    inputRef.current?.select()
   }
 
   return (
     <div className="min-w-0">
       <p className="mb-1 truncate text-center text-[10px] font-semibold uppercase tracking-wide text-ink-subtle">
-        {shortLabel}
+        {label}
       </p>
       <div className="relative overflow-hidden rounded-xl bg-sunken">
         <span className="pointer-events-none absolute inset-x-1 top-1/2 z-0 h-10 -translate-y-1/2 rounded-lg border-y border-brand-200 bg-brand-50" />
@@ -714,19 +662,78 @@ function WheelColumn({ label, shortLabel = label, options, value, onChange }) {
         <span className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-8 bg-gradient-to-t from-sunken to-transparent" />
         <div
           ref={listRef}
-          role="listbox"
-          aria-label={label}
-          aria-activedescendant={`${optionId}-${activeIndex}`}
-          tabIndex={0}
-          onPointerDown={() => listRef.current?.focus({ preventScroll: true })}
-          onWheel={() => listRef.current?.focus({ preventScroll: true })}
+          aria-hidden="true"
+          onPointerDown={() => inputRef.current?.blur()}
+          onWheel={() => inputRef.current?.blur()}
+          onScroll={(event) => {
+            const nextIndex = Math.min(
+              Math.max(Math.round(event.currentTarget.scrollTop / WHEEL_ROW_HEIGHT), 0),
+              options.length - 1
+            )
+            if (nextIndex !== activeIndex) {
+              const next = options[nextIndex].value
+              scrollDriven.current = true
+              setText(formatWheelValue(next))
+              onValidityChange(true)
+              onChange(next)
+            }
+          }}
+          className="no-scrollbar relative z-10 h-[120px] touch-pan-y snap-y snap-mandatory overflow-y-auto overscroll-contain py-10"
+        >
+          {options.map((option, index) => {
+            const selected = index === activeIndex
+            return (
+              <div
+                key={option.value}
+                onClick={() => {
+                  if (selected) beginTyping()
+                  else choose(index)
+                }}
+                className={`flex h-10 snap-center items-center justify-center truncate px-1 text-center tabular-nums transition-colors duration-150 ${
+                  selected
+                    ? 'cursor-text font-display text-sm font-semibold text-transparent'
+                    : 'cursor-pointer text-xs text-ink-muted'
+                }`}
+              >
+                {option.label}
+              </div>
+            )
+          })}
+        </div>
+        <input
+          ref={inputRef}
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          role="spinbutton"
+          maxLength={2}
+          value={text}
+          required
+          aria-valuemin={min}
+          aria-valuemax={max}
+          aria-valuenow={valid ? number : undefined}
+          aria-invalid={!valid}
+          aria-label={`${label}, swipe to adjust or type a number from ${min} to ${max}`}
+          onFocus={(event) => event.currentTarget.select()}
+          onChange={(event) => {
+            const next = event.target.value.replace(/\D/g, '').slice(0, 2)
+            const nextNumber = Number(next)
+            const nextValid =
+              next !== '' &&
+              Number.isInteger(nextNumber) &&
+              nextNumber >= min &&
+              nextNumber <= max
+
+            setText(next)
+            onValidityChange(nextValid)
+            if (nextValid) onChange(nextNumber)
+          }}
+          onBlur={commit}
           onKeyDown={(event) => {
-            if (event.key === 'ArrowUp') {
+            if (event.key === 'Enter') event.currentTarget.blur()
+            if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
               event.preventDefault()
-              choose(activeIndex - 1)
-            } else if (event.key === 'ArrowDown') {
-              event.preventDefault()
-              choose(activeIndex + 1)
+              step(event.key === 'ArrowUp' ? 1 : -1)
             } else if (event.key === 'Home') {
               event.preventDefault()
               choose(0)
@@ -735,38 +742,8 @@ function WheelColumn({ label, shortLabel = label, options, value, onChange }) {
               choose(options.length - 1)
             }
           }}
-          onScroll={(event) => {
-            const nextIndex = Math.min(
-              Math.max(Math.round(event.currentTarget.scrollTop / WHEEL_ROW_HEIGHT), 0),
-              options.length - 1
-            )
-            if (nextIndex !== activeIndex) {
-              scrollDriven.current = true
-              onChange(options[nextIndex].value)
-            }
-          }}
-          className="no-scrollbar relative z-10 h-[120px] snap-y snap-mandatory overflow-y-auto overscroll-contain py-10 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500"
-        >
-          {options.map((option, index) => {
-            const selected = index === activeIndex
-            return (
-              <div
-                key={option.value}
-                id={`${optionId}-${index}`}
-                role="option"
-                aria-selected={selected}
-                onClick={() => choose(index)}
-                className={`flex h-10 cursor-pointer snap-center items-center justify-center truncate px-1 text-center tabular-nums transition-colors duration-150 ${
-                  selected
-                    ? 'font-display text-sm font-semibold text-ink'
-                    : 'text-xs text-ink-muted'
-                }`}
-              >
-                {option.label}
-              </div>
-            )
-          })}
-        </div>
+          className="pointer-events-none absolute left-1/2 top-1/2 z-30 h-9 w-[calc(100%-0.5rem)] max-w-20 -translate-x-1/2 -translate-y-1/2 rounded-md border border-transparent bg-transparent px-1 text-center font-display text-base font-semibold tabular-nums text-ink outline-none transition-colors duration-150 focus:border-brand-500 focus:bg-surface"
+        />
       </div>
     </div>
   )
