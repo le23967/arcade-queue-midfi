@@ -134,10 +134,12 @@ export default function PlanSession({ arcades, preset, onBack, onDone }) {
             <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-surface text-brand-600 shadow-sm">
               <CalendarGlyph />
             </span>
-            {/* The chosen time is not repeated here. It is on the summary row
-                above the send button, which is on screen the whole time. */}
-            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-brand-700">
-              Choose your date and time
+            {/* The row states the time it holds rather than naming the action.
+                Reading "Choose your date and time" back after pressing Done
+                looks like nothing was saved, since the section has nothing else
+                that changes: a custom time matches none of the chips below. */}
+            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">
+              {formatWhen(when, now)}
             </span>
             <span className="text-brand-600" aria-hidden="true">
               <ChevronGlyph />
