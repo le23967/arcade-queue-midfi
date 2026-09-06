@@ -97,17 +97,18 @@ export const ARCADES = [
   {
     id: 'market-city',
     name: 'Timezone Haymarket',
-    short: 'Market City',
+    short: 'Haymarket',
     suburb: 'Haymarket',
     address: 'Level 3, Market City, 9-13 Hay Street, Haymarket NSW 2000',
     distanceKm: 0.7,
     map: { lat: -33.8794, lng: 151.2035 },
     games: {
-      /* Nobody here is on the app, which is exactly why this venue's number is
-         41 minutes old. */
+      /* Nobody on the app is on the maimai queue here, which is exactly why
+         that number is 41 minutes old. Sound Voltex has one player reporting,
+         so that queue is current: freshness is per game, not per venue. */
       maimai: q(2, 11, 2, 41, '11:59 AM'),
       chunithm: q(2, 4, 2, 7, '12:33 PM'),
-      sdvx: q(1, 3, 1, 5, '12:35 PM'),
+      sdvx: q(1, 1, 1, 2, '12:38 PM', [{ handle: 'cyan' }]),
       gitadora: q(2, 0, 0, 8, '12:32 PM'),
       taiko: q(1, 4, 2, 3, '12:37 PM'),
       ddr: q(2, 2, 2, 31, '12:09 PM'),
@@ -128,7 +129,7 @@ export const ARCADES = [
         { handle: 'tsuki' },
       ]),
       chunithm: q(3, 5, 3, 4, '12:36 PM', [{ handle: 'ovo_' }, { handle: 'hana' }]),
-      sdvx: q(2, 2, 2, 26, '12:14 PM'),
+      sdvx: q(2, 4, 2, 26, '12:14 PM'),
       gitadora: q(1, 1, 1, 11, '12:29 PM'),
       taiko: q(5, 6, 3, 3, '12:37 PM'),
       ddr: q(2, 3, 3, 18, '12:22 PM'),
