@@ -92,8 +92,8 @@ years told us the official maimai score site lets you favourite 20 people, and
 *"you can't have more than that"*. He said getting around that limit would be
 worth having, and we had not mentioned it.
 
-So the Scores leaderboard ranks all 27 people you follow and draws a line where
-the official site stops. On our data that line hides 8 players, and two of them
+So the Scores leaderboard ranks all 28 people you follow and draws a line where
+the official site stops. On our data that line hides 9 players, and two of them
 are checked into an arcade at that moment. The point of the screen is that the
 person standing next to you can be invisible on the tool you use today.
 

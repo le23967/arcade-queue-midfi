@@ -83,6 +83,7 @@ const FOLLOWING = [
   f('penny', ['maimai DX', 'DDR'], ['QZKago Requiem', 'Oshama Scramble!'], 98.762, 98.4802, 98.8619),
   f('leo', ['maimai DX'], ['GIGANTOMAKHIA', 'Garakuta Doll Play'], 98.4193, 98.3115, 98.5530),
   f('zed', ['maimai DX', 'GITADORA'], ['Oshama Scramble!', 'Halcyon'], 98.0055, 98.1006, 98.2201),
+  f('mia', ['maimai DX', 'Sound Voltex'], ['Oshama Scramble!', 'Valsqotch'], 97.8410, 97.9633, 98.0742),
 ]
 
 /* Following is not symmetric. A few of the people you follow do not follow
@@ -190,6 +191,16 @@ export const CLIP_COMMENTS = {
    presence ends in a plan - a venue, a game, a time, and who is coming.
 --------------------------------------------------------------------------- */
 export const PLANNED = [
+  {
+    id: 'ps3',
+    host: 'mia',
+    venue: 'market-city',
+    gameId: 'sdvx',
+    whenLabel: 'Today, 5:20 PM',
+    note: 'One cab there, so we take turns on it',
+    going: ['mia', 'mike'],
+    invitedMe: true,
+  },
   {
     id: 'ps1',
     host: 'mtsk',
