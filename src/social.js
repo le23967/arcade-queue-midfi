@@ -61,6 +61,7 @@ const FOLLOWING = [
   f('kaito', ['maimai DX', 'Sound Voltex'], ['Oshama Scramble!', 'GIGANTOMAKHIA'], 100.9455, 100.0087, 100.6621),
   f('hana', ['maimai DX'], ['Valsqotch', 'QZKago Requiem'], 100.8901, 99.9310, 100.9004, 'central-park', 5),
   f('sable', ['maimai DX', 'DDR'], ['Halcyon', 'Garakuta Doll Play'], 100.8534, 99.8776, 100.4415),
+  f('mike', ['maimai DX', 'Sound Voltex'], ['Garakuta Doll Play', 'Valsqotch'], 100.8203, 99.8102, 100.2470),
   f('quill', ['maimai DX'], ['PANDORA PARADOXXX', 'GIGANTOMAKHIA'], 100.7998, 99.7420, 100.2288),
   f('nagi', ['maimai DX', 'Taiko'], ['QZKago Requiem', 'Valsqotch'], 100.7412, 99.6903, 100.5570, 'koko-town-hall', 7),
   f('ovo_', ['maimai DX', 'CHUNITHM'], ['Oshama Scramble!', 'Halcyon'], 100.687, 99.6015, 100.1192, 'koko-town-hall', 11),
