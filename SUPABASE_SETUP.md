@@ -1,9 +1,9 @@
 # Supabase setup
 
-Accounts, follows, private messages, message requests, blocks and account
-deletion run on a Supabase project. Everything else in the prototype (venues,
-queues, presence, clips, scores, sessions) is still local sample data and
-needs nothing from this page.
+Accounts, follows, private messages, message requests, blocks, planned
+sessions, who is checked in where, and account deletion run on a Supabase
+project. Everything else in the prototype (venues, queue figures, clips,
+scores) is still local sample data and needs nothing from this page.
 
 ## 1. Create a project
 
@@ -62,15 +62,22 @@ filename order:
    unanswered request to one message; and a fix to the follow-notice trigger
    so that deleting an account no longer fails on its own cascade. Existing
    conversations are `accepted` and keep every message.
+4. `20260914051543_sessions_and_presence.sql` — planned sessions
+   (`sessions`, `session_members`) and check-ins (`presence`), shared between
+   accounts, with a `presence_changes` notice table so a check-out or going
+   hidden reaches mutuals live. A closed session is visible to its host and
+   the people on it; an open one to anyone signed in; presence only to
+   people you follow both ways, while you are checked in and visible.
 
 Either:
 
 - **SQL editor** — open **SQL Editor** in the dashboard, paste each file in
-  turn, and run it. All three are safe to run more than once.
+  turn, and run it. All four are safe to run more than once.
 - **Supabase CLI** — with the CLI installed and logged in,
   `supabase link --project-ref <your ref>` then `supabase db push`.
 
-If the project already has the first two applied, run only the third.
+If the project already has the earlier ones applied, run only the ones it
+is missing, in order.
 
 ## 5. Email confirmation
 
@@ -132,7 +139,16 @@ function is not reachable and nothing is deleted.
    sees only **Request sent**. **Block** and A can no longer open a
    conversation with B at all; B's view of A's profile offers **Unblock**.
 6. Reload either window and everything is still there.
-7. **Me → Account → Sign out** returns to the sign-in screen with nothing of
+7. Once A and B follow each other: in A, **Arcades → a venue → Join queue →
+   Manual → Join queue**. B's Circle map now shows A at that venue without a
+   reload, and the list has **Join** on A's row; **Notify them** sends A a
+   message. Reload A and the queue banner is still there. **Check Out** in A
+   takes A off B's map.
+8. In A, **Circle → Later → Plan**, pick B, **Send to 1**. B's Later shows the
+   session as **Invited you** at once; **I'm in** on it tells A and A's card
+   counts B as going. **Change** the time in A and B's card changes, with a
+   message; **Call it off** and it leaves B's Later, with a message.
+9. **Me → Account → Sign out** returns to the sign-in screen with nothing of
    the previous account left on screen. **Delete account** asks for the
    username, then removes the account and everything it owned.
 

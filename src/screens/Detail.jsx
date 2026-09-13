@@ -9,7 +9,6 @@ import {
   Info,
 } from '../components/ui.jsx'
 import { Users, Clock, Chevron, Pin, Bars } from '../components/Icons.jsx'
-import { presentAt } from '../lib/social.js'
 import {
   queueRoster,
   rosterKnownCount,
@@ -72,12 +71,13 @@ export default function Detail({
   queueOpen,
   onToggleQueue,
   mePosition,
-  following,
+  /* Who is out, scoped to people you follow both ways. */
+  present = [],
   openCount = 0,
   onOpenSessions,
 }) {
   const stale = isStale(arcade)
-  const friendsHere = presentAt(arcade.id, following)
+  const friendsHere = present.filter((p) => p.at === arcade.id)
 
   return (
     <Screen>

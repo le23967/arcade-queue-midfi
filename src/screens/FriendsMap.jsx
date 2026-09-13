@@ -6,7 +6,6 @@ import { Avatar, GameDot, PrimaryButton, Chip } from '../components/ui.jsx'
 import { Users, Clock, Chevron, Crosshair } from '../components/Icons.jsx'
 import { ME_MAP } from '../data.js'
 import { estimateWaitMin, isStale, freshnessLabel, partiesLabel } from '../lib/queue.js'
-import { presentFriends } from '../lib/social.js'
 
 const MAP_CENTRE = [-33.88015, 151.20335]
 const START_ZOOM = 15
@@ -203,7 +202,8 @@ const YOU_ICON = L.divIcon({
    one "see the list" target replaces the five chips. */
 export default function FriendsMap({
   arcades,
-  following,
+  /* Who is out, already scoped to people you follow both ways. */
+  present = [],
   joinsSent,
   listOpen = false,
   listTitle = null,
@@ -227,7 +227,7 @@ export default function FriendsMap({
     typeof navigator !== 'undefined' && navigator.geolocation ? 'locating' : 'unavailable'
   )
   const tileFailed = useRef(false)
-  const here = presentFriends(following)
+  const here = present
 
   /* Watch rather than read once, so the dot follows you while you walk to the
      arcade. Venue level privacy is unaffected: this position stays on the

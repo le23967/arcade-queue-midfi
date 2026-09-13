@@ -18,7 +18,6 @@ import { resolveVenues } from '../lib/queue.js'
 import {
   leaderboard,
   belowOldCap,
-  presentFriends,
   playerSignal,
   relationshipOf,
   circleSessions,
@@ -65,6 +64,9 @@ export default function Friends({
   onSong,
   me,
   following,
+  /* Who is at an arcade right now - real mutuals when signed in, sample
+     players when not. Everything here that draws people reads this. */
+  present = [],
   joinsSent,
   planned,
   rsvps,
@@ -192,6 +194,7 @@ export default function Friends({
         <Now
           arcades={venues}
           following={following}
+          present={present}
           venueId={hereVenueId}
           joinsSent={joinsSent}
           onClearVenue={onClearVenue}
@@ -257,7 +260,7 @@ function Now({ venueId, onClearVenue, onSeeOpen, ...rest }) {
   const [toggled, setToggled] = useState(null)
   const listOpen = toggled ?? Boolean(venueId)
   const venue = venueId ? rest.arcades.find((a) => a.id === venueId) : null
-  const count = presentFriends(rest.following).filter((p) => p.at === venueId).length
+  const count = rest.present.filter((p) => p.at === venueId).length
 
   return (
     <FriendsMap
@@ -306,7 +309,7 @@ function Now({ venueId, onClearVenue, onSeeOpen, ...rest }) {
    feed has nothing recent on them. */
 function HereNow({
   arcades,
-  following,
+  present,
   venueId,
   joinsSent,
   onClearVenue,
@@ -316,9 +319,7 @@ function HereNow({
   onUnsendJoin,
   onSeeOpen,
 }) {
-  const here = presentFriends(following).filter(
-    (p) => !venueId || p.at === venueId
-  )
+  const here = present.filter((p) => !venueId || p.at === venueId)
   const venue = venueId ? arcades.find((a) => a.id === venueId) : null
   const venues = arcades
     .filter((a) => !venueId || a.id === venueId)
@@ -739,8 +740,10 @@ function SessionList({
             {going ? 'Going' : "I'm in"}
           </ActionButton>
         ) : s.mine ? (
+          /* Who has answered matters more than who was asked, once anyone
+             has. */
           <Chip tone="quiet">
-            {s.open
+            {s.open || s.going.length > 0
               ? `${s.going.length} going`
               : `${s.asked.length} asked`}
           </Chip>

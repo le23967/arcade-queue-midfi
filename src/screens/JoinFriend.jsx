@@ -16,6 +16,12 @@ export default function JoinFriend({
   handle,
   arcade,
   sent,
+  /* Whether the message that tells them is on its way, and what went
+     wrong if it did not go. A sample player has nobody to tell, and the
+     sheet says so rather than pretending. */
+  busy = false,
+  error = null,
+  real = true,
   onConfirm,
   onUndo,
   onOpenArcade,
@@ -39,10 +45,12 @@ export default function JoinFriend({
               </span>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-ink">
-                  {handle} has been notified
+                  {real ? `${handle} has been told` : `${handle} is a sample player`}
                 </p>
                 <p className="mt-0.5 text-xs text-ink-muted">
-                  You&rsquo;re on your way to {venue}.
+                  {real
+                    ? `They have a message from you: on your way to ${venue}.`
+                    : `Nothing was sent - there is nobody behind this profile. You're on your way to ${venue}.`}
                 </p>
               </div>
             </div>
@@ -89,14 +97,29 @@ export default function JoinFriend({
                 <Users size={15} />
               </span>
               <span>
-                {handle} gets told you are coming. You join the queue yourself once
-                you arrive, so this does not take a queue position.
+                {real
+                  ? `${handle} gets a message saying you are coming. `
+                  : `${handle} is a sample player, so nothing is sent. `}
+                You join the queue yourself once you arrive, so this does not
+                take a queue position.
               </span>
             </p>
 
+            <div aria-live="polite">
+              {error && (
+                <p role="alert" className="mt-3 rounded-xl bg-live-bg px-3 py-2.5 text-xs font-medium text-live">
+                  {error}
+                </p>
+              )}
+            </div>
+
             <div className="mt-4 space-y-2">
-              <PrimaryButton onClick={onConfirm}>Notify them</PrimaryButton>
-              <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
+              <PrimaryButton onClick={onConfirm} disabled={busy}>
+                {busy ? 'Sending…' : 'Notify them'}
+              </PrimaryButton>
+              <SecondaryButton onClick={onClose} disabled={busy}>
+                Cancel
+              </SecondaryButton>
             </div>
           </div>
         )}

@@ -13,6 +13,7 @@ import { Check, Close } from '../components/Icons.jsx'
 import { GAMES } from '../data.js'
 import { ME } from '../social.js'
 import { searchProfiles, hueFromProfile, describeError } from '../lib/accounts.js'
+import { formatWhen } from '../lib/time.js'
 
 /* Plan a session.
 
@@ -75,11 +76,14 @@ export default function PlanSession({
      from a search stays on screen after the search is cleared, and so the
      invitation knows who to message. A handle with no profile here is a
      seeded sample player carried in from the prototype. */
-  const [picked, setPicked] = useState(() => new Map())
+  const [picked, setPicked] = useState(
+    () => new Map((preset?.invitedProfiles ?? []).map((p) => [p.handle, p]))
+  )
   /* Open to anyone on the app, or only to the people asked. */
   const [open, setOpen] = useState(Boolean(preset?.open))
   const [note, setNote] = useState(preset?.note ?? '')
   const [sending, setSending] = useState(false)
+  const [saveError, setSaveError] = useState(null)
   /* Once sent: who was messaged, and what went wrong for anyone it did not
      reach. Null until then. */
   const [delivery, setDelivery] = useState(null)
@@ -177,9 +181,19 @@ export default function PlanSession({
   /* The plan in one line, for the people it is sent to. The date is spelt
      out rather than "Tonight": it is read on someone else's phone, maybe
      tomorrow. */
-  const inviteText = `${arcade?.short ?? 'An arcade'}, ${INVITE_DATE.format(when)}, ${gameLabel}.${
+  const planLine = `${arcade?.short ?? 'An arcade'}, ${INVITE_DATE.format(when)}, ${gameLabel}.${
     note.trim() ? ` ${note.trim()}` : ''
-  } Are you in?`
+  }`
+  const inviteText = `${planLine} Are you in?`
+  const changeText = `Change of plan: ${planLine} Still in?`
+  /* Whether a session being changed is different in a way the people on
+     it need to hear about. */
+  const changed =
+    editing &&
+    ((preset?.when && new Date(preset.when).getTime() !== when.getTime()) ||
+      preset?.venue !== venue ||
+      preset?.gameId !== gameId ||
+      (preset?.note ?? '') !== note.trim())
 
   async function sendInvites() {
     if (!canSend) return
@@ -187,44 +201,51 @@ export default function PlanSession({
       setPickerOpen(true)
       return
     }
-    /* The invitation has to land on Later as well. Without this the
-       confirmation screen was the only trace it had ever been sent, and the
-       list you were dropped into still held only the seeded sessions. */
-    onPlanned?.({
-      id: preset?.editingId ?? `ps-${Date.now()}`,
-      mine: true,
-      host: me.handle,
-      venue,
-      gameId,
-      /* The Date is kept as well as the label, so reopening this session for a
-         change can start the picker where it already is. */
-      when,
-      whenLabel: formatWhen(when, now),
-      /* Asked is not the same as coming: nobody has answered yet. */
-      going: [me.handle],
-      asked: invited,
-      invitedMe: false,
-      open,
-      note: note.trim(),
-    })
-
-    /* Everyone real who was asked gets the plan as a message - only the
-       people added this time, when a session is being changed, so nobody is
-       asked twice for the same evening. Failures are reported per person;
-       the session itself is already planned. */
-    const already = new Set(preset?.invited ?? [])
-    const targets = invited
-      .map((h) => picked.get(h))
-      .filter((p) => p && !already.has(p.handle))
-    const outcomes = []
-    if (onSendInvite && targets.length > 0) {
-      setSending(true)
-      for (const profile of targets) {
-        const result = await onSendInvite(profile, inviteText)
-        outcomes.push({ handle: profile.handle, error: result?.error ?? null })
-      }
+    setSending(true)
+    setSaveError(null)
+    /* The session itself: stored and shared when signed in, kept on this
+       phone when not. Either way it lands on Later. */
+    const realInvitees = invited.map((h) => picked.get(h)).filter(Boolean)
+    const saved = await onPlanned?.(
+      {
+        id: preset?.editingId ?? `ps-${Date.now()}`,
+        mine: true,
+        host: me.handle,
+        venue,
+        gameId,
+        /* The Date is kept as well as the label, so reopening this session for a
+           change can start the picker where it already is. */
+        when,
+        whenLabel: formatWhen(when, now),
+        /* Asked is not the same as coming: nobody has answered yet. */
+        going: [me.handle],
+        asked: invited,
+        invitedMe: false,
+        open,
+        note: note.trim(),
+      },
+      { inviteeIds: realInvitees.map((p) => p.id), editingId: preset?.editingId ?? null }
+    )
+    if (saved?.error) {
+      setSaveError(saved.error)
       setSending(false)
+      return
     }
+
+    /* Then the people. Newly asked get the plan; anyone already on a
+       session that has changed gets the change. Failures are reported per
+       person; the session itself is already saved. */
+    const already = new Set((preset?.invitedProfiles ?? []).map((p) => p.handle))
+    const outcomes = []
+    if (onSendInvite) {
+      for (const profile of realInvitees) {
+        const isNew = !already.has(profile.handle)
+        if (!isNew && !changed) continue
+        const result = await onSendInvite(profile, isNew ? inviteText : changeText)
+        outcomes.push({ handle: profile.handle, error: result?.error ?? null, told: isNew ? 'asked' : 'told' })
+      }
+    }
+    setSending(false)
     setDelivery(outcomes)
   }
 
@@ -266,8 +287,8 @@ export default function PlanSession({
                   <span className="font-semibold text-ink">
                     Sent to {reached.map((d) => d.handle).join(', ')}
                   </span>{' '}
-                  as a message. Anyone who doesn&rsquo;t follow you back gets it as a
-                  request.
+                  as a message{editing ? ', with the change' : ''}. Anyone who
+                  doesn&rsquo;t follow you back gets it as a request.
                 </p>
               )}
               {failed.map((d) => (
@@ -528,6 +549,13 @@ export default function PlanSession({
             {arcade?.short} &middot; {formatWhen(when, now)}
           </p>
         </div>
+        <div aria-live="polite">
+          {saveError && (
+            <p role="alert" className="rounded-xl bg-live-bg px-3 py-2.5 text-xs font-medium text-live">
+              {saveError}
+            </p>
+          )}
+        </div>
         <PrimaryButton disabled={!canSend} onClick={sendInvites}>
           {sending
             ? 'Sending…'
@@ -572,30 +600,6 @@ const INVITE_DATE = new Intl.DateTimeFormat(undefined, {
   minute: '2-digit',
 })
 
-const DAY_NAMES = [
-  'Sunday',
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-]
-const MONTHS = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-]
-
 function at(from, hours, minutes, addDays = 0) {
   const date = new Date(from)
   date.setDate(date.getDate() + addDays)
@@ -613,25 +617,6 @@ function presetTimes(now) {
   const daysToSaturday = (6 - now.getDay() + 7) % 7 || 7
 
   return [tonight, at(now, 14, 0, 1), at(now, 13, 0, daysToSaturday)]
-}
-
-function midnight(date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
-}
-
-function clock(date) {
-  const hours = date.getHours()
-  const hour12 = hours % 12 === 0 ? 12 : hours % 12
-  return `${hour12}:${String(date.getMinutes()).padStart(2, '0')} ${hours >= 12 ? 'PM' : 'AM'}`
-}
-
-export function formatWhen(date, now = new Date()) {
-  const days = Math.round((midnight(date) - midnight(now)) / 86400000)
-
-  if (days === 0) return `${date.getHours() >= 17 ? 'Tonight' : 'Today'}, ${clock(date)}`
-  if (days === 1) return `Tomorrow, ${clock(date)}`
-  if (days > 1 && days < 7) return `${DAY_NAMES[date.getDay()]}, ${clock(date)}`
-  return `${DAY_NAMES[date.getDay()].slice(0, 3)} ${date.getDate()} ${MONTHS[date.getMonth()]}, ${clock(date)}`
 }
 
 function dateKey(date) {

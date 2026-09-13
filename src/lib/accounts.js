@@ -349,6 +349,216 @@ export function subscribeToInboxChanges(myId, onChange) {
   }
 }
 
+/* --- sessions ------------------------------------------------------------ */
+
+const SESSION_COLUMNS = `
+  id, host_id, venue_id, game_id, starts_at, note, open, created_at, updated_at,
+  host:profiles!sessions_host_id_fkey (${PROFILE_COLUMNS}),
+  members:session_members (
+    user_id, status, by_host, created_at,
+    profile:profiles!session_members_user_id_fkey (${PROFILE_COLUMNS})
+  )
+`
+
+/* Every session you can see - yours, the ones you were asked to or said
+   yes to, and every open one - from a little before now onwards. */
+export async function fetchSessions() {
+  const since = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
+  const { data, error } = await supabase
+    .from('sessions')
+    .select(SESSION_COLUMNS)
+    .gte('starts_at', since)
+    .order('starts_at', { ascending: true })
+  if (error) throw error
+  return data ?? []
+}
+
+export async function createSession(hostId, { venueId, gameId, startsAt, note, open }) {
+  const { data, error } = await supabase
+    .from('sessions')
+    .insert({
+      host_id: hostId,
+      venue_id: venueId,
+      game_id: gameId,
+      starts_at: new Date(startsAt).toISOString(),
+      note: note ?? '',
+      open: Boolean(open),
+    })
+    .select('id')
+    .single()
+  if (error) throw error
+  return data.id
+}
+
+export async function updateSession(id, { venueId, gameId, startsAt, note, open }) {
+  const { error } = await supabase
+    .from('sessions')
+    .update({
+      venue_id: venueId,
+      game_id: gameId,
+      starts_at: new Date(startsAt).toISOString(),
+      note: note ?? '',
+      open: Boolean(open),
+    })
+    .eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteSession(id) {
+  const { error } = await supabase.from('sessions').delete().eq('id', id)
+  if (error) throw error
+}
+
+/* The host's list of who is asked. People no longer on it are removed;
+   people newly on it are added as invited; anyone already answering stays
+   as they are. Returns the ids that were newly asked. */
+export async function setSessionInvitees(sessionId, userIds, currentMemberIds = []) {
+  const wanted = new Set(userIds)
+  const current = new Set(currentMemberIds)
+  const toAdd = userIds.filter((id) => !current.has(id))
+  const toRemove = currentMemberIds.filter((id) => !wanted.has(id))
+  if (toRemove.length > 0) {
+    const { error } = await supabase
+      .from('session_members')
+      .delete()
+      .eq('session_id', sessionId)
+      .in('user_id', toRemove)
+    if (error) throw error
+  }
+  if (toAdd.length > 0) {
+    const { error } = await supabase
+      .from('session_members')
+      .insert(toAdd.map((user_id) => ({ session_id: sessionId, user_id, status: 'invited', by_host: true })))
+    if (error) throw error
+  }
+  return toAdd
+}
+
+/* Saying you are in, or taking it back. Someone the host asked keeps their
+   row as invited when they withdraw; someone who joined an open session on
+   their own leaves no row behind. */
+export async function setGoing(sessionId, myId, going, { byHost = false } = {}) {
+  if (going && byHost) {
+    const { error } = await supabase
+      .from('session_members')
+      .update({ status: 'going' })
+      .eq('session_id', sessionId)
+      .eq('user_id', myId)
+    if (error) throw error
+    return
+  }
+  if (going) {
+    const { error } = await supabase
+      .from('session_members')
+      .insert({ session_id: sessionId, user_id: myId, status: 'going', by_host: false })
+    if (error) throw error
+    return
+  }
+  if (byHost) {
+    const { error } = await supabase
+      .from('session_members')
+      .update({ status: 'invited' })
+      .eq('session_id', sessionId)
+      .eq('user_id', myId)
+    if (error) throw error
+  } else {
+    const { error } = await supabase
+      .from('session_members')
+      .delete()
+      .eq('session_id', sessionId)
+      .eq('user_id', myId)
+    if (error) throw error
+  }
+}
+
+/* Any session or membership you are allowed to see, changing. The caller
+   refetches. Returns the unsubscribe function. */
+export function subscribeToSessionChanges(myId, onChange) {
+  const channel = supabase.channel(`sessions:${myId}`)
+  for (const table of ['sessions', 'session_members']) {
+    for (const event of ['INSERT', 'UPDATE', 'DELETE']) {
+      channel.on('postgres_changes', { event, schema: 'public', table }, () => onChange?.())
+    }
+  }
+  channel.subscribe()
+  return () => {
+    supabase.removeChannel(channel)
+  }
+}
+
+/* --- presence ------------------------------------------------------------ */
+
+const PRESENCE_COLUMNS = `
+  user_id, venue_id, game_id, position, active, visible, checked_in_at, updated_at,
+  profile:profiles!presence_user_id_fkey (${PROFILE_COLUMNS})
+`
+
+/* Yours, plus every mutual who is checked in and visible. Row level
+   security does the scoping; the age cut-off keeps a forgotten check-in
+   from haunting the map. */
+export async function fetchPresence() {
+  const since = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
+  const { data, error } = await supabase
+    .from('presence')
+    .select(PRESENCE_COLUMNS)
+    .gte('checked_in_at', since)
+  if (error) throw error
+  return data ?? []
+}
+
+export async function checkInPresence(myId, { venueId, gameId, position, visible = true }) {
+  const { data, error } = await supabase
+    .from('presence')
+    .upsert(
+      {
+        user_id: myId,
+        venue_id: venueId,
+        game_id: gameId,
+        position: position ?? null,
+        active: true,
+        visible,
+        checked_in_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id' }
+    )
+    .select(PRESENCE_COLUMNS)
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function checkOutPresence(myId) {
+  const { error } = await supabase
+    .from('presence')
+    .update({ active: false })
+    .eq('user_id', myId)
+  if (error) throw error
+}
+
+export async function setPresenceVisible(myId, visible) {
+  const { error } = await supabase
+    .from('presence')
+    .update({ visible })
+    .eq('user_id', myId)
+  if (error) throw error
+}
+
+/* A notice arrives whenever a mutual's presence changes - or your own, from
+   another tab. The caller refetches. Returns the unsubscribe function. */
+export function subscribeToPresenceChanges(myId, onChange) {
+  const channel = supabase
+    .channel(`presence_changes:${myId}`)
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'presence_changes', filter: `user_id=eq.${myId}` },
+      () => onChange?.()
+    )
+    .subscribe()
+  return () => {
+    supabase.removeChannel(channel)
+  }
+}
+
 /* --- account ------------------------------------------------------------- */
 
 /* Deletion happens on the server. The function reads who is calling from

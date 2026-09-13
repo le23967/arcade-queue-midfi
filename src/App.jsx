@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ARCADES, QUEUE_AHEAD, DEFAULT_GAME } from './data.js'
 import {
   estimateWaitMin,
@@ -45,10 +45,13 @@ import {
   relationshipOf,
   openSessionWith,
   openSessions,
+  presentFriends,
 } from './lib/social.js'
 import { useAuth } from './lib/auth.jsx'
 import { useFollows } from './lib/useFollows.js'
 import { useConversation, useInbox } from './lib/useConversation.js'
+import { useSessions } from './lib/useSessions.js'
+import { usePresence } from './lib/usePresence.js'
 import {
   hueFromProfile,
   classifyThread,
@@ -136,7 +139,8 @@ function Prototype({ auth, initialGame }) {
   const [modal, setModal] = useState(null)
   const [activeId, setActiveId] = useState(null)
   const [scanMethod, setScanMethod] = useState('qr')
-  const [session, setSession] = useState(null)
+  /* The queue you joined on this phone this run. */
+  const [ownSession, setOwnSession] = useState(null)
   const [notify, setNotify] = useState(true)
   const [reports, setReports] = useState(7)
   const [lastSession, setLastSession] = useState(null)
@@ -167,11 +171,11 @@ function Prototype({ auth, initialGame }) {
   /* Which arcade the Here now list was opened from, if any. Null means the
      general, all-arcades view. */
   const [hereVenueId, setHereVenueId] = useState(null)
-  /* Planned sessions you have said yes to. */
-  const [rsvps, setRsvps] = useState([])
-  /* Every session on Later, seeded with the ones you were invited to. Sessions
-     you arrange are added here, so the invitation has somewhere to land. */
-  const [planned, setPlanned] = useState(PLANNED)
+  /* Without an account, sessions and who is out are the prototype's sample
+     data, held here for the run. With one they come from the database
+     below, shared with everyone else, and these two are not used. */
+  const [localRsvps, setLocalRsvps] = useState([])
+  const [localPlanned, setLocalPlanned] = useState(PLANNED)
   /* Where back goes. A single "the screen I came from" slot was enough while
      no two screens could open each other - then the conversation header
      started opening the profile, and the profile's Message button opened the
@@ -223,6 +227,55 @@ function Prototype({ auth, initialGame }) {
   const [realPlayer, setRealPlayer] = useState(null)
   /* The person a block sheet is asking about, and where it was opened from. */
   const [blockTarget, setBlockTarget] = useState(null)
+  /* Sessions and presence, shared through the database when signed in.
+     Presence looks again whenever the follow graph changes, since a new
+     mutual may already be out. */
+  const realSessions = useSessions(myId)
+  const graphKey = useMemo(
+    () =>
+      `${follows.following.map((p) => p.id).join(',')}|${follows.followers.map((p) => p.id).join(',')}`,
+    [follows.following, follows.followers]
+  )
+  const presence = usePresence(myId, graphKey)
+  const planned = myId ? realSessions.sessions : localPlanned
+  const rsvps = myId ? realSessions.rsvps : localRsvps
+  /* Who is at an arcade: real mutuals when signed in, sample players when
+     not. Everything that draws people on the map or lists them reads this. */
+  const present = useMemo(
+    () => (myId ? presence.present : presentFriends(followingHandles)),
+    [myId, presence.present, followingHandles]
+  )
+  /* A real account by handle, from anything already loaded: follows, who
+     is out, and the sessions on Later. Rows in those lists carry handles,
+     the way the sample data does, so a tap has to find the account again. */
+  function realProfileByHandle(handle) {
+    for (const p of follows.following) if (p.handle === handle) return p
+    for (const p of follows.followers) if (p.handle === handle) return p
+    for (const p of presence.present) if (p.handle === handle) return p.profile
+    for (const sess of realSessions.sessions) {
+      if (sess.hostProfile?.handle === handle) return sess.hostProfile
+      for (const p of sess.askedProfiles) if (p.handle === handle) return p
+    }
+    return null
+  }
+  /* A check-in made earlier - on this phone before a reload, or on another
+     one - is still yours. It is read straight off your presence row, so
+     the banner and the queue screen come back with it and leave with it,
+     with nothing to keep in step. */
+  const restored = useMemo(() => {
+    const mine = presence.mine
+    if (!myId || !mine?.active) return null
+    const venue = venueGame(arcades.find((a) => a.id === mine.venue_id), mine.game_id)
+    if (!venue) return null
+    return {
+      arcadeId: mine.venue_id,
+      gameId: mine.game_id,
+      position: mine.position ?? venue.queue + 1,
+      checkInAt: Date.parse(mine.checked_in_at),
+      waitedMin: estimateWaitMin(venue),
+    }
+  }, [myId, presence.mine, arcades])
+  const session = ownSession ?? restored
 
   /* Anything that navigates "back to the tab I came from" goes through this,
      so a renamed tab can never strand the view on an id nothing renders. */
@@ -308,6 +361,11 @@ function Prototype({ auth, initialGame }) {
      nowhere. The old prototype exception for open-session hosts is not
      carried over - it will return when open sessions themselves are stored. */
   function openMessage(handle) {
+    const real = realProfileByHandle(handle)
+    if (real) {
+      openRealChat(real)
+      return
+    }
     /* Seeded players: the prototype's own rule still decides whether the
        tap does anything at all. */
     if (
@@ -324,12 +382,13 @@ function Prototype({ auth, initialGame }) {
     push('chat')
   }
 
-  /* A planned session reaches each real person asked as a message in the
-     conversation their profile would open - a request if they do not
+  /* Anything the app says it has told a real person - a session they are
+     asked to, a change to it, that you are on your way - is a message in
+     the conversation their profile would open: a request if they do not
      follow you back. The database applies the same rules as any other
      send, so a stranger who already has your request waiting is told so
      rather than messaged twice. */
-  async function sendSessionInvite(profile, text) {
+  async function sendNote(profile, text) {
     if (!myId) return { error: 'Sign in to ask people.' }
     try {
       const conversation = await getOrCreateConversation(profile.id)
@@ -369,37 +428,80 @@ function Prototype({ auth, initialGame }) {
     setModal('join')
   }
 
-  function confirmJoin() {
+  /* Telling a real person you are coming is a message to them - it is the
+     only thing that actually leaves this phone - so the sheet waits for it
+     to go and says so if it did not. A sample player has nobody to tell. */
+  async function confirmJoin() {
     if (!joinTarget) return
+    const real = realProfileByHandle(joinTarget.handle)
+    const venue = arcades.find((a) => a.id === joinTarget.arcadeId)
+    if (real) {
+      setJoinTarget((t) => ({ ...t, busy: true, error: null }))
+      const result = await sendNote(real, `On my way to ${venue?.short ?? 'the arcade'} - see you there.`)
+      if (result.error) {
+        setJoinTarget((t) => (t ? { ...t, busy: false, error: result.error } : t))
+        return
+      }
+    }
     setJoinsSent((all) => ({ ...all, [joinTarget.handle]: joinTarget.arcadeId }))
-    setJoinTarget((t) => ({ ...t, sent: true }))
+    setJoinTarget((t) => (t ? { ...t, sent: true, busy: false, error: null } : t))
     playSound('success')
   }
 
   /* Plans change, so telling someone you are coming has to be as undoable as
-     saying yes to a session already is. */
+     saying yes to a session already is. For a real person that is one more
+     message, since the first one cannot be unsaid. */
   function unsendJoin(handle) {
+    const arcadeId = joinsSent[handle]
     setJoinsSent((all) => {
       const next = { ...all }
       delete next[handle]
       return next
     })
     setJoinTarget((t) => (t && t.handle === handle ? { ...t, sent: false } : t))
+    const real = realProfileByHandle(handle)
+    if (real) {
+      const venue = arcades.find((a) => a.id === arcadeId)
+      sendNote(real, `Change of plan - not coming to ${venue?.short ?? 'the arcade'} after all.`)
+    }
   }
 
   /* Sending replaces the session it was opened on, if it was opened on one, so
-     a change leaves one session rather than two. */
-  function savePlan(plan) {
-    setPlanned((list) =>
+     a change leaves one session rather than two. Signed in, the session is
+     written to the database and the people asked are attached to it there;
+     the screen that called this then messages them. */
+  async function savePlan(plan, { inviteeIds = [], editingId = null } = {}) {
+    if (myId) {
+      return realSessions.save(
+        { venueId: plan.venue, gameId: plan.gameId, startsAt: plan.when, note: plan.note, open: plan.open },
+        inviteeIds,
+        editingId
+      )
+    }
+    setLocalPlanned((list) =>
       list.some((s) => s.id === plan.id)
         ? list.map((s) => (s.id === plan.id ? plan : s))
         : [plan, ...list]
     )
+    return { error: null, id: plan.id, added: [] }
   }
 
-  function cancelPlan(id) {
-    setPlanned((list) => list.filter((s) => s.id !== id))
-    setRsvps((list) => list.filter((s) => s !== id))
+  /* Calling a session off tells everyone on it, in the thread each of them
+     already has with you. */
+  async function cancelPlan(id) {
+    if (myId) {
+      const sess = realSessions.sessions.find((s) => s.id === id)
+      const result = await realSessions.cancel(id)
+      if (!result.error && sess) {
+        const venue = arcades.find((a) => a.id === sess.venue)
+        for (const profile of sess.askedProfiles) {
+          sendNote(profile, `Called off: ${venue?.short ?? 'the arcade'}, ${sess.whenLabel}. Sorry.`)
+        }
+      }
+      return
+    }
+    setLocalPlanned((list) => list.filter((s) => s.id !== id))
+    setLocalRsvps((list) => list.filter((s) => s !== id))
   }
 
   /* Reopens Plan a session on an existing one, with everything already filled
@@ -409,6 +511,7 @@ function Prototype({ auth, initialGame }) {
       venue: session.venue,
       gameId: session.gameId,
       invited: session.asked ?? [],
+      invitedProfiles: session.askedProfiles ?? [],
       when: session.when,
       open: Boolean(session.open),
       note: session.note ?? '',
@@ -417,9 +520,26 @@ function Prototype({ auth, initialGame }) {
   }
 
   /* Saying yes to a session is reversible, so it commits straight away and
-     shows the result, rather than asking first. */
-  function toggleRsvp(id) {
-    setRsvps((list) =>
+     shows the result, rather than asking first. The host hears either way:
+     the row says they were told, so they are. */
+  async function toggleRsvp(id) {
+    if (myId) {
+      const sess = realSessions.sessions.find((s) => s.id === id)
+      if (!sess) return
+      const going = !sess.goingMe
+      const result = await realSessions.rsvp(id, going)
+      if (!result.error && sess.hostProfile && !sess.mine) {
+        const venue = arcades.find((a) => a.id === sess.venue)
+        sendNote(
+          sess.hostProfile,
+          going
+            ? `I'm in for ${venue?.short ?? 'the arcade'}, ${sess.whenLabel}.`
+            : `Can't make ${venue?.short ?? 'the arcade'}, ${sess.whenLabel} after all.`
+        )
+      }
+      return
+    }
+    setLocalRsvps((list) =>
       list.includes(id) ? list.filter((s) => s !== id) : [...list, id]
     )
   }
@@ -465,6 +585,11 @@ function Prototype({ auth, initialGame }) {
      two that are not tabs. Opening someone from People used to return you to
      the Me tab, which reads as a failed back. */
   function openPlayer(handle) {
+    const real = realProfileByHandle(handle)
+    if (real) {
+      openRealProfile(real)
+      return
+    }
     setRealPlayer(null)
     setPlayerHandle(handle)
     push('player')
@@ -536,13 +661,16 @@ function Prototype({ auth, initialGame }) {
       updatedAt: '12:38 PM',
     })
 
-    setSession({
+    setOwnSession({
       arcadeId: target.id,
       gameId: target.gameId,
       position,
       checkInAt: Date.now() - DEMO_SESSION_OFFSET_MIN * 60_000,
       waitedMin: estimateWaitMin({ ...target, queue, solo }),
     })
+    /* Shared with the people you follow both ways, if you are signed in
+       and have not gone hidden. */
+    presence.checkIn({ venueId: target.id, gameId: target.gameId, position, visible })
     playSound('success')
     setTab('arcades')
     goRoot('checkedin')
@@ -573,8 +701,9 @@ function Prototype({ auth, initialGame }) {
      venue, where you can queue again or look somewhere else. */
   function leaveQueue() {
     releaseQueueSlot()
+    presence.checkOut()
     setActiveId(session.arcadeId)
-    setSession(null)
+    setOwnSession(null)
     setModal(null)
     setTab('arcades')
     goRoot('detail')
@@ -582,6 +711,7 @@ function Prototype({ auth, initialGame }) {
 
   function doCheckOut() {
     releaseQueueSlot()
+    presence.checkOut()
 
     const elapsed = Math.max(
       1,
@@ -593,7 +723,7 @@ function Prototype({ auth, initialGame }) {
       sessionMin: elapsed,
       waitedMin: session.waitedMin,
     })
-    setSession(null)
+    setOwnSession(null)
     setModal(null)
     goRoot('summary')
   }
@@ -693,6 +823,7 @@ function Prototype({ auth, initialGame }) {
               onSong={setSong}
               me={me}
               following={followingHandles}
+              present={present}
               joinsSent={joinsSent}
               planned={planned}
               rsvps={rsvps}
@@ -754,7 +885,7 @@ function Prototype({ auth, initialGame }) {
               me={me}
               myId={myId}
               follows={follows}
-              onSendInvite={sendSessionInvite}
+              onSendInvite={sendNote}
               onPlanned={savePlan}
               onBack={goBack}
               onDone={(open) => {
@@ -792,14 +923,17 @@ function Prototype({ auth, initialGame }) {
               }}
               relationship={follows.relationship(realPlayer.id)}
               blocked={follows.isBlocked(realPlayer.id)}
-              arcade={null}
-              joinedAt={null}
+              arcade={
+                arcades.find((a) => a.id === present.find((p) => p.id === realPlayer.id)?.at) ?? null
+              }
+              sinceMin={present.find((p) => p.id === realPlayer.id)?.sinceMin ?? null}
+              joinedAt={joinsSent[realPlayer.handle] ?? null}
               onBack={leaveToTab}
               backLabel={`Back to ${tabLabel(backTab)}`}
               onClose={leaveToTab}
               onOpenArcade={openArcade}
-              onJoin={() => {}}
-              onUnsendJoin={() => {}}
+              onJoin={openJoin}
+              onUnsendJoin={unsendJoin}
               onMessage={() => openRealChat(realPlayer)}
               onToggleFollow={() => follows.toggle(realPlayer.id)}
               onBlock={() => askToBlock(realPlayer, 'profile')}
@@ -837,7 +971,10 @@ function Prototype({ auth, initialGame }) {
               reports={reports}
               sessions={3}
               visible={visible}
-              onVisible={setVisible}
+              onVisible={(on) => {
+                setVisible(on)
+                presence.setVisible(on)
+              }}
               onOpenFollows={(t) => {
                 setFollowsTab(t)
                 push('follows')
@@ -873,7 +1010,7 @@ function Prototype({ auth, initialGame }) {
               onBack={goBack}
               onCheckIn={() => setView('checkin')}
               onReport={() => setModal('report')}
-              following={followingHandles}
+              present={present}
               onFriends={() => openHereAt(arcade.id)}
               openCount={
                 openSessions(planned).filter((s) => s.venue === arcade.id).length
@@ -924,9 +1061,16 @@ function Prototype({ auth, initialGame }) {
               })}
               notify={notify}
               onNotify={setNotify}
+              /* Out of the queue screen is back to Circle, where the queue
+                 banner keeps the way back in; the arcade page is a step
+                 behind you, not a place to be returned to. */
               onBack={() => {
-                setTab('arcades')
-                goRoot('arcades')
+                setTab('friends')
+                goRoot('friends')
+              }}
+              onClose={() => {
+                setTab('friends')
+                goRoot('friends')
               }}
               onCheckOut={() => setModal('checkout')}
               onLeaveQueue={() => setModal('leavequeue')}
@@ -1029,6 +1173,9 @@ function Prototype({ auth, initialGame }) {
             handle={joinTarget.handle}
             arcade={arcades.find((a) => a.id === joinTarget.arcadeId) ?? null}
             sent={joinTarget.sent}
+            busy={Boolean(joinTarget.busy)}
+            error={joinTarget.error ?? null}
+            real={Boolean(realProfileByHandle(joinTarget.handle))}
             onConfirm={confirmJoin}
             onUndo={() => unsendJoin(joinTarget.handle)}
             onOpenArcade={() => {

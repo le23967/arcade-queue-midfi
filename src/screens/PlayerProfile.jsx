@@ -73,6 +73,8 @@ export default function PlayerProfile({
   onBlock,
   onUnblock,
   busy = false,
+  /* How long a real account has been at `arcade`, when they are there. */
+  sinceMin = null,
 }) {
   const rel = relationship ?? {
     youFollow: false,
@@ -142,7 +144,7 @@ export default function PlayerProfile({
                 At {arcade.name}
               </span>
               <span className="block text-xs tabular-nums text-ink-muted">
-                Checked in {player.sinceMin} min ago
+                Checked in {player.sinceMin ?? sinceMin ?? 0} min ago
               </span>
             </span>
             <span className="text-xs font-semibold text-fresh">Open</span>
@@ -232,6 +234,10 @@ export default function PlayerProfile({
             rel={rel}
             blocked={blocked}
             busy={busy}
+            arcade={arcade}
+            joined={joined}
+            onJoin={onJoin}
+            onUnsendJoin={onUnsendJoin}
             onMessage={onMessage}
             onToggleFollow={onToggleFollow}
             onBlock={onBlock}
@@ -309,7 +315,20 @@ export default function PlayerProfile({
    profile is for. Under it, the follow, and one line that says what a
    message will be - a conversation, or a request - so nobody has to learn
    the rule by sending one. */
-function RealActions({ player, rel, blocked, busy, onMessage, onToggleFollow, onBlock, onUnblock }) {
+function RealActions({
+  player,
+  rel,
+  blocked,
+  busy,
+  arcade,
+  joined,
+  onJoin,
+  onUnsendJoin,
+  onMessage,
+  onToggleFollow,
+  onBlock,
+  onUnblock,
+}) {
   if (blocked) {
     return (
       <>
@@ -324,11 +343,39 @@ function RealActions({ player, rel, blocked, busy, onMessage, onToggleFollow, on
     )
   }
 
+  /* Someone you follow both ways who is at an arcade right now: joining
+     them is the first thing to offer, and Message steps down a level. */
+  const there = Boolean(arcade) && rel.mutual
   return (
     <>
-      <PrimaryButton onClick={() => onMessage(player.handle)} disabled={busy}>
-        Message
-      </PrimaryButton>
+      {there && joined && (
+        <div className="flex items-center gap-2 rounded-xl bg-fresh-bg px-3 py-2">
+          <p className="min-w-0 flex-1 text-xs font-medium text-ink">
+            {player.handle} knows you&rsquo;re on your way to {arcade.short}.
+          </p>
+          <button
+            type="button"
+            onClick={() => onUnsendJoin?.(player.handle)}
+            className="flex-none rounded-md text-xs font-semibold text-ink-muted underline decoration-ink-subtle underline-offset-2 transition-colors duration-150 hover:text-ink"
+          >
+            Take it back
+          </button>
+        </div>
+      )}
+      {there && !joined ? (
+        <>
+          <PrimaryButton onClick={() => onJoin(player.handle, arcade.id)} disabled={busy}>
+            Join them at {arcade.short}
+          </PrimaryButton>
+          <SecondaryButton onClick={() => onMessage(player.handle)} disabled={busy}>
+            Message
+          </SecondaryButton>
+        </>
+      ) : (
+        <PrimaryButton onClick={() => onMessage(player.handle)} disabled={busy}>
+          Message
+        </PrimaryButton>
+      )}
       <SecondaryButton onClick={() => onToggleFollow(player.handle)} disabled={busy}>
         {rel.youFollow ? 'Following' : rel.followsYou ? 'Follow back' : 'Follow'}
       </SecondaryButton>

@@ -32,7 +32,10 @@ export default function CheckedIn({
   aheadMin,
   notify,
   onNotify,
+  /* Both leave for Circle, where the queue banner keeps the way back in.
+     Neither leaves the queue - that is the two buttons at the foot. */
   onBack,
+  onClose = null,
   onCheckOut,
   onLeaveQueue,
 }) {
@@ -44,8 +47,13 @@ export default function CheckedIn({
 
   return (
     <Screen>
-      <TopBar title="Checked In"
-        onBack={onBack} />
+      <TopBar
+        title="Checked In"
+        onBack={onBack}
+        backLabel="Back to Circle"
+        onClose={onClose}
+        closeLabel="Close"
+      />
 
       <Body>
         <div className="flex items-center gap-3 border-b border-line px-4 py-5">

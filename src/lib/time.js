@@ -39,3 +39,32 @@ export function formatMessageTime(timestamp) {
   const then = Number(timestamp)
   return Number.isFinite(then) ? time.format(then) : ''
 }
+
+/* --- when a session is ------------------------------------------------- */
+
+/* Written for the person planning, so the near future reads the way they
+   would say it - tonight, tomorrow, Saturday - and only further out does it
+   become a date. Day and month names are fixed English here because the
+   rest of the prototype's copy is; the invitation that leaves the phone
+   uses Intl instead, since it is read on someone else's. */
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+function midnight(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+}
+
+function clock(date) {
+  const hours = date.getHours()
+  const hour12 = hours % 12 === 0 ? 12 : hours % 12
+  return `${hour12}:${String(date.getMinutes()).padStart(2, '0')} ${hours >= 12 ? 'PM' : 'AM'}`
+}
+
+export function formatWhen(date, now = new Date()) {
+  const days = Math.round((midnight(date) - midnight(now)) / 86400000)
+
+  if (days === 0) return `${date.getHours() >= 17 ? 'Tonight' : 'Today'}, ${clock(date)}`
+  if (days === 1) return `Tomorrow, ${clock(date)}`
+  if (days > 1 && days < 7) return `${DAY_NAMES[date.getDay()]}, ${clock(date)}`
+  return `${DAY_NAMES[date.getDay()].slice(0, 3)} ${date.getDate()} ${MONTHS[date.getMonth()]}, ${clock(date)}`
+}
