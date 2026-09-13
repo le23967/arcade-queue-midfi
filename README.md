@@ -103,9 +103,10 @@ Players wanted an easy way to know when friends were already at an arcade. A
 map makes that information useful without adding another presence list.
 
 So the Circle tab opens on a real map. Friends show as avatars and venues show
-as pins. You can drag, scroll, pinch or use the zoom buttons. The map can move
-beyond central Sydney. Tapping a friend opens useful next steps, while tapping
-a venue opens its queue details.
+as pins. You can drag, scroll or pinch, and the map can move beyond central
+Sydney. Tapping a friend opens useful next steps, while tapping a venue opens
+its queue details. The same people as a list, grouped by venue, is a sheet that
+rises over the map from the card at the bottom.
 
 ### Activity, which answers a different question
 
@@ -148,11 +149,12 @@ the app is in effect telling them to come back once they have friends, which is
 what they came here to make. The introverted players we spoke to are the ones
 most likely to stay in that state.
 
-Open is the one segment not scoped to the people you follow. It lists every
-session anyone has posted for anyone, filtered by game, and each row ends in
-*I'm in*. A venue page also says how many open sessions are posted there, next
-to the row that names the people you follow, so a new player sees a reason to
-go even when that second row is missing.
+*Open to anyone* is the one view not scoped to the people you follow. It is
+the second filter on Later, and it lists every session anyone has posted for
+anyone, filtered by game, with each row ending in *I'm in*. A venue page also
+says how many open sessions are posted there, next to the row that names the
+people you follow, so a new player sees a reason to go even when that second
+row is missing.
 
 This does not undo the research finding about strangers. Nobody is located and
 nobody is approached. A host who posts an open session has chosen to be found,
@@ -230,10 +232,8 @@ Sources: [SEGA maimai DX location finder](https://location.am-all.net/alm/locati
 
 | Screen | Route | What it does |
 | --- | --- | --- |
-| Circle, Map | tab | Friends as avatars, venues as pins. Pinch to zoom, drag to pan, tap to act. |
-| Circle, Here now | tab | Who is out, grouped by venue, each row ending in Join. |
-| Circle, Later | tab | Sessions you arranged, were asked to, or that your circle is hosting. |
-| Circle, Open | tab | Sessions anyone posted for anyone, filtered by game, each row ending in I'm in. |
+| Circle, Now | tab | Friends as avatars, venues as pins; the same people as a list in a sheet over the map, each row ending in Join. |
+| Circle, Later | tab | Your circle's sessions, or every session open to anyone, each row ending in I'm in. |
 | Circle, Activity | tab | What people did and when, each line ending in an action. |
 | Circle, Scores | tab | Uncapped leaderboard with the 20 favourite limit drawn on it. |
 | Watch | tab | Clips from people you follow, with your queue position pinned above. |
@@ -256,6 +256,15 @@ Sources: [SEGA maimai DX location finder](https://location.am-all.net/alm/locati
 Screens 1 to 8 from the lo-fi sheet all still run end to end. The current screen
 name prints under the phone frame so the prototype can be reviewed next to the
 sheet.
+
+Circle had six segments for a while and the bar stopped fitting the width. A
+count of the tap targets on the map screen came to about thirty, and several
+groups were answering one question more than once: Map and Here now were both
+"who is out", Later and Open were both "what is coming up", and the bottom
+card repeated the five avatars already drawn on the map. Each pair is one
+segment now with the second answer a step inside the first, the map keeps one
+control, and the card is a single way into the list. Fewer things to read
+before the one you need.
 
 The tab bar is Circle, Watch, Arcades, Me. The lo-fi sheet had Home, Compare,
 Maps and Me. Home and Compare merged into Arcades. Watch and Circle were added

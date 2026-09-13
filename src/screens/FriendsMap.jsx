@@ -3,7 +3,7 @@ import L from 'leaflet'
 import { Circle, MapContainer, Marker, TileLayer } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { Avatar, GameDot, PrimaryButton, Chip } from '../components/ui.jsx'
-import { Plus, Minus, Users, Clock, Pin, Crosshair } from '../components/Icons.jsx'
+import { Users, Clock, Chevron, Crosshair } from '../components/Icons.jsx'
 import { ME_MAP } from '../data.js'
 import { estimateWaitMin, isStale, freshnessLabel, partiesLabel } from '../lib/queue.js'
 import { presentFriends } from '../lib/social.js'
@@ -188,10 +188,28 @@ const YOU_ICON = L.divIcon({
   `,
 })
 
+/* The map and the Here now list used to be two segments answering one
+   question. They are one view now: the map, with the list as a sheet that
+   rises over it. `list` is that sheet's content, and the map owns nothing
+   about it beyond whether it is up.
+
+   A count of what was on this screen made the case. The map alone carried
+   four zoom-and-pan buttons, an "out now" badge, a second copyright line, and
+   a bottom card of five friend chips that repeated the five avatars already
+   drawn on the map - all of it on top of a six-segment bar that no longer fit
+   the width. Every one of those was defensible on its own and the sum was a
+   screen people did not know where to look at. Pinch and scroll already zoom;
+   the count is in the sheet header; Leaflet already prints the credit; and
+   one "see the list" target replaces the five chips. */
 export default function FriendsMap({
   arcades,
   following,
   joinsSent,
+  listOpen = false,
+  listTitle = null,
+  onOpenList,
+  onCloseList,
+  list = null,
   onOpenPlayer,
   onOpenArcade,
   onJoin,
@@ -253,14 +271,13 @@ export default function FriendsMap({
   const venueCard =
     selected?.kind === 'venue' ? arcades.find((arcade) => arcade.id === selected.id) : null
 
-  function recentre() {
-    if (!map) return
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    map.setView(MAP_CENTRE, START_ZOOM, { animate: !reduceMotion })
+  /* Picking a pin answers a narrower question than the list does, so it
+     replaces the sheet rather than sitting under it. */
+  function pick(next) {
+    setSelected(next)
+    onCloseList?.()
   }
 
-  /* Separate from recentre: one frames all three venues, the other takes you
-     to yourself. */
   function locateMe() {
     if (!map) return
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -321,8 +338,8 @@ export default function FriendsMap({
             arcade={arcade}
             friends={here.filter((player) => player.at === arcade.id)}
             active={selected?.kind === 'venue' && selected.id === arcade.id}
-            onPickVenue={() => setSelected({ kind: 'venue', id: arcade.id })}
-            onPickFriend={(player) => setSelected({ kind: 'friend', player })}
+            onPickVenue={() => pick({ kind: 'venue', id: arcade.id })}
+            onPickFriend={(player) => pick({ kind: 'friend', player })}
           />
         ))}
 
@@ -348,56 +365,52 @@ export default function FriendsMap({
         />
       </MapContainer>
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-[1000] flex items-start justify-between p-3">
-        <span className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-line bg-surface/95 px-2.5 py-1.5 shadow-sm backdrop-blur">
-          <span className="relative flex h-2 w-2">
-            <span className="anim-ring absolute inline-flex h-full w-full rounded-full bg-fresh" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-fresh" />
+      {/* One control. Zoom is pinch, scroll or keyboard on the map itself,
+          and the map opens framed on all three venues, so the only thing a
+          button has to do is take you to yourself. */}
+      {!listOpen && (
+        <div className="pointer-events-none absolute right-3 top-3 z-[1000]">
+          <span className="pointer-events-auto flex overflow-hidden rounded-xl border border-line bg-surface shadow-lg">
+            <ZoomButton
+              label={geoState === 'live' ? 'Centre on my location' : 'Find my location'}
+              disabled={geoState === 'unavailable' || geoState === 'denied'}
+              onClick={locateMe}
+            >
+              <Crosshair size={15} />
+            </ZoomButton>
           </span>
-          <span className="text-[11px] font-semibold text-ink">{here.length} out now</span>
-        </span>
-
-        <span className="pointer-events-auto flex flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-lg">
-          <ZoomButton label="Zoom in" onClick={() => map?.zoomIn()}>
-            <Plus size={16} />
-          </ZoomButton>
-          <span className="h-px bg-line" />
-          <ZoomButton label="Zoom out" onClick={() => map?.zoomOut()}>
-            <Minus size={16} />
-          </ZoomButton>
-          <span className="h-px bg-line" />
-          <ZoomButton
-            label={geoState === 'live' ? 'Centre on my location' : 'Find my location'}
-            disabled={geoState === 'unavailable' || geoState === 'denied'}
-            onClick={locateMe}
-          >
-            <Crosshair size={15} />
-          </ZoomButton>
-          <span className="h-px bg-line" />
-          <ZoomButton label="Show all arcades" onClick={recentre}>
-            <Pin size={15} />
-          </ZoomButton>
-        </span>
-      </div>
-
-      <a
-        href="https://www.openstreetmap.org/copyright"
-        target="_blank"
-        rel="noreferrer"
-        className="absolute left-3 top-12 z-[1000] rounded bg-surface/90 px-1.5 py-0.5 text-[9px] font-medium text-ink-muted shadow-sm backdrop-blur hover:text-brand-700"
-      >
-        Map data © OpenStreetMap contributors
-      </a>
+        </div>
+      )}
 
       {tileState !== 'ready' && (
         <span
           role="status"
-          className="pointer-events-none absolute left-3 top-[70px] z-[1000] rounded-full border border-line bg-surface/95 px-2 py-1 text-[10px] font-medium text-ink-muted shadow-sm"
+          className="pointer-events-none absolute left-3 top-3 z-[1000] rounded-full border border-line bg-surface/95 px-2 py-1 text-[10px] font-medium text-ink-muted shadow-sm"
         >
           {tileState === 'error' ? 'Map tiles are having trouble loading' : 'Loading map…'}
         </span>
       )}
 
+      {listOpen ? (
+        <div className="anim-sheet absolute inset-x-0 bottom-0 z-[1000] flex h-[78%] flex-col rounded-t-2xl border-t border-line bg-surface shadow-2xl">
+          <button
+            type="button"
+            onClick={onCloseList}
+            aria-label="Back to the map"
+            className="flex items-center gap-2 border-b border-line px-4 py-3 text-left"
+          >
+            <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold text-ink">
+              {listTitle ??
+                `${here.length} ${here.length === 1 ? 'friend is' : 'friends are'} out`}
+            </span>
+            <span className="text-xs font-semibold text-brand-600">Map</span>
+            <span className="rotate-90 text-ink-muted">
+              <Chevron size={16} />
+            </span>
+          </button>
+          {list}
+        </div>
+      ) : (
       <div className="absolute inset-x-0 bottom-0 z-[1000] p-3">
         {venueCard ? (
           <VenueCard
@@ -419,13 +432,10 @@ export default function FriendsMap({
             onClose={() => setSelected(null)}
           />
         ) : (
-          <SummaryCard
-            friends={here}
-            arcades={arcades}
-            onPick={(player) => setSelected({ kind: 'friend', player })}
-          />
+          <SummaryCard friends={here} arcades={arcades} onOpenList={onOpenList} />
         )}
       </div>
+      )}
     </div>
   )
 }
@@ -490,42 +500,37 @@ function Card({ children }) {
   )
 }
 
-function SummaryCard({ friends, arcades, onPick }) {
+function SummaryCard({ friends, arcades, onOpenList }) {
+  /* Which venues, in the order the map shows them, so the line under the
+     count says where without listing anyone twice. */
+  const venues = arcades.filter((a) => friends.some((p) => p.at === a.id))
   return (
     <Card>
-      <div className="flex items-center justify-between gap-2">
-        <p className="font-display text-sm font-semibold text-ink">
-          {friends.length} friends are out
-        </p>
-        <span className="text-right text-[11px] text-ink-subtle">Tap someone to join them</span>
-      </div>
-      {/* Every friend used to share the width, so a busy evening squeezed the
-          names out of their own buttons and left a strip of initials. They keep
-          a readable width now and the row scrolls, the same way the venue cards
-          on Arcades do. */}
-      <div className="no-scrollbar -mx-1 mt-2.5 flex gap-2 overflow-x-auto px-1">
-        {friends.map((player) => {
-          const arcade = arcades.find((item) => item.id === player.at)
-          return (
-            <button
-              key={player.handle}
-              type="button"
-              onClick={() => onPick(player)}
-              className="flex min-w-[104px] flex-1 items-center gap-2 rounded-xl bg-sunken px-2 py-2 text-left transition-colors duration-150 hover:bg-line/50"
-            >
-              <Avatar handle={player.handle} size={30} live />
-              <span className="min-w-0">
-                <span className="block truncate text-xs font-semibold text-ink">
-                  {player.handle}
-                </span>
-                <span className="block truncate text-[10px] text-ink-muted">
-                  {arcade?.short}
-                </span>
-              </span>
-            </button>
-          )
-        })}
-      </div>
+      <button
+        type="button"
+        onClick={onOpenList}
+        className="flex w-full items-center gap-3 text-left"
+      >
+        <span className="flex -space-x-2">
+          {friends.slice(0, 3).map((p) => (
+            <Avatar key={p.handle} handle={p.handle} size={26} className="ring-2 ring-surface" />
+          ))}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-display text-sm font-semibold text-ink">
+            {friends.length} {friends.length === 1 ? 'friend is' : 'friends are'} out
+          </span>
+          <span className="block truncate text-[11px] text-ink-muted">
+            {venues.length > 0
+              ? venues.map((a) => a.short).join(' · ')
+              : 'Nobody you follow is at an arcade right now'}
+          </span>
+        </span>
+        <span className="text-xs font-semibold text-brand-600">List</span>
+        <span className="-rotate-90 text-ink-muted">
+          <Chevron size={16} />
+        </span>
+      </button>
     </Card>
   )
 }

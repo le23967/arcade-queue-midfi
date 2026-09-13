@@ -65,7 +65,7 @@ export default function App() {
   const [notify, setNotify] = useState(true)
   const [reports, setReports] = useState(7)
   const [lastSession, setLastSession] = useState(null)
-  const [friendsSection, setFriendsSection] = useState('map')
+  const [friendsSection, setFriendsSection] = useState('now')
   const [song, setSong] = useState('pandora')
   const [playerHandle, setPlayerHandle] = useState(null)
   const [visible, setVisible] = useState(true)
@@ -302,7 +302,7 @@ export default function App() {
      so the tab is never permanently narrowed. */
   function openHereAt(venueId) {
     setHereVenueId(venueId)
-    setFriendsSection('here')
+    setFriendsSection('now')
     setTab('friends')
     goRoot('friends')
   }

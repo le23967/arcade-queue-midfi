@@ -10,7 +10,6 @@ import {
   GameDot,
   ActionButton,
   QuietAction,
-  LiveBadge,
 } from '../components/ui.jsx'
 import { Plus, Comment, Qr } from '../components/Icons.jsx'
 import { FRIENDS, SONGS, OLD_SITE_FAVOURITE_CAP, ACTIVITY } from '../social.js'
@@ -30,7 +29,7 @@ import {
 } from '../lib/social.js'
 import FriendsMap from './FriendsMap.jsx'
 
-/* Circle tab. Six views over the same community.
+/* Circle tab. Four views over the same community, one per question.
 
    The underlying request was "seeing where your friends are and all of that",
    and the temporal half of it - whether you have just missed someone - is what
@@ -41,12 +40,19 @@ import FriendsMap from './FriendsMap.jsx'
    join them, ask them about the venue, or arrange to meet. Second, the map
    view exists at all - people were only ever in a list before.
 
-   Open is the one view that is not scoped to the people you follow. Every
-   other segment here is empty for a player with no mutuals, and the app was
+   There were six segments for a while, and the bar no longer fit the width.
+   Two of them were the same question drawn twice: Map and Now both answered
+   "who is out", one as pins and one as rows, and Later and Open both answered
+   "what is coming up", one for your circle and one for anyone. Each pair is
+   one segment now, with the second answer a step inside the first - a list
+   sheet over the map, and a filter on Later. The segment bar is the first
+   thing on the tab, so it is the first thing to say what the tab is for, and
+   four questions is what it is for.
+
+   Open sessions are the one thing here not scoped to the people you follow.
+   Every other view is empty for a player with no mutuals, and the app was
    telling that player, in effect, to come back once they had friends - which
-   is backwards, since making them is what they are here for. Open lists the
-   sessions anyone has posted for anyone, so there is always somewhere to
-   start. */
+   is backwards, since making them is what they are here for. */
 export default function Friends({
   arcades,
   game,
@@ -120,18 +126,18 @@ export default function Friends({
         }
       />
 
-      <div className="flex gap-1.5 overflow-x-auto border-b border-line px-4 py-2">
-        <Seg on={section === 'map'} onClick={() => onSection('map')}>
-          Map
-        </Seg>
-        <Seg on={section === 'here'} onClick={() => onSection('here')}>
+      {/* 'open' is Later with the other filter selected. It stays a section
+          id of its own so a venue page or a freshly posted session can land
+          straight on it, without a second piece of state to keep in step. */}
+      <div className="flex gap-1.5 border-b border-line px-4 py-2">
+        <Seg on={section === 'now'} onClick={() => onSection('now')}>
           Now
         </Seg>
-        <Seg on={section === 'planned'} onClick={() => onSection('planned')}>
+        <Seg
+          on={section === 'planned' || section === 'open'}
+          onClick={() => onSection('planned')}
+        >
           Later
-        </Seg>
-        <Seg on={section === 'open'} onClick={() => onSection('open')}>
-          Open
         </Seg>
         <Seg on={section === 'activity'} onClick={() => onSection('activity')}>
           Activity
@@ -141,20 +147,8 @@ export default function Friends({
         </Seg>
       </div>
 
-      {section === 'map' && (
-        <FriendsMap
-          arcades={venues}
-          following={following}
-          joinsSent={joinsSent}
-          onOpenPlayer={onOpenPlayer}
-          onOpenArcade={onOpenArcade}
-          onJoin={onJoin}
-          onUnsendJoin={onUnsendJoin}
-          onMessage={onMessage}
-        />
-      )}
-      {section === 'here' && (
-        <HereNow
+      {section === 'now' && (
+        <Now
           arcades={venues}
           following={following}
           venueId={hereVenueId}
@@ -164,31 +158,22 @@ export default function Friends({
           onOpenArcade={onOpenArcade}
           onJoin={onJoin}
           onUnsendJoin={onUnsendJoin}
-          onSeeOpen={() => onSection('open')}
-        />
-      )}
-      {section === 'planned' && (
-        <Planned
-          sessions={circleSessions(planned, following, rsvps)}
-          arcades={venues}
-          following={following}
-          rsvps={rsvps}
-          onRsvp={onRsvp}
-          onEdit={onEditPlan}
-          onCancel={onCancelPlan}
-          onOpenArcade={onOpenArcade}
-          onOpenPlayer={onOpenPlayer}
           onMessage={onMessage}
-          onPlan={onPlan}
           onSeeOpen={() => onSection('open')}
         />
       )}
-      {section === 'open' && (
-        <OpenSessions
-          sessions={openSessions(planned)}
+      {(section === 'planned' || section === 'open') && (
+        <Later
+          scope={section === 'open' ? 'open' : 'circle'}
+          onScope={(next) => onSection(next === 'open' ? 'open' : 'planned')}
+          sessions={
+            section === 'open'
+              ? openSessions(planned)
+              : circleSessions(planned, following, rsvps)
+          }
           arcades={venues}
           following={following}
-          venueId={hereVenueId}
+          venueId={section === 'open' ? hereVenueId : null}
           onClearVenue={onClearVenue}
           rsvps={rsvps}
           onRsvp={onRsvp}
@@ -218,17 +203,60 @@ export default function Friends({
   )
 }
 
+/* Now.
+
+   The map, with the list as a sheet over it. Opened from an arcade page the
+   sheet is already up and filtered to that arcade, because a person who
+   tapped "People you follow" on KOKO was asking about KOKO, not about the
+   city. Anything that brings you here on its own terms starts on the map. */
+function Now({ venueId, onClearVenue, onSeeOpen, ...rest }) {
+  /* Null until the person has opened or closed the sheet themselves; until
+     then a venue filter is what decides, so arriving from an arcade page
+     lands on the list. */
+  const [toggled, setToggled] = useState(null)
+  const listOpen = toggled ?? Boolean(venueId)
+  const venue = venueId ? rest.arcades.find((a) => a.id === venueId) : null
+  const count = presentFriends(rest.following).filter((p) => p.at === venueId).length
+
+  return (
+    <FriendsMap
+      {...rest}
+      listOpen={listOpen}
+      listTitle={
+        venue
+          ? `${count} ${count === 1 ? 'friend' : 'friends'} at ${venue.short}`
+          : null
+      }
+      onOpenList={() => setToggled(true)}
+      onCloseList={() => {
+        setToggled(false)
+        onClearVenue()
+      }}
+      list={
+        <HereNow
+          {...rest}
+          venueId={venueId}
+          /* Widening the list from one arcade to all of them is still the
+             list, so the sheet stays up once the filter it was opened on is
+             gone. */
+          onClearVenue={() => {
+            setToggled(true)
+            onClearVenue()
+          }}
+          onSeeOpen={onSeeOpen}
+        />
+      }
+    />
+  )
+}
+
 /* Here now.
 
    Planned sessions - a time in the future - used to render first, above the
    live presence list, inside this same view. Under a tab called "Here now" a
    host who was not at any arcade read as somebody standing in one. They are
-   now a segment of their own, so this view contains exactly what its name
-   says: people who are at an arcade right now, and nothing else.
-
-   The venue filter is the other half of it: opened from an arcade page this
-   list stays inside that arcade, because a person who tapped "People you
-   follow" on KOKO was asking about KOKO, not about the city.
+   on Later now, so this view contains exactly what its name says: people who
+   are at an arcade right now, and nothing else.
 
    Each row also carries one line about the player. Knowing that somebody is
    at KOKO and plays maimai does not tell you whether you would want to queue
@@ -278,20 +306,6 @@ function HereNow({
         </div>
       )}
 
-      <div className="flex items-center gap-2 border-b border-line px-4 py-3">
-        <LiveBadge label={`${here.length} out now`} />
-        <p className="flex-1 text-xs text-ink-muted">
-          {venue ? (
-            <>at {venue.short}</>
-          ) : (
-            <>
-              of the <span className="tabular-nums">{FRIENDS.length}</span>{' '}
-              people you follow
-            </>
-          )}
-        </p>
-      </div>
-
       {/* An empty list is where a new player lands every time, so it has to
           point somewhere rather than just report the absence. */}
       {venues.length === 0 && (
@@ -308,6 +322,10 @@ function HereNow({
 
       {venues.map(({ arcade, players }) => (
         <div key={arcade.id}>
+          {/* The banner above already names the venue when the list is
+              filtered to one, so the group header only earns its row when
+              there is more than one group. */}
+          {!venue && (
           <button
             type="button"
             onClick={() => onOpenArcade(arcade.id)}
@@ -322,6 +340,7 @@ function HereNow({
             </span>
             <span className="text-xs font-semibold text-brand-600">Open</span>
           </button>
+          )}
 
           {players.map((p, i) => {
             const signal = playerSignal(p.handle)
@@ -378,85 +397,29 @@ function HereNow({
   )
 }
 
-/* Planned sessions.
+/* Later.
 
    Future, not live. These used to sit at the top of Here now with no label of
    their own, so a host who was not at any arcade looked like somebody standing
    in one - and the row never said how you knew that host either. They are a
    segment of their own now, and every row states what put it in front of you:
-   you arranged it, you were invited, or how you know the host.
+   you arranged it, you were invited, how you know the host, or that the host
+   opened it to anyone.
 
-   Later is your circle's sessions. Anything posted open by a stranger lives
-   on Open instead, until you say you are in - then it is yours too, and it
-   shows here as well. */
-function Planned({
-  sessions,
-  arcades,
-  following,
-  rsvps,
-  onRsvp,
-  onEdit,
-  onCancel,
-  onOpenArcade,
-  onOpenPlayer,
-  onMessage,
-  onPlan,
-  onSeeOpen,
-}) {
-  return (
-    <Body>
-      <div className="flex items-center gap-2 border-b border-line px-4 py-3">
-        <Chip tone="quiet">
-          {sessions.length} {sessions.length === 1 ? 'session' : 'sessions'}
-        </Chip>
-        <p className="flex-1 text-xs text-ink-muted">
-          Arranged for later, not here now
-        </p>
-        <ActionButton icon={<Plus size={13} />} onClick={() => onPlan({})}>
-          Plan
-        </ActionButton>
-      </div>
+   Two scopes, one filter. Your circle is the sessions you arranged, were
+   asked to, said yes to, or that someone you follow is hosting. Open to
+   anyone is the public half: every session anyone has posted for anyone,
+   whether or not you have ever heard of them. Open used to be a segment of
+   its own, which made two top-level answers to one question.
 
-      {sessions.length === 0 && (
-        <div className="px-4 py-6 text-center">
-          <p className="text-sm text-ink-muted">
-            Nothing planned yet. Pick a venue, a game and a time, and ask
-            whoever you want there - or open it to anyone.
-          </p>
-          <QuietAction className="mt-2" onClick={onSeeOpen}>
-            See sessions open to anyone
-          </QuietAction>
-        </div>
-      )}
-
-      <SessionList
-        sessions={sessions}
-        arcades={arcades}
-        following={following}
-        rsvps={rsvps}
-        onRsvp={onRsvp}
-        onEdit={onEdit}
-        onCancel={onCancel}
-        onOpenArcade={onOpenArcade}
-        onOpenPlayer={onOpenPlayer}
-        onMessage={onMessage}
-      />
-    </Body>
-  )
-}
-
-/* Open sessions.
-
-   The public half of the tab. Everything else on Circle is scoped to the
-   people you follow both ways, which the research asked for and which this
-   does not undo: nobody here is being located, and nobody is being approached.
-   A host posted a time and a place for anyone, and that is all a stranger
-   gets to see - the same thing a note on the arcade's pinboard would say.
-
-   For the player with nobody in their circle yet, this is the whole tab. It
-   is also the only route in the app from a stranger to a conversation:
-   saying you are in opens a thread with the host, because they asked. */
-function OpenSessions({
+   Open is also the whole tab for a player with nobody in their circle yet.
+   Nothing about presence changes for it - nobody is located, nobody is
+   approached. A host who posts an open session has chosen to be found, the
+   same way a note on the arcade's pinboard would, and saying you are in is
+   the only route in the app from a stranger to a conversation. */
+function Later({
+  scope,
+  onScope,
   sessions,
   arcades,
   following,
@@ -471,20 +434,40 @@ function OpenSessions({
   onMessage,
   onPlan,
 }) {
+  const open = scope === 'open'
   const [gameId, setGameId] = useState(null)
   const venue = venueId ? arcades.find((a) => a.id === venueId) : null
   /* Only games with something posted get a chip, so the filter row never
      offers an empty list. */
-  const games = GAMES.filter((g) =>
-    sessions.some((s) => s.gameId === g.id && (!venueId || s.venue === venueId))
-  )
+  const games = open
+    ? GAMES.filter((g) =>
+        sessions.some((s) => s.gameId === g.id && (!venueId || s.venue === venueId))
+      )
+    : []
   const rows = sessions.filter(
-    (s) => (!venueId || s.venue === venueId) && (!gameId || s.gameId === gameId)
+    (s) =>
+      (!venueId || s.venue === venueId) && (!open || !gameId || s.gameId === gameId)
   )
-  const joined = rows.filter((s) => rsvps.includes(s.id)).length
 
   return (
     <Body>
+      <div className="flex items-center gap-2 border-b border-line px-4 py-2">
+        <div className="flex flex-1 gap-1.5">
+          <Seg on={!open} onClick={() => onScope('circle')}>
+            Your circle
+          </Seg>
+          <Seg on={open} onClick={() => onScope('open')}>
+            Open to anyone
+          </Seg>
+        </div>
+        <ActionButton
+          icon={<Plus size={13} />}
+          onClick={() => onPlan(open ? { open: true, venue: venueId ?? undefined } : {})}
+        >
+          {open ? 'Post' : 'Plan'}
+        </ActionButton>
+      </div>
+
       {venue && (
         <div className="flex items-center gap-2 border-b border-line bg-brand-50 px-4 py-2.5">
           <span className="min-w-0 flex-1">
@@ -505,23 +488,6 @@ function OpenSessions({
         </div>
       )}
 
-      <div className="flex items-center gap-2 border-b border-line px-4 py-3">
-        <Chip tone="quiet">
-          {rows.length} open
-        </Chip>
-        <p className="flex-1 text-xs text-ink-muted">
-          {joined > 0
-            ? `Posted for anyone · you\u2019re in ${joined}`
-            : 'Posted for anyone on the app, not just your circle'}
-        </p>
-        <ActionButton
-          icon={<Plus size={13} />}
-          onClick={() => onPlan({ open: true, venue: venueId ?? undefined })}
-        >
-          Post
-        </ActionButton>
-      </div>
-
       {games.length > 1 && (
         <div className="no-scrollbar flex gap-1.5 overflow-x-auto border-b border-line px-4 py-2">
           <Seg on={gameId === null} onClick={() => setGameId(null)}>
@@ -541,10 +507,18 @@ function OpenSessions({
       )}
 
       {rows.length === 0 && (
-        <p className="px-4 py-6 text-center text-sm text-ink-muted">
-          Nothing open {venue ? `at ${venue.short}` : 'right now'}. Post one,
-          and anyone on the app can say they&rsquo;re in.
-        </p>
+        <div className="px-4 py-6 text-center">
+          <p className="text-sm text-ink-muted">
+            {open
+              ? `Nothing open ${venue ? `at ${venue.short}` : 'right now'}. Post one, and anyone on the app can say they\u2019re in.`
+              : 'Nothing planned yet. Pick a venue, a game and a time, and ask whoever you want there - or open it to anyone.'}
+          </p>
+          {!open && (
+            <QuietAction className="mt-2" onClick={() => onScope('open')}>
+              See sessions open to anyone
+            </QuietAction>
+          )}
+        </div>
       )}
 
       <SessionList
