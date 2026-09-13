@@ -1,6 +1,7 @@
-import { Screen, TopBar, Body, Avatar } from '../components/ui.jsx'
-import { Chevron } from '../components/Icons.jsx'
+import { useState } from 'react'
+import { Avatar, Sheet, SheetBody } from '../components/ui.jsx'
 import { hueFromProfile } from '../lib/accounts.js'
+import { formatMessageStamp } from '../lib/time.js'
 
 /* Conversations.
 
@@ -11,104 +12,178 @@ import { hueFromProfile } from '../lib/accounts.js'
    had an hour ago could only be reached by remembering who it was with and
    going to look for them in your follows, which is recall, not recognition.
 
-   This is the list that was missing. Every conversation is here, newest first,
-   whether or not the person is at an arcade right now.
+   This is the list that was missing. Every conversation is here, newest
+   first, whether or not the person is at an arcade right now.
 
-   Threads come from the database now: each one is a real conversation with
-   another account, carrying the other person's profile and the last message.
-   Seeded sample players never appear here, because there is nobody behind
-   them to have written back. */
-const STATUS_MARK = { sent: '✓', read: '✓✓' }
+   It is a sheet over the tab it was opened from rather than a screen of its
+   own. An inbox is a glance - who has written, is anything waiting - and a
+   glance should not take the whole phone and leave only Back. The sheet
+   takes as much height as the list needs, up to most of the screen, and
+   closes back to exactly where you were. A conversation is the opposite: a
+   place you go to, with a keyboard in it, so tapping a row still pushes the
+   full thread and Back from there returns to this sheet.
 
-function timeOf(timestamp) {
-  const then = new Date(timestamp)
-  const sameDay = new Date().toDateString() === then.toDateString()
-  return sameDay
-    ? then.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-    : then.toLocaleDateString([], { day: 'numeric', month: 'short' })
-}
-
+   Two lists. Chats are conversations you can write in - with people you
+   follow both ways, or that either of you accepted - plus any request you
+   have sent, marked as such. Requests are messages from people you do not
+   follow both ways, waiting on you; the count is on the tab so it can be
+   seen without opening it. Nothing here claims delivery. A row is marked
+   unread when the last message is theirs and you have not opened it. */
 export default function Messages({
-  threads = [],
+  chats = [],
+  requests = [],
   loading = false,
   error = null,
   signedIn = true,
   onOpen,
-  onBack,
+  onClose,
 }) {
-  return (
-    <Screen>
-      <TopBar title="Messages" onBack={onBack} />
+  const [tab, setTab] = useState(requests.length > 0 && chats.length === 0 ? 'requests' : 'chats')
+  const rows = tab === 'requests' ? requests : chats
 
-      <Body>
-        {!signedIn ? (
-          <div className="px-6 py-10 text-center">
-            <p className="font-display text-sm font-semibold text-ink">Sign in to message</p>
-            <p className="mt-1 text-xs leading-relaxed text-ink-muted">
-              Messages are between real accounts that follow each other.
+  return (
+    <Sheet
+      title="Messages"
+      onClose={onClose}
+      closeLabel="Close messages"
+      size="tall"
+      returnFocusTo="[data-messages-opener]"
+    >
+      {signedIn && (
+        <div role="tablist" aria-label="Message lists" className="flex gap-1.5 border-b border-line px-4 py-2">
+          <ListTab on={tab === 'chats'} onClick={() => setTab('chats')} id="chats">
+            Chats
+          </ListTab>
+          <ListTab on={tab === 'requests'} onClick={() => setTab('requests')} id="requests">
+            Requests
+            {requests.length > 0 && (
+              <span
+                className={`ml-1.5 inline-flex min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold tabular-nums ${
+                  tab === 'requests' ? 'bg-white/20 text-white' : 'bg-brand-600 text-white'
+                }`}
+              >
+                {requests.length}
+              </span>
+            )}
+          </ListTab>
+        </div>
+      )}
+
+      <SheetBody>
+        <div role="tabpanel" aria-labelledby={`messages-tab-${tab}`} id={`messages-panel-${tab}`}>
+          {!signedIn ? (
+            <Empty title="Sign in to message" detail="Messages are between accounts." />
+          ) : error ? (
+            <p role="alert" className="px-6 py-10 text-center text-xs font-medium text-live">
+              {error}
             </p>
-          </div>
-        ) : error ? (
-          <p role="alert" className="px-6 py-10 text-center text-xs font-medium text-live">
-            {error}
-          </p>
-        ) : loading ? (
-          <p role="status" className="px-6 py-10 text-center text-xs text-ink-subtle">
-            Loading messages…
-          </p>
-        ) : threads.length === 0 ? (
-          <div className="px-6 py-10 text-center">
-            <p className="font-display text-sm font-semibold text-ink">
-              No conversations yet
+          ) : loading && rows.length === 0 ? (
+            <p role="status" className="px-6 py-10 text-center text-xs text-ink-subtle">
+              Loading messages…
             </p>
-            <p className="mt-1 text-xs leading-relaxed text-ink-muted">
-              Open someone you follow both ways from People or their profile
-              and tap Message. Whatever you send stays here.
-            </p>
-          </div>
-        ) : (
-          <ul>
-            {threads.map(({ id, partner, last }) => (
-              <li key={id}>
-                <button
-                  type="button"
-                  onClick={() => onOpen(partner)}
-                  className="flex w-full items-center gap-3 border-b border-line px-4 py-3 text-left transition-colors duration-150 hover:bg-sunken"
-                >
-                  <Avatar handle={partner.handle} hue={hueFromProfile(partner)} size={44} />
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-baseline gap-2">
-                      <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold text-ink">
-                        {partner.handle}
-                      </span>
-                      {last && (
-                        <span className="flex-none text-[11px] tabular-nums text-ink-subtle">
-                          {timeOf(last.timestamp)}
-                        </span>
-                      )}
-                    </span>
-                    <span className="mt-0.5 flex items-center gap-1 text-xs text-ink-muted">
-                      {last?.sender === 'me' && (
-                        <span
-                          className={`flex-none tabular-nums ${
-                            last.status === 'read' ? 'text-brand-600' : 'text-ink-subtle'
-                          }`}
-                        >
-                          {STATUS_MARK[last.status] ?? ''}
-                        </span>
-                      )}
-                      <span className="min-w-0 flex-1 truncate">
-                        {last ? last.text : 'No messages yet'}
-                      </span>
-                    </span>
-                  </span>
-                  <Chevron size={16} />
-                </button>
-              </li>
-            ))}
-          </ul>
+          ) : rows.length === 0 ? (
+            tab === 'requests' ? (
+              <Empty
+                title="No requests"
+                detail="When someone you don’t follow both ways messages you, it arrives here for you to accept or decline."
+              />
+            ) : (
+              <Empty
+                title="No conversations yet"
+                detail="Open someone’s profile and tap Message. What you send stays here."
+              />
+            )
+          ) : (
+            <ul>
+              {rows.map((thread) => (
+                <ThreadRow key={thread.id} thread={thread} onOpen={() => onOpen(thread)} />
+              ))}
+            </ul>
+          )}
+        </div>
+      </SheetBody>
+    </Sheet>
+  )
+}
+
+function ListTab({ on, onClick, id, children }) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      id={`messages-tab-${id}`}
+      aria-selected={on}
+      aria-controls={`messages-panel-${id}`}
+      onClick={onClick}
+      className={`inline-flex min-h-[36px] items-center whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors duration-150 ease-soft active:scale-95 ${
+        on
+          ? 'border-transparent bg-ink text-white'
+          : 'border-line-strong bg-surface text-ink-muted hover:border-ink-subtle hover:text-ink'
+      }`}
+    >
+      {children}
+    </button>
+  )
+}
+
+function Empty({ title, detail }) {
+  return (
+    <div className="px-6 py-10 text-center">
+      <p className="font-display text-sm font-semibold text-ink">{title}</p>
+      <p className="mt-1 text-xs leading-relaxed text-ink-muted">{detail}</p>
+    </div>
+  )
+}
+
+/* One row: who, what they last said, when. Unread is a heavier name and a
+   dot, nothing more; a request you sent says so in place of a preview it
+   would not have. */
+function ThreadRow({ thread, onOpen }) {
+  const { partner, last, kind } = thread
+  const unread = kind !== 'sent' && last?.sender === 'them' && last.status !== 'read'
+  const preview =
+    kind === 'sent' ? `Request sent · ${last?.text ?? ''}` : last ? last.text : 'No messages yet'
+
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={`${partner.handle}${unread ? ', unread' : ''}${kind === 'request' ? ', message request' : ''}`}
+        className="flex w-full items-center gap-3 border-b border-line px-4 py-3 text-left transition-colors duration-150 hover:bg-sunken"
+      >
+        <Avatar handle={partner.handle} hue={hueFromProfile(partner)} size={40} />
+        <span className="min-w-0 flex-1">
+          <span className="flex items-baseline gap-2">
+            <span
+              className={`min-w-0 flex-1 truncate text-sm text-ink ${
+                unread ? 'font-bold' : 'font-semibold'
+              }`}
+            >
+              {partner.handle}
+            </span>
+            {last && (
+              <span
+                className={`flex-none text-[11px] tabular-nums ${
+                  unread ? 'font-semibold text-brand-600' : 'text-ink-subtle'
+                }`}
+              >
+                {formatMessageStamp(last.timestamp)}
+              </span>
+            )}
+          </span>
+          <span
+            className={`mt-0.5 block truncate text-xs ${
+              unread ? 'font-medium text-ink' : 'text-ink-muted'
+            }`}
+          >
+            {last?.sender === 'me' && kind !== 'sent' ? `You: ${last.text}` : preview}
+          </span>
+        </span>
+        {unread && (
+          <span aria-hidden="true" className="h-2 w-2 flex-none rounded-full bg-brand-600" />
         )}
-      </Body>
-    </Screen>
+      </button>
+    </li>
   )
 }

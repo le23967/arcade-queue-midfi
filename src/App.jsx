@@ -33,6 +33,8 @@ import AddPerson from './screens/AddPerson.jsx'
 import Messages from './screens/Messages.jsx'
 import EditProfile from './screens/EditProfile.jsx'
 import PlayerProfile from './screens/PlayerProfile.jsx'
+import DeleteAccount from './screens/DeleteAccount.jsx'
+import BlockPerson from './screens/BlockPerson.jsx'
 import Welcome from './screens/Welcome.jsx'
 import Auth from './screens/Auth.jsx'
 import { CLIPS, CLIP_COMMENTS, ME, PLANNED } from './social.js'
@@ -47,7 +49,7 @@ import {
 import { useAuth } from './lib/auth.jsx'
 import { useFollows } from './lib/useFollows.js'
 import { useConversation, useInbox } from './lib/useConversation.js'
-import { hueFromProfile } from './lib/accounts.js'
+import { hueFromProfile, classifyThread } from './lib/accounts.js'
 
 /* The summary is only interesting if a session has some length to it, and a
    reviewer clicks through in seconds. Check-in is therefore backdated by the
@@ -96,6 +98,7 @@ export default function App() {
       <Frame>
         <Auth
           configured={auth.configured}
+          restoreError={auth.error}
           onSignIn={auth.signIn}
           onSignUp={auth.signUp}
           onBack={() => setEntered(false)}
@@ -171,6 +174,12 @@ function Prototype({ auth, initialGame }) {
      trap the evaluation already caught once. A stack cannot do that: every
      step is recorded, and back unwinds them in order. */
   const [history, setHistory] = useState([])
+  /* 'messages' is a step in that history like any other, but it is drawn
+     as a sheet over the tab it was opened from rather than as a screen of
+     its own. Opening a thread from it pushes the thread; Back from the
+     thread lands on 'messages' again, so the sheet reappears where it was;
+     closing the sheet is one more step back. */
+  const sheetOpen = view === 'messages'
   /* Your identity is your real profile when signed in. Without an account
      (a build with no Supabase configured) the seeded ME stands in, editable
      for the run only. */
@@ -180,10 +189,33 @@ function Prototype({ auth, initialGame }) {
   const me = profile
     ? { id: profile.id, handle: profile.handle, hue: hueFromProfile(profile) }
     : guestMe
-  /* The real follow graph: other accounts, both directions. */
+  /* The real follow graph: other accounts, both directions, and blocks. */
   const follows = useFollows(myId)
+  /* Every conversation you are in, kept for the whole session so the way
+     into it can say what is waiting. Which list a thread belongs to needs
+     the follow graph as well as the row, so it is worked out here. */
+  const inbox = useInbox(myId)
+  const chats = []
+  const requests = []
+  for (const thread of inbox.threads) {
+    const kind = classifyThread({
+      status: thread.status,
+      requestedBy: thread.requestedBy,
+      myId,
+      mutual: follows.relationship(thread.partner.id).mutual,
+      hasMessage: Boolean(thread.last),
+    })
+    if (kind === 'chat' || kind === 'sent') chats.push({ ...thread, kind })
+    else if (kind === 'request') requests.push({ ...thread, kind })
+  }
+  const unreadChats = chats.filter(
+    (t) => t.kind === 'chat' && t.last?.sender === 'them' && t.last.status !== 'read'
+  ).length
+  const messageBadge = unreadChats + requests.length
   /* A real account being looked at, as opposed to a seeded player. */
   const [realPlayer, setRealPlayer] = useState(null)
+  /* The person a block sheet is asking about, and where it was opened from. */
+  const [blockTarget, setBlockTarget] = useState(null)
 
   /* Anything that navigates "back to the tab I came from" goes through this,
      so a renamed tab can never strand the view on an id nothing renders. */
@@ -256,12 +288,12 @@ function Prototype({ auth, initialGame }) {
     setView('watch')
   }
 
-  /* Messaging is real and mutual-only: a thread with another account you
-     follow both ways, stored in the database. The seeded players have no
-     account behind them, so a Message tap on one of them opens a closed
-     thread that says so rather than a box that goes nowhere. The old
-     prototype exception for open-session hosts is not carried over - it will
-     return when open sessions themselves are stored. */
+  /* Messaging is real: a thread with another account, stored in the
+     database, that starts as a request when you do not follow each other.
+     The seeded players have no account behind them, so a Message tap on one
+     of them opens a closed thread that says so rather than a box that goes
+     nowhere. The old prototype exception for open-session hosts is not
+     carried over - it will return when open sessions themselves are stored. */
   function openMessage(handle) {
     /* Seeded players: the prototype's own rule still decides whether the
        tap does anything at all. */
@@ -277,6 +309,25 @@ function Prototype({ auth, initialGame }) {
   function openRealChat(target) {
     setChat({ kind: 'real', profile: target })
     push('chat')
+  }
+
+  /* Blocking asks first, on a sheet that names the person. Confirmed from
+     inside their thread, the thread is closed too - it is no longer yours
+     to see - and you land back where you opened it from. */
+  function askToBlock(target, from) {
+    setBlockTarget({ profile: target, from })
+    setModal('block')
+  }
+
+  async function confirmBlock() {
+    if (!blockTarget) return { error: 'Nobody to block.' }
+    const result = await follows.block(blockTarget.profile.id)
+    if (result.error) return result
+    inbox.refresh()
+    setModal(null)
+    if (blockTarget.from === 'thread') goBack()
+    setBlockTarget(null)
+    return result
   }
 
   /* "Join them" is about a person, so it asks before it acts and then says
@@ -517,7 +568,9 @@ function Prototype({ auth, initialGame }) {
     goRoot('summary')
   }
 
-  const showTabs = ['arcades', 'watch', 'friends', 'me', 'detail'].includes(view)
+  /* What is drawn as the screen: the view, or the tab under the sheet. */
+  const screen = sheetOpen ? backTab : view
+  const showTabs = ['arcades', 'watch', 'friends', 'me', 'detail'].includes(screen)
   const sessionArcade = session
     ? venueGame(
         arcades.find((a) => a.id === session.arcadeId),
@@ -528,9 +581,11 @@ function Prototype({ auth, initialGame }) {
   return (
     <Frame>
       <div className="relative flex h-full flex-col">
-        <div className="min-h-0 flex-1">
-          <ErrorBoundary resetKey={view}>
-          {view === 'arcades' && (
+        {/* Everything behind an open sheet is inert: not focusable, not
+            read, not tappable through the scrim. */}
+        <div className="min-h-0 flex-1" inert={sheetOpen ? '' : undefined}>
+          <ErrorBoundary resetKey={screen}>
+          {screen === 'arcades' && (
             <Arcades
               arcades={rows}
               venueCount={arcades.length}
@@ -543,7 +598,7 @@ function Prototype({ auth, initialGame }) {
             />
           )}
 
-          {view === 'watch' && (
+          {screen === 'watch' && (
             <Watch
               clips={CLIPS}
               index={clipIndex}
@@ -571,20 +626,18 @@ function Prototype({ auth, initialGame }) {
             />
           )}
 
-          {view === 'addperson' && (
+          {screen === 'addperson' && (
             <AddPerson
               me={me}
-              following={followingHandles}
-              onFollow={toggleFollow}
+              myId={myId}
+              configured={auth.configured}
+              follows={follows}
               onBack={goBack}
-              onSearch={() => {
-                setFollowsTab('following')
-                push('follows')
-              }}
+              onOpenProfile={openRealProfile}
             />
           )}
 
-          {view === 'follows' && (
+          {screen === 'follows' && (
             <Follows
               tabName={followsTab}
               onTab={setFollowsTab}
@@ -597,7 +650,7 @@ function Prototype({ auth, initialGame }) {
             />
           )}
 
-          {view === 'friends' && (
+          {screen === 'friends' && (
             <Friends
               arcades={arcades}
               game={game}
@@ -624,41 +677,42 @@ function Prototype({ auth, initialGame }) {
               onPlan={openPlan}
               onMessage={openMessage}
               onOpenMessages={() => push('messages')}
+              messageBadge={messageBadge}
               onAddPerson={() => push('addperson')}
             />
           )}
 
-          {view === 'chat' && chat?.kind === 'real' && (
+          {screen === 'chat' && chat?.kind === 'real' && (
             <RealThread
+              key={chat.profile.id}
               myId={myId}
               partner={chat.profile}
-              mutual={follows.relationship(chat.profile.id).mutual}
+              relationship={follows.relationship(chat.profile.id)}
+              blocked={follows.isBlocked(chat.profile.id)}
+              onChanged={inbox.refresh}
+              onBlock={() => askToBlock(chat.profile, 'thread')}
               onOpenProfile={() => openRealProfile(chat.profile)}
               onBack={goBack}
             />
           )}
 
-          {view === 'chat' && chat?.kind === 'sample' && (
+          {screen === 'chat' && chat?.kind === 'sample' && (
             <Message
               handle={chat.handle}
               messages={[]}
-              canReply={false}
+              mode="closed"
               subtitle="Sample player"
-              blockedNote={`${chat.handle} is a sample player from the prototype, so there is nobody to write back. Messaging works between real accounts: find people under Me, then People.`}
+              closedNote={`${chat.handle} is a sample player from the prototype, so there is nobody to write back. Messaging works between real accounts: find people under Add someone.`}
               onOpenProfile={() => openPlayer(chat.handle)}
               onBack={goBack}
             />
           )}
 
-          {view === 'editprofile' && (
+          {screen === 'editprofile' && (
             <EditProfile me={me} onSave={saveProfile} onBack={goBack} />
           )}
 
-          {view === 'messages' && (
-            <Inbox myId={myId} onOpen={openRealChat} onBack={goBack} />
-          )}
-
-          {view === 'plan' && (
+          {screen === 'plan' && (
             <PlanSession
               arcades={rows}
               preset={planPreset}
@@ -678,7 +732,7 @@ function Prototype({ auth, initialGame }) {
             />
           )}
 
-          {view === 'liked' && (
+          {screen === 'liked' && (
             <Liked
               likedIds={likedIds}
               onBack={goBack}
@@ -686,7 +740,7 @@ function Prototype({ auth, initialGame }) {
             />
           )}
 
-          {view === 'player' && realPlayer && (
+          {screen === 'player' && realPlayer && (
             <PlayerProfile
               player={{
                 id: realPlayer.id,
@@ -699,6 +753,7 @@ function Prototype({ auth, initialGame }) {
                 real: true,
               }}
               relationship={follows.relationship(realPlayer.id)}
+              blocked={follows.isBlocked(realPlayer.id)}
               arcade={null}
               joinedAt={null}
               onBack={goBack}
@@ -707,11 +762,13 @@ function Prototype({ auth, initialGame }) {
               onUnsendJoin={() => {}}
               onMessage={() => openRealChat(realPlayer)}
               onToggleFollow={() => follows.toggle(realPlayer.id)}
+              onBlock={() => askToBlock(realPlayer, 'profile')}
+              onUnblock={() => follows.unblock(realPlayer.id)}
               onPlan={() => {}}
             />
           )}
 
-          {view === 'player' && !realPlayer && player && (
+          {screen === 'player' && !realPlayer && player && (
             <PlayerProfile
               player={player}
               relationship={playerRelationship}
@@ -728,12 +785,13 @@ function Prototype({ auth, initialGame }) {
             />
           )}
 
-          {view === 'me' && (
+          {screen === 'me' && (
             <MeTab
               me={me}
               account={auth.user}
               onEditProfile={() => push('editprofile')}
               onSignOut={auth.signOut}
+              onDeleteAccount={() => setModal('delete')}
               reports={reports}
               sessions={3}
               visible={visible}
@@ -755,7 +813,7 @@ function Prototype({ auth, initialGame }) {
             />
           )}
 
-          {view === 'detail' && arcade && (
+          {screen === 'detail' && arcade && (
             <Detail
               arcade={arcade}
               otherGames={otherGamesAt(rawArcade, game)}
@@ -782,7 +840,7 @@ function Prototype({ auth, initialGame }) {
             />
           )}
 
-          {view === 'checkin' && (
+          {screen === 'checkin' && (
             <CheckIn
               arcade={arcade}
               onBack={() => setView('detail')}
@@ -794,7 +852,7 @@ function Prototype({ auth, initialGame }) {
             />
           )}
 
-          {view === 'scan' && (
+          {screen === 'scan' && (
             <Scan
               arcade={arcade}
               method={scanMethod}
@@ -803,7 +861,7 @@ function Prototype({ auth, initialGame }) {
             />
           )}
 
-          {view === 'confirm' && arcade && (
+          {screen === 'confirm' && arcade && (
             <ConfirmQueue
               arcade={arcade}
               onBack={() => setView('checkin')}
@@ -811,7 +869,7 @@ function Prototype({ auth, initialGame }) {
             />
           )}
 
-          {view === 'checkedin' && session && sessionArcade && (
+          {screen === 'checkedin' && session && sessionArcade && (
             <CheckedIn
               arcade={sessionArcade}
               position={session.position}
@@ -833,7 +891,7 @@ function Prototype({ auth, initialGame }) {
             />
           )}
 
-          {view === 'summary' && lastSession && (
+          {screen === 'summary' && lastSession && (
             <Summary
               arcade={venueGame(
                 arcades.find((a) => a.id === lastSession.arcadeId),
@@ -864,6 +922,38 @@ function Prototype({ auth, initialGame }) {
                 />
               ) : null
             }
+          />
+        )}
+
+        {sheetOpen && (
+          <Messages
+            chats={chats}
+            requests={requests}
+            loading={inbox.loading}
+            error={inbox.error}
+            signedIn={Boolean(myId)}
+            onOpen={(thread) => openRealChat(thread.partner)}
+            onClose={goBack}
+          />
+        )}
+
+        {modal === 'block' && blockTarget && (
+          <BlockPerson
+            handle={blockTarget.profile.handle}
+            hue={hueFromProfile(blockTarget.profile)}
+            onConfirm={confirmBlock}
+            onCancel={() => {
+              setModal(null)
+              setBlockTarget(null)
+            }}
+          />
+        )}
+
+        {modal === 'delete' && profile && (
+          <DeleteAccount
+            handle={profile.handle}
+            onConfirm={auth.deleteAccount}
+            onCancel={() => setModal(null)}
           />
         )}
 
@@ -940,38 +1030,68 @@ function Prototype({ auth, initialGame }) {
    The conversation hook lives in this component rather than in the shell so
    its realtime channel opens when the thread is on screen and closes when it
    is not - going back, opening a different person, or signing out all
-   unmount it. A thread with someone you no longer follow both ways is closed
-   for replies and says why. */
-function RealThread({ myId, partner, mutual, onOpenProfile, onBack }) {
-  const thread = useConversation(myId, partner.id, mutual)
+   unmount it. It is keyed by the other person's id above, so a different
+   person is a different mount. What the bottom of the screen offers comes
+   from the hook: a composer, a request in flight, or the three answers to
+   one. Answering tells the inbox to look again, so the counts on the way in
+   are right by the time you are back there. */
+function RealThread({
+  myId,
+  partner,
+  relationship,
+  blocked,
+  onChanged,
+  onBlock,
+  onOpenProfile,
+  onBack,
+}) {
+  const thread = useConversation(myId, partner.id, { mutual: relationship.mutual, blocked })
+
+  async function answer(action) {
+    const result = await action()
+    if (!result?.error) onChanged?.()
+    return result
+  }
+
+  const subtitle = relationship.mutual
+    ? 'You follow each other'
+    : thread.mode === 'request-received'
+      ? 'Message request'
+      : thread.mode === 'request-sent'
+        ? 'Request sent'
+        : relationship.youFollow
+          ? 'You follow them'
+          : relationship.followsYou
+            ? 'Follows you'
+            : 'Not connected'
+
   return (
     <Message
       handle={partner.handle}
       hue={hueFromProfile(partner)}
       messages={thread.messages}
-      canReply={mutual}
-      subtitle={mutual ? 'You follow each other' : 'You don\u2019t follow each other'}
-      blockedNote={`You and ${partner.handle} don\u2019t follow each other, so you can\u2019t send messages. Follow each other to talk.`}
+      mode={thread.mode}
+      subtitle={subtitle}
+      closedNote={thread.mode === 'closed' ? 'You can’t message this person.' : ''}
       loading={thread.loading}
       error={thread.error}
       sending={thread.sending}
       sendError={thread.sendError}
-      onSend={thread.send}
+      answering={thread.answering}
+      answerError={thread.answerError}
+      onSend={async (text) => {
+        const result = await thread.send(text)
+        if (!result?.error) onChanged?.()
+        return result
+      }}
+      onAccept={() => answer(thread.accept)}
+      onDecline={async () => {
+        const result = await answer(thread.decline)
+        /* Declined, the request is no longer yours to look at. */
+        if (!result?.error) onBack()
+      }}
+      onBlock={onBlock}
       onOpenProfile={onOpenProfile}
-      onBack={onBack}
-    />
-  )
-}
-
-function Inbox({ myId, onOpen, onBack }) {
-  const inbox = useInbox(myId)
-  return (
-    <Messages
-      threads={inbox.threads}
-      loading={inbox.loading}
-      error={inbox.error}
-      signedIn={Boolean(myId)}
-      onOpen={onOpen}
       onBack={onBack}
     />
   )

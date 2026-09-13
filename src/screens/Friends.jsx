@@ -11,7 +11,7 @@ import {
   ActionButton,
   QuietAction,
 } from '../components/ui.jsx'
-import { Plus, Comment, Qr } from '../components/Icons.jsx'
+import { Plus, Comment, UserPlus } from '../components/Icons.jsx'
 import { FRIENDS, SONGS, OLD_SITE_FAVOURITE_CAP, ACTIVITY } from '../social.js'
 import { GAMES, gameColor, gameLabel } from '../data.js'
 import { resolveVenues } from '../lib/queue.js'
@@ -79,6 +79,9 @@ export default function Friends({
   onPlan,
   onMessage,
   onOpenMessages,
+  /* Unread conversations plus requests waiting, for the badge on the way
+     in. Zero draws nothing. */
+  messageBadge = 0,
   onAddPerson,
 }) {
   /* Resolved here, once: raw venues carry their queues nested per game, so
@@ -97,20 +100,34 @@ export default function Friends({
             <button
               type="button"
               onClick={onAddPerson}
-              aria-label="Add someone by code"
-              className="rounded-full p-1.5 text-ink-muted transition-colors duration-150 hover:bg-sunken hover:text-ink"
+              aria-label="Add someone"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-ink-muted transition-colors duration-150 hover:bg-sunken hover:text-ink"
             >
-              <Qr size={19} />
+              <UserPlus size={20} />
             </button>
             {/* Conversations are with the people on this tab, so this is where
-                the way back to them belongs. */}
+                the way back to them belongs. The count is what is waiting:
+                unread chats and requests together. */}
             <button
               type="button"
+              data-messages-opener
               onClick={onOpenMessages}
-              aria-label="Messages"
-              className="rounded-full p-1.5 text-ink-muted transition-colors duration-150 hover:bg-sunken hover:text-ink"
+              aria-label={
+                messageBadge > 0
+                  ? `Messages, ${messageBadge} waiting`
+                  : 'Messages'
+              }
+              className="relative flex h-10 w-10 items-center justify-center rounded-full text-ink-muted transition-colors duration-150 hover:bg-sunken hover:text-ink"
             >
-              <Comment size={19} />
+              <Comment size={20} />
+              {messageBadge > 0 && (
+                <span
+                  aria-hidden="true"
+                  className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-surface bg-brand-600 px-1 text-[10px] font-bold leading-none tabular-nums text-white"
+                >
+                  {messageBadge > 9 ? '9+' : messageBadge}
+                </span>
+              )}
             </button>
             <Info>
               Presence is venue level and mutual-only: you appear here to people

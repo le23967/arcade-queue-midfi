@@ -1,4 +1,4 @@
-import { useId, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 /* Shared primitives.
@@ -66,15 +66,20 @@ export function Body({ children, className = '' }) {
   return <div className={`flex-1 overflow-y-auto ${className}`}>{children}</div>
 }
 
-export function PrimaryButton({ children, className = '', disabled, ...rest }) {
+/* `tone="danger"` is for the one kind of primary action that destroys
+   something; it keeps the shape and drops the brand colour for the one the
+   app reserves for things that cannot be taken back. */
+export function PrimaryButton({ children, className = '', disabled, tone = 'brand', ...rest }) {
+  const live =
+    tone === 'danger'
+      ? 'bg-live text-white shadow-lg shadow-live/25 hover:brightness-95 active:scale-[0.98]'
+      : 'bg-brand-600 text-white shadow-lg shadow-brand-600/25 hover:bg-brand-700 active:scale-[0.98]'
   return (
     <button
       type="button"
       disabled={disabled}
       className={`w-full rounded-xl px-4 py-3.5 font-display text-sm font-semibold transition-all duration-150 ease-soft ${
-        disabled
-          ? 'bg-line text-ink-subtle'
-          : 'bg-brand-600 text-white shadow-lg shadow-brand-600/25 hover:bg-brand-700 active:scale-[0.98]'
+        disabled ? 'bg-line text-ink-subtle' : live
       } ${className}`}
       {...rest}
     >
@@ -83,11 +88,16 @@ export function PrimaryButton({ children, className = '', disabled, ...rest }) {
   )
 }
 
-export function SecondaryButton({ children, className = '', ...rest }) {
+export function SecondaryButton({ children, className = '', disabled, ...rest }) {
   return (
     <button
       type="button"
-      className={`w-full rounded-xl border border-line-strong bg-surface px-4 py-3.5 font-display text-sm font-semibold text-ink transition-all duration-150 ease-soft hover:bg-sunken active:scale-[0.98] ${className}`}
+      disabled={disabled}
+      className={`w-full rounded-xl border px-4 py-3.5 font-display text-sm font-semibold transition-all duration-150 ease-soft ${
+        disabled
+          ? 'border-line bg-sunken text-ink-subtle'
+          : 'border-line-strong bg-surface text-ink hover:bg-sunken active:scale-[0.98]'
+      } ${className}`}
       {...rest}
     >
       {children}
@@ -470,6 +480,163 @@ export function Placeholder({ label, className = '', children }) {
         </span>
       )}
     </div>
+  )
+}
+
+/* A sheet that behaves like a dialog.
+
+   The existing sheets each drew their own scrim and handled their own
+   closing, and none of them was reachable from a keyboard once open. This
+   is the one they share from now on: it names itself for assistive
+   technology, moves focus inside when it opens and puts it back when it
+   closes, keeps Tab inside, closes on Escape and on a tap on the scrim, and
+   stops a scroll at its edge from moving the screen behind it.
+
+   Height is the content's, between a floor and a ceiling of the frame, so a
+   short list is a short sheet and a long one scrolls inside. Anything that
+   must scroll passes `scroll` and gets the contained scroll area. */
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
+export function Sheet({
+  title,
+  onClose,
+  closeLabel = 'Close',
+  children,
+  /* tall: a list that wants most of the screen; short: a confirmation */
+  size = 'short',
+  /* Whether the scrim and Escape close it. A sheet mid-request says no. */
+  dismissable = true,
+  /* Where focus goes when the sheet closes, if the control that opened it
+     is no longer on the page - a sheet reopened by Back from a screen it
+     opened has no opener to return to, so the app names one. */
+  returnFocusTo = null,
+}) {
+  const panelRef = useRef(null)
+  const titleId = useId()
+  /* The latest close handler, so the key listener below is attached once
+     and never re-runs the focus work when a parent re-renders. */
+  const closeRef = useRef(onClose)
+  const dismissRef = useRef(dismissable)
+  const returnRef = useRef(returnFocusTo)
+  useEffect(() => {
+    closeRef.current = onClose
+    dismissRef.current = dismissable
+    returnRef.current = returnFocusTo
+  }, [onClose, dismissable, returnFocusTo])
+
+  useEffect(() => {
+    const previous = document.activeElement
+    const panel = panelRef.current
+    /* The first field if there is one, otherwise the close control, so a
+       keyboard user lands on the thing the sheet is for. */
+    const first =
+      panel?.querySelector('[data-autofocus]') ?? panel?.querySelector('[data-close]') ?? panel
+    first?.focus?.({ preventScroll: true })
+
+    function onKey(event) {
+      if (event.key === 'Escape') {
+        if (!dismissRef.current) return
+        event.stopPropagation()
+        closeRef.current?.()
+        return
+      }
+      if (event.key !== 'Tab' || !panel) return
+      const items = Array.from(panel.querySelectorAll(FOCUSABLE)).filter(
+        (el) => el.offsetParent !== null
+      )
+      if (items.length === 0) {
+        event.preventDefault()
+        return
+      }
+      const start = items[0]
+      const end = items[items.length - 1]
+      if (event.shiftKey && (document.activeElement === start || document.activeElement === panel)) {
+        event.preventDefault()
+        end.focus()
+      } else if (!event.shiftKey && document.activeElement === end) {
+        event.preventDefault()
+        start.focus()
+      }
+    }
+
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      const target =
+        previous && previous !== document.body && previous.isConnected
+          ? previous
+          : returnRef.current
+            ? document.querySelector(returnRef.current)
+            : null
+      target?.focus?.({ preventScroll: true })
+    }
+  }, [])
+
+  return (
+    <div
+      className="anim-scrim absolute inset-0 z-30 flex items-end bg-ink/40"
+      onClick={dismissable ? onClose : undefined}
+    >
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        onClick={(event) => event.stopPropagation()}
+        className={`anim-sheet flex w-full flex-col rounded-t-2xl border-t border-line bg-surface shadow-2xl outline-none ${
+          size === 'tall' ? 'min-h-[55%] max-h-[85%]' : 'max-h-[85%]'
+        }`}
+      >
+        <div className="flex justify-center pt-2" aria-hidden="true">
+          <span className="h-1 w-9 rounded-full bg-line-strong" />
+        </div>
+        <div className="flex items-center gap-2 border-b border-line py-1 pl-4 pr-1.5">
+          <h2 id={titleId} className="min-w-0 flex-1 truncate font-display text-base font-semibold text-ink">
+            {title}
+          </h2>
+          <button
+            type="button"
+            data-close
+            onClick={onClose}
+            aria-label={closeLabel}
+            className="flex h-11 w-11 flex-none items-center justify-center rounded-full text-ink-muted transition-colors duration-150 hover:bg-sunken hover:text-ink"
+          >
+            <CloseGlyph />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+/* The scrolling middle of a Sheet. Contained, so reaching the end of the
+   list does not start scrolling whatever is behind the scrim. */
+export function SheetBody({ children, className = '' }) {
+  return (
+    <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain ${className}`}>
+      {children}
+    </div>
+  )
+}
+
+function CloseGlyph() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
   )
 }
 

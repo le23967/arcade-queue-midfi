@@ -1,8 +1,9 @@
 # Supabase setup
 
-Accounts, follows and private messages run on a Supabase project. Everything
-else in the prototype (venues, queues, presence, clips, scores, sessions) is
-still local sample data and needs nothing from this page.
+Accounts, follows, private messages, message requests, blocks and account
+deletion run on a Supabase project. Everything else in the prototype (venues,
+queues, presence, clips, scores, sessions) is still local sample data and
+needs nothing from this page.
 
 ## 1. Create a project
 
@@ -40,21 +41,36 @@ Restart `npm run dev` after changing env files; Vite reads them at start-up.
 Without these two values the app still runs, but the sign-in screen says
 accounts are not set up and offers a look around without an account.
 
-## 4. Apply the database migration
+## 4. Apply the database migrations
 
-The schema lives in `supabase/migrations/20260913140043_accounts_and_messaging.sql`.
+The schema lives in `supabase/migrations/`, one file per step, applied in
+filename order:
+
+1. `20260913140043_accounts_and_messaging.sql` — `profiles`, `follows`,
+   `conversations` and `messages`, row level security with the policies
+   described in the file, a trigger that creates a profile when an account is
+   created, and the two functions the app calls (`handle_available`,
+   `get_or_create_conversation`).
+2. `20260913144547_follow_changes_realtime.sql` — a small `follow_changes`
+   table and trigger so a follow or unfollow made in one browser reaches the
+   other person live. The file explains why `follows` itself is not
+   broadcast.
+3. `20260914012517_message_requests_and_blocks.sql` — message requests and
+   blocks. Conversations gain a status (`pending`, `accepted`, `declined`),
+   who asked and when it was answered; a `blocks` table; the functions the
+   app calls to accept, decline, block and unblock; a trigger that holds an
+   unanswered request to one message; and a fix to the follow-notice trigger
+   so that deleting an account no longer fails on its own cascade. Existing
+   conversations are `accepted` and keep every message.
 
 Either:
 
-- **SQL editor** — open **SQL Editor** in the dashboard, paste the whole file,
-  and run it. It is safe to run more than once.
+- **SQL editor** — open **SQL Editor** in the dashboard, paste each file in
+  turn, and run it. All three are safe to run more than once.
 - **Supabase CLI** — with the CLI installed and logged in,
   `supabase link --project-ref <your ref>` then `supabase db push`.
 
-The migration creates `profiles`, `follows`, `conversations` and `messages`,
-turns on row level security with the policies described in the file, adds a
-trigger that creates a profile when an account is created, and the two
-functions the app calls (`handle_available`, `get_or_create_conversation`).
+If the project already has the first two applied, run only the third.
 
 ## 5. Email confirmation
 
@@ -66,28 +82,61 @@ lets a new account sign in immediately. Either setting works with the app.
 
 ## 6. Realtime
 
-The migration adds `messages` to the `supabase_realtime` publication so open
-conversations update live. If that statement fails on your project, open
-**Database → Publications**, pick `supabase_realtime`, and toggle on
-`public.messages`. Realtime respects the same row level security as queries,
-so a client only ever receives messages from conversations it is part of.
+The migrations add `messages` and `follow_changes` to the `supabase_realtime`
+publication, so open conversations and follow state update live. If either
+statement fails on your project, open **Database → Publications**, pick
+`supabase_realtime`, and toggle on `public.messages` and
+`public.follow_changes`. Realtime respects the same row level security as
+queries, so a client only ever receives messages from conversations it is
+part of and follow notices addressed to it.
 
-## 7. Test with two accounts
+## 7. Deploy the delete-account function
+
+Deleting an account needs the service role, which must never reach the
+browser, so it runs as an Edge Function: `supabase/functions/delete-account/index.ts`.
+The function reads who is calling from the session token, deletes that auth
+user and nothing else, and the database cascades take the profile, follows,
+conversations and messages with it. It uses the `SUPABASE_URL` and
+`SUPABASE_SERVICE_ROLE_KEY` values the platform provides to every function;
+there is nothing to configure by hand and nothing to add to `.env.local`.
+
+Either:
+
+- **Dashboard** — open **Edge Functions**, choose **Deploy a new function**,
+  then **Via Editor**. Name it exactly `delete-account`, replace the editor's
+  contents with the whole of `supabase/functions/delete-account/index.ts`,
+  and deploy. Leave *Verify JWT* on.
+- **Supabase CLI** — with the CLI installed and logged in, from the repository
+  root: `supabase link --project-ref <your ref>` (run `supabase init` first if
+  `supabase/config.toml` does not exist yet - it keeps the migrations folder),
+  then `supabase functions deploy delete-account`.
+
+Until it is deployed, **Me → Account → Delete account** reports that the
+function is not reachable and nothing is deleted.
+
+## 8. Test with two accounts
 
 1. Run `npm run dev` and open the app in a normal window. Continue past the
    welcome screen, choose **Create account**, and make account A with a
    username, email and password.
 2. Open the same URL in a private window (or another browser or phone) and
    create account B.
-3. In each window go to **Me → Following** (or Followers) and search the
-   other username, then **Follow**. Once both have followed, each profile
-   shows **Mutual**.
-4. Open the other person's profile and tap **Message**. Send something from A;
-   it appears in B's open thread without a reload. Reply from B; it appears
-   for A. Reload either window and the thread is still there.
-5. **Me → Sign out** returns to the sign-in screen with nothing of the
-   previous account left on screen.
+3. In A, open **Circle**, tap the add-person icon, and search B's username.
+   Tap **Follow**. B's **Me** tab shows the new follower without a reload.
+4. Still in A, open B's profile and tap **Message**. The thread says the
+   first message goes as a request; send one. A sees **Request sent** and
+   no composer. In B, the Messages icon on Circle shows **1**; open it, pick
+   **Requests**, open the request, and tap **Accept**. A's composer opens
+   without a reload, and messages now flow both ways live.
+5. Decline instead of accept, and the request leaves B's list while A still
+   sees only **Request sent**. **Block** and A can no longer open a
+   conversation with B at all; B's view of A's profile offers **Unblock**.
+6. Reload either window and everything is still there.
+7. **Me → Account → Sign out** returns to the sign-in screen with nothing of
+   the previous account left on screen. **Delete account** asks for the
+   username, then removes the account and everything it owned.
 
-Two accounts that do not follow each other can see each other's profile and
-follow, but have no message box, and the database refuses a conversation
-between them regardless of what the client asks.
+The database enforces all of this: a request is one message until answered,
+only the person it was sent to can answer it, a block hides the conversation
+from both sides, and nobody can read or write a conversation they are not
+part of.

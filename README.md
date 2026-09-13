@@ -169,11 +169,19 @@ Profiles show which games someone mainly plays and their favourite songs. Both
 came up unprompted. Shared items are marked, so you can see what you have in
 common before you say anything.
 
-Messaging is limited to people you follow both ways. We took it out at one point
-because of an interview finding, but that finding was about strangers. Our own
-notes said the app *"can't force our users to just go up to someone they haven't
-met"*, and that still holds. Nothing in the app reaches someone who has not
-followed you back.
+Messaging was limited to people you follow both ways for a long time. We took
+it out at one point because of an interview finding, but that finding was about
+strangers. Our own notes said the app *"can't force our users to just go up to
+someone they haven't met"*, and that still shapes it: a message to someone who
+does not follow you back arrives as a request, one message long, that they can
+accept, decline or block, and declining tells the sender nothing. Between
+people who follow each other it is an ordinary conversation from the first
+word. Nobody is approached; the person on the other end decides.
+
+Every real profile has a Message button. Add someone leads with a username
+search, and a real QR code - your account id, nothing else - for the moment you
+are standing next to the person. Accounts can be deleted from Me, with the
+username typed to confirm.
 
 ## What we did not build
 
@@ -246,7 +254,9 @@ Sources: [SEGA maimai DX location finder](https://location.am-all.net/alm/locati
 | Checked In | `checkedin` | Your position and the running order. |
 | Session summary | `summary` | Session time and time queued. |
 | Plan a session | `plan` | Venue, game, time, who can come, and who to ask. |
-| Message | `chat` | Mutuals, plus the host of an open session you joined. |
+| Messages | sheet | Chats and requests over the tab they were opened from, with what is waiting counted on the way in. |
+| Message | `chat` | A conversation, or a request in either direction; Accept, Decline and Block live on it. |
+| Add someone | `addperson` | Search by username first; scan a QR code, or show yours. |
 | Player profile | `player` | Games, songs, scores, and the actions. |
 | Liked clips | `liked` | Clips you saved, reachable from Me. |
 | Followers and Following | `follows` | Who can see you, and who you can see. |

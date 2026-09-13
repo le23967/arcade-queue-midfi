@@ -41,6 +41,19 @@
   --game-taiko: #ea580c;
   --game-ddr: #0ea5e9;
 
+  /* The same tokens as bare channels, for the few places that need them at
+     an opacity - a scrim, a translucent bar, a tinted shadow. Tailwind can
+     only mix an alpha into a colour it can see the channels of, so
+     `bg-ink/40` was silently never generated while --ink was a hex value,
+     and no sheet in the app had a backdrop. Keep these in step with the
+     values above. */
+  --ink-rgb: 24 24 27;
+  --surface-rgb: 255 255 255;
+  --line-rgb: 228 228 231;
+  --brand-400-rgb: 129 140 248;
+  --brand-600-rgb: 79 70 229;
+  --live-rgb: 225 29 72;
+
   /* Motion */
   --ease: cubic-bezier(0.2, 0, 0, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);

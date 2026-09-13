@@ -31,6 +31,7 @@ export default function MeTab({
   account = null,
   onEditProfile,
   onSignOut,
+  onDeleteAccount,
   reports,
   sessions,
   visible,
@@ -71,9 +72,13 @@ export default function MeTab({
                   </span>
                   <Chip tone="brand">Sydney</Chip>
                 </span>
-                <span className="mt-0.5 block truncate text-xs text-ink-muted">
-                  {account?.email ?? 'Not signed in'}
-                </span>
+                {/* The email lives in the Account section below; up here the
+                    card is who you are in the app, not how you log in. */}
+                {!account && (
+                  <span className="mt-0.5 block truncate text-xs text-ink-muted">
+                    Not signed in
+                  </span>
+                )}
               </span>
               <span className="flex flex-none items-center gap-1 text-xs font-semibold text-brand-700">
                 Edit
@@ -207,16 +212,37 @@ export default function MeTab({
             </div>
           </Disclosure>
 
-          {/* Signing out is the one action here that is not a setting, so it
-              sits on its own at the end rather than inside a disclosure. */}
+          {/* The account itself: what it is signed in as, and the two ways
+              out. Signing out is ordinary and reversible, so it looks like
+              any other row. Deleting is neither, so it sits apart, in the
+              colour the app keeps for things that cannot be taken back, and
+              it asks again before it does anything. */}
           {account && (
-            <button
-              type="button"
-              onClick={onSignOut}
-              className="w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm font-semibold text-live transition-colors duration-150 hover:bg-live-bg"
+            <section
+              aria-labelledby="account-heading"
+              className="overflow-hidden rounded-2xl border border-line bg-surface shadow-sm"
             >
-              Sign out
-            </button>
+              <div className="border-b border-line px-4 py-3">
+                <h2 id="account-heading" className="font-display text-sm font-semibold text-ink">
+                  Account
+                </h2>
+                <p className="mt-0.5 truncate text-xs text-ink-muted">{account.email ?? 'Signed in'}</p>
+              </div>
+              <button
+                type="button"
+                onClick={onSignOut}
+                className="flex min-h-[48px] w-full items-center border-b border-line px-4 py-3 text-left text-sm font-semibold text-ink transition-colors duration-150 hover:bg-sunken"
+              >
+                Sign out
+              </button>
+              <button
+                type="button"
+                onClick={onDeleteAccount}
+                className="flex min-h-[48px] w-full items-center px-4 py-3 text-left text-sm font-semibold text-live transition-colors duration-150 hover:bg-live-bg"
+              >
+                Delete account
+              </button>
+            </section>
           )}
         </div>
       </Body>

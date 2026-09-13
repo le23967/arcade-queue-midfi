@@ -7,6 +7,10 @@ import {
   hueFromProfile,
   toThreadMessage,
   partnerOf,
+  classifyThread,
+  threadMode,
+  encodeProfileCode,
+  decodeProfileCode,
   MESSAGE_MAX,
 } from './accountRules.js'
 
@@ -65,4 +69,60 @@ test('the partner is whichever side is not me', () => {
   const conv = { user_a: 'u1', user_b: 'u2', a: { id: 'u1' }, b: { id: 'u2' } }
   assert.equal(partnerOf(conv, 'u1').id, 'u2')
   assert.equal(partnerOf(conv, 'u2').id, 'u1')
+})
+
+test('a thread is a chat, a sent request, a received request, or nothing', () => {
+  const me = 'u1'
+  const chat = { status: 'accepted', requestedBy: null, myId: me, mutual: false }
+  assert.equal(classifyThread(chat), 'chat')
+  assert.equal(classifyThread({ ...chat, status: 'pending', requestedBy: 'u2', mutual: true }), 'chat')
+  assert.equal(classifyThread({ status: 'pending', requestedBy: me, myId: me, mutual: false }), 'sent')
+  assert.equal(classifyThread({ status: 'pending', requestedBy: 'u2', myId: me, mutual: false }), 'request')
+  /* Declining tells the requester nothing: their side still reads as sent. */
+  assert.equal(classifyThread({ status: 'declined', requestedBy: me, myId: me, mutual: false }), 'sent')
+  assert.equal(classifyThread({ status: 'declined', requestedBy: 'u2', myId: me, mutual: false }), 'hidden')
+  /* A request with nothing in it is not a request. */
+  assert.equal(
+    classifyThread({ status: 'pending', requestedBy: 'u2', myId: me, mutual: false, hasMessage: false }),
+    'hidden'
+  )
+  assert.equal(classifyThread({ status: null, requestedBy: null, myId: me, mutual: false }), 'hidden')
+})
+
+test('the thread offers the right thing at the bottom', () => {
+  const me = 'u1'
+  assert.equal(threadMode({ status: null, requestedBy: null, myId: me, mutual: true }), 'chat')
+  assert.equal(threadMode({ status: null, requestedBy: null, myId: me, mutual: false }), 'request-compose')
+  assert.equal(threadMode({ status: 'accepted', requestedBy: 'u2', myId: me, mutual: false }), 'chat')
+  assert.equal(
+    threadMode({ status: 'pending', requestedBy: me, myId: me, mutual: false, sentByMe: 0 }),
+    'request-compose'
+  )
+  assert.equal(
+    threadMode({ status: 'pending', requestedBy: me, myId: me, mutual: false, sentByMe: 1 }),
+    'request-sent'
+  )
+  assert.equal(
+    threadMode({ status: 'declined', requestedBy: me, myId: me, mutual: false, sentByMe: 1 }),
+    'request-sent'
+  )
+  assert.equal(threadMode({ status: 'pending', requestedBy: 'u2', myId: me, mutual: false }), 'request-received')
+  assert.equal(threadMode({ status: 'declined', requestedBy: 'u2', myId: me, mutual: false }), 'request-received')
+  assert.equal(threadMode({ status: 'accepted', requestedBy: null, myId: me, mutual: true, blocked: true }), 'blocked')
+  /* Mutual wins over a pending row: the two follow each other now. */
+  assert.equal(threadMode({ status: 'pending', requestedBy: 'u2', myId: me, mutual: true }), 'chat')
+})
+
+test('a profile code carries the account id and nothing else', () => {
+  const id = '0b6f4a7e-1c3d-4e5f-8a9b-0c1d2e3f4a5b'
+  const code = encodeProfileCode(id)
+  assert.equal(code, `arcadecircle://profile/${id}`)
+  assert.equal(decodeProfileCode(code), id)
+  assert.equal(decodeProfileCode(`  ${code.toUpperCase()}/ `), id)
+  assert.equal(decodeProfileCode(id), id)
+  assert.equal(decodeProfileCode('https://example.com/whatever'), null)
+  assert.equal(decodeProfileCode('arcadecircle://profile/not-an-id'), null)
+  assert.equal(decodeProfileCode(''), null)
+  assert.equal(decodeProfileCode(null), null)
+  assert.ok(!code.includes('@'))
 })

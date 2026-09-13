@@ -41,6 +41,14 @@ export const User = (p) => (
   </Svg>
 )
 
+export const UserPlus = (p) => (
+  <Svg {...p}>
+    <circle cx="10" cy="8" r="3.2" />
+    <path d="M3.5 20a6.5 6.5 0 0 1 13 0" />
+    <path d="M19 8v6M16 11h6" />
+  </Svg>
+)
+
 export const Clock = (p) => (
   <Svg {...p}>
     <circle cx="12" cy="12" r="8.5" />

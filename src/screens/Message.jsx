@@ -1,39 +1,39 @@
 import { useEffect, useRef, useState } from 'react'
-import { Screen, Avatar } from '../components/ui.jsx'
+import { Screen, Avatar, PrimaryButton, SecondaryButton, QuietAction } from '../components/ui.jsx'
 import { Send, ArrowLeft } from '../components/Icons.jsx'
+import { formatMessageTime } from '../lib/time.js'
 
-/* A conversation, scoped to mutuals.
+/* A conversation.
 
    An earlier version deliberately had no contact action at all, on the team's
    own finding that "the app can't force our users to just go up to someone
-   they haven't met". That was about strangers, and it still holds: nothing
-   here reaches a person you do not already follow both ways.
+   they haven't met". That was about strangers, and the shape of it still
+   holds: a stranger gets one message, which arrives as a request, and the
+   other person decides whether it becomes a conversation. Between people
+   who follow each other it is an ordinary thread from the first word.
 
-   The messages are real now. This screen does not know or care where they
-   come from - it is handed a list, a flag for whether replying is allowed,
-   and a line to show under the name - so the same screen can show a live
+   The messages are real. This screen does not know or care where they come
+   from - it is handed a list, a mode that says what belongs at the bottom,
+   and a line to show under the name - so the same screen shows a live
    thread with another account and a closed one with a seeded sample player.
-   The old prototype used a timer to turn Sent into Delivered; nothing here
-   claims a status the database has not recorded.
+   Nothing here claims a status the database has not recorded.
 
-   Consultation feedback was that presence has to lead somewhere: reaching out,
-   joining them, or asking about the venue they are at. Between mutuals that is
-   an ordinary message, so the openers are the three questions the feed
-   actually raises.
+   The bottom of the screen is the mode:
 
-   It is a thread rather than a send box because the first version replaced the
-   composer with "Sent" and a Done button, and then forgot the message.
+     chat              the composer
+     request-compose   the composer, and a line saying the first message
+                       goes as a request
+     request-sent      what you sent, and that it is waiting on them
+     request-received  their message, and Accept / Decline / Block
+     blocked           you blocked them; the way back is on their profile
+     closed            no composer, for a reason given in `closedNote`
 
-   It is a screen rather than a sheet because a conversation is a place you go
-   to, not a panel that covers where you were. As a sheet it was neither: tall
-   enough to hide the screen underneath, short enough to leave a strip of it
-   showing, and opened from the inbox it sat on top of the very row you had
-   just tapped. Pushing a screen is also what every messaging app does, so back
-   goes where back always goes.
+   It is a thread rather than a send box because the first version replaced
+   the composer with "Sent" and a Done button, and then forgot the message.
 
-   Sending is the round button at the end of the field for the same reason: a
-   full-width Send stacked over a full-width Cancel is the shape of a form, and
-   sending a message is not submitting one. */
+   It is a screen rather than a sheet because a conversation is a place you
+   go to, not a panel that covers where you were: it can be long, and the
+   keyboard needs the room. The inbox is the sheet; this is what it opens. */
 const OPENERS = [
   'How long is the wait really?',
   'Save me a spot, on my way',
@@ -41,36 +41,34 @@ const OPENERS = [
   'Are you around later this week?',
 ]
 
-const STATUS_LABEL = { sent: 'Sent', delivered: 'Delivered', read: 'Read' }
-
-function timeOf(timestamp) {
-  return new Date(timestamp).toLocaleTimeString([], {
-    hour: 'numeric',
-    minute: '2-digit',
-  })
-}
+const STATUS_LABEL = { sent: 'Sent', read: 'Read' }
 
 export default function Message({
   handle,
   hue = null,
   messages = [],
   opener = '',
-  /* Whether the composer is offered at all. */
-  canReply = true,
+  mode = 'chat',
   /* One line under the name: the relationship, or why replying is off. */
   subtitle = '',
-  blockedNote = '',
+  closedNote = '',
   loading = false,
   error = null,
   sending = false,
   sendError = null,
+  answering = false,
+  answerError = null,
   onSend,
+  onAccept,
+  onDecline,
+  onBlock,
   onOpenProfile,
   onBack,
 }) {
   const [text, setText] = useState(opener)
   const endRef = useRef(null)
-  const canSend = text.trim().length > 0 && !sending && !loading
+  const composing = mode === 'chat' || mode === 'request-compose'
+  const canSend = composing && text.trim().length > 0 && !sending && !loading
   /* Openers are for opening. Once there is a conversation, or once you have
      started typing, they are just clutter above the field. */
   const showOpeners = messages.length === 0 && text === ''
@@ -94,7 +92,7 @@ export default function Message({
           type="button"
           onClick={onBack}
           aria-label="Back"
-          className="-ml-2 rounded-full p-1.5 text-ink transition-colors duration-150 hover:bg-sunken active:bg-line"
+          className="-ml-2 flex h-10 w-10 items-center justify-center rounded-full text-ink transition-colors duration-150 hover:bg-sunken active:bg-line"
         >
           <ArrowLeft size={20} />
         </button>
@@ -121,7 +119,7 @@ export default function Message({
 
       {/* The conversation sits on its own ground, so it reads as a place
           rather than as the middle of a form. */}
-      <div className="flex-1 overflow-y-auto bg-sunken px-4 py-3">
+      <div className="flex-1 overflow-y-auto overscroll-contain bg-sunken px-4 py-3">
         {error ? (
           <p role="alert" className="py-6 text-center text-xs font-medium text-live">
             {error}
@@ -132,7 +130,9 @@ export default function Message({
           </p>
         ) : messages.length === 0 ? (
           <p className="py-6 text-center text-xs text-ink-subtle">
-            No messages yet. Anything you send stays here.
+            {mode === 'request-compose'
+              ? `You don’t follow each other yet, so your first message reaches ${handle} as a request.`
+              : 'No messages yet. Anything you send stays here.'}
           </p>
         ) : (
           <ul className="space-y-2">
@@ -143,7 +143,7 @@ export default function Message({
               >
                 <span className="max-w-[78%]">
                   <span
-                    className={`block rounded-2xl px-3 py-2 text-sm shadow-sm ${
+                    className={`block break-words rounded-2xl px-3 py-2 text-sm shadow-sm ${
                       m.sender === 'me'
                         ? 'rounded-br-md bg-brand-600 text-white'
                         : 'rounded-bl-md bg-surface text-ink'
@@ -156,8 +156,8 @@ export default function Message({
                       m.sender === 'me' ? 'text-right' : ''
                     }`}
                   >
-                    {timeOf(m.timestamp)}
-                    {m.sender === 'me' && ` · ${STATUS_LABEL[m.status] ?? m.status}`}
+                    {formatMessageTime(m.timestamp)}
+                    {m.sender === 'me' && mode === 'chat' && ` · ${STATUS_LABEL[m.status] ?? m.status}`}
                   </span>
                 </span>
               </li>
@@ -167,7 +167,7 @@ export default function Message({
         <div ref={endRef} />
       </div>
 
-      {canReply ? (
+      {composing && (
         <div className="border-t border-line bg-surface px-3 pb-3 pt-2.5">
           {sendError && (
             <p role="alert" className="mb-2 text-xs font-medium text-live">
@@ -192,20 +192,22 @@ export default function Message({
           <div className="flex items-end gap-2">
             <input
               id="msg"
+              name="message"
               type="text"
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && send()}
-              placeholder={sending ? 'Sending…' : 'Message'}
+              placeholder={sending ? 'Sending…' : mode === 'request-compose' ? 'Write a request…' : 'Message'}
               disabled={loading || Boolean(error)}
-              aria-label={`Message ${handle}`}
+              autoComplete="off"
+              aria-label={mode === 'request-compose' ? `Message request to ${handle}` : `Message ${handle}`}
               className="min-w-0 flex-1 rounded-full border border-line-strong bg-surface px-4 py-2.5 text-sm text-ink outline-none transition-colors duration-150 placeholder:text-ink-subtle focus:border-brand-500"
             />
             <button
               type="button"
               onClick={send}
               disabled={!canSend}
-              aria-label="Send"
+              aria-label={mode === 'request-compose' ? 'Send request' : 'Send'}
               className={`flex h-11 w-11 flex-none items-center justify-center rounded-full transition-all duration-150 ease-soft ${
                 canSend
                   ? 'bg-brand-600 text-white shadow-lg shadow-brand-600/25 hover:bg-brand-700 active:scale-95'
@@ -216,12 +218,56 @@ export default function Message({
             </button>
           </div>
         </div>
-      ) : (
-        /* The rule holds - you cannot reach someone you do not follow both
-           ways - and the screen says why rather than hiding the box. */
+      )}
+
+      {mode === 'request-sent' && (
+        <p
+          role="status"
+          className="border-t border-line bg-surface px-4 py-4 text-center text-xs leading-relaxed text-ink-muted"
+        >
+          Request sent. You can keep talking once {handle} accepts.
+        </p>
+      )}
+
+      {mode === 'request-received' && (
+        /* The three answers, next to the message they answer. Accept is the
+           one that opens something, so it is the primary; Block is the one
+           that closes something, so it is quiet and asks first. */
+        <div className="border-t border-line bg-surface px-4 pb-3 pt-3">
+          <p className="text-xs leading-relaxed text-ink-muted">
+            {handle} wants to message you. You don’t follow each other. Accept to
+            reply, or decline and they won’t know.
+          </p>
+          {answerError && (
+            <p role="alert" className="mt-2 text-xs font-medium text-live">
+              {answerError}
+            </p>
+          )}
+          <div className="mt-3 flex gap-2">
+            <PrimaryButton onClick={onAccept} disabled={answering} className="flex-1">
+              {answering ? 'Working…' : 'Accept'}
+            </PrimaryButton>
+            <SecondaryButton onClick={onDecline} disabled={answering} className="flex-1">
+              Decline
+            </SecondaryButton>
+          </div>
+          <div className="mt-1 flex justify-center">
+            <QuietAction onClick={onBlock} disabled={answering} className="min-h-[44px] px-3">
+              Block {handle}
+            </QuietAction>
+          </div>
+        </div>
+      )}
+
+      {mode === 'blocked' && (
         <p className="border-t border-line bg-surface px-4 py-4 text-center text-xs leading-relaxed text-ink-muted">
-          {blockedNote ||
-            `You and ${handle} don\u2019t follow each other, so you can\u2019t send messages.`}
+          You blocked {handle}. Unblock them from their profile to message again.
+        </p>
+      )}
+
+      {mode === 'closed' && (
+        <p className="border-t border-line bg-surface px-4 py-4 text-center text-xs leading-relaxed text-ink-muted">
+          {closedNote || `You can’t message ${handle}.`}
         </p>
       )}
     </Screen>

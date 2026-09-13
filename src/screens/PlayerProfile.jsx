@@ -7,6 +7,7 @@ import {
   Info,
   PrimaryButton,
   SecondaryButton,
+  QuietAction,
   GameDot,
 } from '../components/ui.jsx'
 import { SONGS } from '../social.js'
@@ -40,9 +41,13 @@ import {
 
    A real account arrives here as `player.real`. It has a handle, a colour
    and a relationship and nothing else yet - no games, songs, scores or
-   presence, because none of that is stored for accounts. For a real mutual
-   the only action is Message, since joining them at an arcade and planning a
-   session still run on prototype data. */
+   presence, because none of that is stored for accounts. Its actions are
+   Message and Follow, whatever the relationship: a message to someone who
+   does not follow you back arrives as a request they can accept, decline
+   or block, and the line under the buttons says so. Joining them at an
+   arcade and planning a session still run on prototype data, so they stay
+   with the seeded players. Someone you have blocked gets neither button,
+   only the way back. */
 export default function PlayerProfile({
   player,
   relationship,
@@ -58,6 +63,13 @@ export default function PlayerProfile({
   onMessage,
   onToggleFollow,
   onPlan,
+  /* Real accounts only: whether you have blocked them, and the two ways to
+     change that. Blocking asks first; the confirmation lives above this
+     screen. */
+  blocked = false,
+  onBlock,
+  onUnblock,
+  busy = false,
 }) {
   const rel = relationship ?? {
     youFollow: false,
@@ -76,13 +88,15 @@ export default function PlayerProfile({
       <TopBar
         title={player.handle}
         subtitle={
-          rel.mutual
-            ? 'You follow each other'
-            : rel.youFollow
-              ? 'You follow them'
-              : rel.followsYou
-                ? 'Follows you'
-                : 'Not connected'
+          blocked
+            ? 'Blocked'
+            : rel.mutual
+              ? 'You follow each other'
+              : rel.youFollow
+                ? 'You follow them'
+                : rel.followsYou
+                  ? 'Follows you'
+                  : 'Not connected'
         }
         onBack={onBack}
       />
@@ -103,7 +117,7 @@ export default function PlayerProfile({
             </p>
           </div>
           <Chip className="ml-auto" tone={rel.mutual ? 'brand' : 'default'}>
-            {rel.label}
+            {blocked ? 'Blocked' : rel.label}
           </Chip>
         </div>
 
@@ -188,15 +202,17 @@ export default function PlayerProfile({
           </Section>
         )}
 
-        <p className="flex items-center gap-1.5 px-4 py-3 text-xs text-ink-subtle">
-          Contact is mutual-only
-          <Info above>
-            Messaging only reaches people you follow both ways. Nothing here
-            lets you approach a stranger, which is what the arcade research
-            warned against. The one exception is someone whose open session
-            you have joined - they asked for anyone, so you can reply.
-          </Info>
-        </p>
+        {!player.real && (
+          <p className="flex items-center gap-1.5 px-4 py-3 text-xs text-ink-subtle">
+            Contact is mutual-only
+            <Info above>
+              Messaging only reaches people you follow both ways. Nothing here
+              lets you approach a stranger, which is what the arcade research
+              warned against. The one exception is someone whose open session
+              you have joined - they asked for anyone, so you can reply.
+            </Info>
+          </p>
+        )}
       </Body>
 
       {/* The actions the consultation asked for: reach out, join them where
@@ -204,7 +220,18 @@ export default function PlayerProfile({
           run both ways first, so a one-way profile offers the follow instead of
           an action that would quietly do nothing. */}
       <div className="space-y-2 border-t border-line p-4">
-        {rel.mutual ? (
+        {player.real ? (
+          <RealActions
+            player={player}
+            rel={rel}
+            blocked={blocked}
+            busy={busy}
+            onMessage={onMessage}
+            onToggleFollow={onToggleFollow}
+            onBlock={onBlock}
+            onUnblock={onUnblock}
+          />
+        ) : rel.mutual ? (
           <>
             {joined && (
               <div className="flex items-center gap-2 rounded-xl bg-fresh-bg px-3 py-2">
@@ -221,26 +248,18 @@ export default function PlayerProfile({
                 </button>
               </div>
             )}
-            {player.real ? (
-              <PrimaryButton onClick={() => onMessage(player.handle)}>
-                Message
+            {arcade ? (
+              <PrimaryButton onClick={() => onJoin(player.handle, arcade.id)}>
+                Join them at {arcade.short}
               </PrimaryButton>
             ) : (
-              <>
-                {arcade ? (
-                  <PrimaryButton onClick={() => onJoin(player.handle, arcade.id)}>
-                    Join them at {arcade.short}
-                  </PrimaryButton>
-                ) : (
-                  <PrimaryButton onClick={() => onPlan({ invite: player.handle })}>
-                    Plan a session together
-                  </PrimaryButton>
-                )}
-                <SecondaryButton onClick={() => onMessage(player.handle)}>
-                  Message
-                </SecondaryButton>
-              </>
+              <PrimaryButton onClick={() => onPlan({ invite: player.handle })}>
+                Plan a session together
+              </PrimaryButton>
             )}
+            <SecondaryButton onClick={() => onMessage(player.handle)}>
+              Message
+            </SecondaryButton>
           </>
         ) : (
           <>
@@ -277,6 +296,47 @@ export default function PlayerProfile({
         )}
       </div>
     </Screen>
+  )
+}
+
+/* The actions for a real account. Message is always first: it is what a
+   profile is for. Under it, the follow, and one line that says what a
+   message will be - a conversation, or a request - so nobody has to learn
+   the rule by sending one. */
+function RealActions({ player, rel, blocked, busy, onMessage, onToggleFollow, onBlock, onUnblock }) {
+  if (blocked) {
+    return (
+      <>
+        <p className="rounded-xl bg-sunken px-3 py-2.5 text-xs leading-relaxed text-ink-muted">
+          You blocked {player.handle}. They can’t message you or send you requests,
+          and neither of you follows the other.
+        </p>
+        <SecondaryButton onClick={onUnblock} disabled={busy}>
+          {busy ? 'Working…' : `Unblock ${player.handle}`}
+        </SecondaryButton>
+      </>
+    )
+  }
+
+  return (
+    <>
+      <PrimaryButton onClick={() => onMessage(player.handle)} disabled={busy}>
+        Message
+      </PrimaryButton>
+      <SecondaryButton onClick={() => onToggleFollow(player.handle)} disabled={busy}>
+        {rel.youFollow ? 'Following' : rel.followsYou ? 'Follow back' : 'Follow'}
+      </SecondaryButton>
+      <p className="text-xs leading-relaxed text-ink-muted">
+        {rel.mutual
+          ? 'You follow each other, so messages go straight through and you see where each other plays.'
+          : `You don’t follow each other yet, so your first message reaches ${player.handle} as a request.`}
+      </p>
+      <div className="flex justify-center pt-1">
+        <QuietAction onClick={onBlock} disabled={busy} className="min-h-[44px] px-3">
+          Block {player.handle}
+        </QuietAction>
+      </div>
+    </>
   )
 }
 

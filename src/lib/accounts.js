@@ -20,6 +20,10 @@ export {
   hueFromProfile,
   toThreadMessage,
   partnerOf,
+  classifyThread,
+  threadMode,
+  encodeProfileCode,
+  decodeProfileCode,
 } from './accountRules.js'
 
 /* --- profiles ------------------------------------------------------------ */
@@ -136,16 +140,78 @@ export async function unfollow(myId, otherId) {
   if (error) throw error
 }
 
+/* A notice arrives whenever an edge touching you is created or removed, from
+   either side, in any browser. The row itself is not interesting - the
+   caller refetches the graph. Returns the unsubscribe function. */
+export function subscribeToFollowChanges(myId, onChange) {
+  const channel = supabase
+    .channel(`follow_changes:${myId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'follow_changes',
+        filter: `user_id=eq.${myId}`,
+      },
+      (payload) => onChange?.(payload.new)
+    )
+    .subscribe()
+  return () => {
+    supabase.removeChannel(channel)
+  }
+}
+
+/* --- blocks -------------------------------------------------------------- */
+
+/* The people you have blocked. Nobody can read the other direction: being
+   blocked is not something the app ever tells you. */
+export async function fetchBlocks(myId) {
+  const { data, error } = await supabase
+    .from('blocks')
+    .select('blocked_id')
+    .eq('blocker_id', myId)
+  if (error) throw error
+  return (data ?? []).map((r) => r.blocked_id)
+}
+
+/* Both go through database functions: blocking also drops the follow in
+   each direction, and the table itself takes no writes from a client. */
+export async function blockUser(otherId) {
+  const { error } = await supabase.rpc('block_user', { p_other: otherId })
+  if (error) throw error
+}
+
+export async function unblockUser(otherId) {
+  const { error } = await supabase.rpc('unblock_user', { p_other: otherId })
+  if (error) throw error
+}
+
 /* --- conversations and messages ------------------------------------------ */
 
 const CONVERSATION_COLUMNS = `
-  id, user_a, user_b, created_at,
+  id, user_a, user_b, status, requested_by, accepted_at, created_at,
   a:profiles!conversations_user_a_fkey (${PROFILE_COLUMNS}),
   b:profiles!conversations_user_b_fkey (${PROFILE_COLUMNS})
 `
 
-/* Goes through the database function, which orders the pair, refuses
-   self-conversations and refuses anyone you are not mutual with. */
+/* The conversation between you and one other person if there is one, or
+   null. Nothing is created by looking. */
+export async function findConversation(myId, otherId) {
+  const { data, error } = await supabase
+    .from('conversations')
+    .select(CONVERSATION_COLUMNS)
+    .or(`and(user_a.eq.${myId},user_b.eq.${otherId}),and(user_a.eq.${otherId},user_b.eq.${myId})`)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+/* Called when the first message is about to be sent. The database function
+   orders the pair, refuses a conversation with yourself or with anyone
+   either of you has blocked, and decides the state: accepted between people
+   who follow each other, otherwise a pending request from you. Returns the
+   row, existing or new. */
 export async function getOrCreateConversation(otherId) {
   const { data, error } = await supabase.rpc('get_or_create_conversation', {
     p_other: otherId,
@@ -154,7 +220,24 @@ export async function getOrCreateConversation(otherId) {
   return data
 }
 
-/* Your conversations with the latest message on each, newest first. */
+/* Answering someone else's request. Each returns the row as it now stands;
+   the database refuses anyone who is not the person the request was sent
+   to. Blocking is above, because it is about the person, not the thread. */
+export async function acceptRequest(conversationId) {
+  const { data, error } = await supabase.rpc('accept_request', { p_conversation: conversationId })
+  if (error) throw error
+  return data
+}
+
+export async function declineRequest(conversationId) {
+  const { data, error } = await supabase.rpc('decline_request', { p_conversation: conversationId })
+  if (error) throw error
+  return data
+}
+
+/* Your conversations with the latest message on each, newest first. What
+   each one is - a chat, a request to you, a request from you - is worked
+   out by the caller, which also knows who you follow. */
 export async function fetchInbox(myId) {
   const { data, error } = await supabase
     .from('conversations')
@@ -165,6 +248,8 @@ export async function fetchInbox(myId) {
   return (data ?? [])
     .map((c) => ({
       id: c.id,
+      status: c.status,
+      requestedBy: c.requested_by,
       partner: partnerOf(c, myId),
       last: c.messages?.[0] ? toThreadMessage(c.messages[0], myId) : null,
     }))
@@ -204,8 +289,10 @@ export async function markConversationRead(conversationId, myId) {
   if (error) throw error
 }
 
-/* One channel per open conversation. Returns the unsubscribe function. */
-export function subscribeToConversation(conversationId, { onInsert, onUpdate }) {
+/* One channel per open conversation: new messages, read receipts, and the
+   conversation row itself changing state - which is how the person who
+   sent a request sees it accepted. Returns the unsubscribe function. */
+export function subscribeToConversation(conversationId, { onInsert, onUpdate, onConversation }) {
   const channel = supabase
     .channel(`messages:${conversationId}`)
     .on(
@@ -228,10 +315,70 @@ export function subscribeToConversation(conversationId, { onInsert, onUpdate }) 
       },
       (payload) => onUpdate?.(payload.new)
     )
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'conversations',
+        filter: `id=eq.${conversationId}`,
+      },
+      (payload) => onConversation?.(payload.new)
+    )
     .subscribe()
   return () => {
     supabase.removeChannel(channel)
   }
+}
+
+/* One channel for the whole inbox: any message or conversation you are
+   allowed to see, arriving or changing. Realtime applies the same row level
+   security as a query, so nothing about anyone else's threads comes down
+   the socket. The payload is not used - the caller refetches. Returns the
+   unsubscribe function. */
+export function subscribeToInboxChanges(myId, onChange) {
+  const channel = supabase.channel(`inbox:${myId}`)
+  for (const table of ['messages', 'conversations']) {
+    for (const event of ['INSERT', 'UPDATE']) {
+      channel.on('postgres_changes', { event, schema: 'public', table }, () => onChange?.())
+    }
+  }
+  channel.subscribe()
+  return () => {
+    supabase.removeChannel(channel)
+  }
+}
+
+/* --- account ------------------------------------------------------------- */
+
+/* Deletion happens on the server. The function reads who is calling from
+   the session token it is sent and deletes that account and nothing else;
+   the browser never holds anything that could delete an account directly. */
+export async function deleteOwnAccount() {
+  const { data, error } = await supabase.functions.invoke('delete-account', { method: 'POST' })
+  if (error) {
+    /* The function's own message is more useful than the transport's. */
+    const detail = await describeFunctionError(error)
+    throw new Error(detail)
+  }
+  if (data && data.ok === false) throw new Error(data.error || 'Could not delete your account.')
+  return data
+}
+
+async function describeFunctionError(error) {
+  const response = error?.context
+  if (response && typeof response.json === 'function') {
+    try {
+      const body = await response.json()
+      if (body?.error) return String(body.error)
+    } catch {
+      /* Not JSON; fall through to the generic message. */
+    }
+  }
+  if (/failed to send a request|failed to fetch|networkerror/i.test(String(error?.message))) {
+    return 'The delete-account function is not reachable. It may not be deployed yet.'
+  }
+  return String(error?.message || 'Could not delete your account.')
 }
 
 /* --- errors -------------------------------------------------------------- */
@@ -254,7 +401,19 @@ export function describeError(error, fallback = 'Something went wrong. Try again
     return 'Too many attempts. Wait a moment and try again.'
   if (/failed to fetch|networkerror|network request failed/i.test(message))
     return 'No connection. Check your network and try again.'
+  if (/cannot message this person/i.test(message))
+    return 'You can\u2019t message this person.'
+  if (/request already sent/i.test(message))
+    return 'Your request is sent. You can send more once they accept.'
+  if (/too many requests today/i.test(message))
+    return 'You have sent a lot of requests today. Try again tomorrow.'
+  if (/not a request you can answer/i.test(message))
+    return 'This request has already been answered.'
+  if (/no such person/i.test(message))
+    return 'That account no longer exists.'
   if (/follow each other/i.test(message))
     return 'Messaging is between people who follow each other.'
+  if (/(relation|function|column) .* does not exist|schema cache/i.test(message))
+    return 'The database is behind the app. Apply the latest migration in supabase/migrations.'
   return message || fallback
 }
