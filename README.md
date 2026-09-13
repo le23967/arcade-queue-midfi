@@ -132,8 +132,11 @@ because it *"looked so cool"*.
 ### Plan a session
 
 Presence pays off when it turns into a time and a place. Plan a session lets you
-pick a venue, a game and a time, then invite mutuals. It lands as an invitation
-on their Circle tab.
+pick a venue, a game and a time, then ask people: the accounts you follow are
+listed, and anyone else can be found by username. Each person asked gets the
+plan as a message in the conversation their profile opens - a request if they
+do not follow you back - so the invitation actually reaches them, and the
+answer comes back in the same thread.
 
 A session can also be opened to anyone on the app. The host picks *Anyone on
 the app* instead of *People I ask*, adds a note if they want one, and it is

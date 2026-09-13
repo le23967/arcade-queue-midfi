@@ -49,7 +49,13 @@ import {
 import { useAuth } from './lib/auth.jsx'
 import { useFollows } from './lib/useFollows.js'
 import { useConversation, useInbox } from './lib/useConversation.js'
-import { hueFromProfile, classifyThread } from './lib/accounts.js'
+import {
+  hueFromProfile,
+  classifyThread,
+  getOrCreateConversation,
+  insertMessage,
+  describeError,
+} from './lib/accounts.js'
 
 /* The summary is only interesting if a session has some length to it, and a
    reviewer clicks through in seconds. Check-in is therefore backdated by the
@@ -316,6 +322,23 @@ function Prototype({ auth, initialGame }) {
   function openRealChat(target) {
     setChat({ kind: 'real', profile: target })
     push('chat')
+  }
+
+  /* A planned session reaches each real person asked as a message in the
+     conversation their profile would open - a request if they do not
+     follow you back. The database applies the same rules as any other
+     send, so a stranger who already has your request waiting is told so
+     rather than messaged twice. */
+  async function sendSessionInvite(profile, text) {
+    if (!myId) return { error: 'Sign in to ask people.' }
+    try {
+      const conversation = await getOrCreateConversation(profile.id)
+      await insertMessage(conversation.id, myId, text)
+      inbox.refresh()
+      return { error: null }
+    } catch (e) {
+      return { error: describeError(e, 'Could not send the invitation.') }
+    }
   }
 
   /* Blocking asks first, on a sheet that names the person. Confirmed from
@@ -728,6 +751,9 @@ function Prototype({ auth, initialGame }) {
               arcades={rows}
               preset={planPreset}
               me={me}
+              myId={myId}
+              follows={follows}
+              onSendInvite={sendSessionInvite}
               onPlanned={savePlan}
               onBack={goBack}
               onDone={(open) => {

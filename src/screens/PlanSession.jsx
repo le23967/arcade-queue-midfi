@@ -9,9 +9,10 @@ import {
   Avatar,
   GameDot,
 } from '../components/ui.jsx'
-import { Check } from '../components/Icons.jsx'
+import { Check, Close } from '../components/Icons.jsx'
 import { GAMES } from '../data.js'
-import { FRIENDS, ME } from '../social.js'
+import { ME } from '../social.js'
+import { searchProfiles, hueFromProfile, describeError } from '../lib/accounts.js'
 
 /* Plan a session.
 
@@ -29,18 +30,32 @@ import { FRIENDS, ME } from '../social.js'
    be typed or moved with phone-style wheels. Common times remain as clearly
    labelled shortcuts rather than being mixed with the custom choice.
 
-   Who can come is a choice of its own. Asking the people you follow both
-   ways is the default, and it is also useless to somebody whose list of
-   mutuals is empty - which every player is on their first day, and which the
-   interviews suggest the introverted ones stay for a long time. Opening a
-   session to anyone on the app is the way round that: it is posted on Open,
-   where people you have never met can see it and say they are in. The host
-   still decides. Nothing about a closed session changes. */
+   Who can come is a choice of its own. Asking the people you follow is the
+   default, and it is also useless to somebody whose list is empty - which
+   every player is on their first day, and which the interviews suggest the
+   introverted ones stay for a long time. Opening a session to anyone on the
+   app is the way round that: it is posted on Open, where people you have
+   never met can see it and say they are in. The host still decides. Nothing
+   about a closed session changes.
+
+   The people here are real accounts: the ones you follow, and anyone you
+   search for by username. Sessions themselves are still kept on this phone,
+   so asking someone would have reached nobody - which is the kind of button
+   this project has been removing. So each real person you ask gets the
+   session as a message, through the same conversation their profile opens:
+   an ordinary message if you follow each other, a request if not. What they
+   get is the plan in one line and the question; what you get is a
+   conversation to settle it in. */
 
 export default function PlanSession({
   arcades,
   preset,
   me = ME,
+  /* The signed-in account, its real follow graph, and the way to reach a
+     real person. Without an account the picker can only search nobody. */
+  myId = null,
+  follows = null,
+  onSendInvite = null,
   onPlanned,
   onBack,
   onDone,
@@ -56,35 +71,97 @@ export default function PlanSession({
   const [invited, setInvited] = useState(
     preset?.invited ?? (preset?.invite ? [preset.invite] : [])
   )
+  /* The real accounts behind the handles in `invited`, so a person picked
+     from a search stays on screen after the search is cleared, and so the
+     invitation knows who to message. A handle with no profile here is a
+     seeded sample player carried in from the prototype. */
+  const [picked, setPicked] = useState(() => new Map())
   /* Open to anyone on the app, or only to the people asked. */
   const [open, setOpen] = useState(Boolean(preset?.open))
   const [note, setNote] = useState(preset?.note ?? '')
-  const [sent, setSent] = useState(false)
+  const [sending, setSending] = useState(false)
+  /* Once sent: who was messaged, and what went wrong for anyone it did not
+     reach. Null until then. */
+  const [delivery, setDelivery] = useState(null)
+
+  /* Finding people by username, the same search as Add someone. */
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState([])
+  const [searching, setSearching] = useState(false)
+  const [searchError, setSearchError] = useState(null)
+  const trimmed = query.trim()
+
+  useEffect(() => {
+    if (!myId || trimmed === '') return undefined
+    let active = true
+    const timer = window.setTimeout(() => {
+      setSearching(true)
+      searchProfiles(trimmed, myId)
+        .then((list) => {
+          if (!active) return
+          setResults(list)
+          setSearchError(null)
+        })
+        .catch((e) => {
+          if (active) setSearchError(describeError(e, 'Search did not go through.'))
+        })
+        .finally(() => {
+          if (active) setSearching(false)
+        })
+    }, 250)
+    return () => {
+      active = false
+      window.clearTimeout(timer)
+    }
+  }, [trimmed, myId])
 
   /* Reopened on a session that already exists, rather than starting a new one.
      Sending then replaces it instead of leaving two. */
   const editing = Boolean(preset?.editingId)
 
-  const mutuals = FRIENDS.filter((f) => f.followsYou)
   const arcade = arcades.find((a) => a.id === venue) ?? arcades[0]
-  /* Only the people the list actually shows, so Select all cannot quietly ask
-     someone who is not on screen. */
-  const askable = mutuals.slice(0, 8)
+  /* The people you follow, as the standing list. */
+  const following = follows?.following ?? []
   const allAsked =
-    askable.length > 0 && askable.every((f) => invited.includes(f.handle))
+    following.length > 0 && following.every((p) => invited.includes(p.handle))
+  const shown = trimmed === '' ? following : results
 
-  function toggle(handle) {
-    setInvited((v) =>
-      v.includes(handle) ? v.filter((h) => h !== handle) : [...v, handle]
-    )
+  function toggle(profile) {
+    const on = invited.includes(profile.handle)
+    setInvited((v) => (on ? v.filter((h) => h !== profile.handle) : [...v, profile.handle]))
+    setPicked((m) => {
+      const next = new Map(m)
+      if (on) next.delete(profile.handle)
+      else next.set(profile.handle, profile)
+      return next
+    })
+  }
+
+  function remove(handle) {
+    setInvited((v) => v.filter((h) => h !== handle))
+    setPicked((m) => {
+      const next = new Map(m)
+      next.delete(handle)
+      return next
+    })
   }
 
   function toggleAll() {
-    setInvited((v) =>
-      allAsked
-        ? v.filter((h) => !askable.some((f) => f.handle === h))
-        : [...new Set([...v, ...askable.map((f) => f.handle)])]
-    )
+    if (allAsked) {
+      setInvited((v) => v.filter((h) => !following.some((p) => p.handle === h)))
+      setPicked((m) => {
+        const next = new Map(m)
+        for (const p of following) next.delete(p.handle)
+        return next
+      })
+    } else {
+      setInvited((v) => [...new Set([...v, ...following.map((p) => p.handle)])])
+      setPicked((m) => {
+        const next = new Map(m)
+        for (const p of following) next.set(p.handle, p)
+        return next
+      })
+    }
   }
 
   function closePicker() {
@@ -94,9 +171,17 @@ export default function PlanSession({
 
   /* An open session can be posted with nobody asked - that is the point of
      it. A closed one with nobody asked would reach no one. */
-  const canSend = open || invited.length > 0
+  const canSend = (open || invited.length > 0) && !sending
+  const gameLabel = GAMES.find((g) => g.id === gameId)?.label ?? gameId
 
-  function sendInvites() {
+  /* The plan in one line, for the people it is sent to. The date is spelt
+     out rather than "Tonight": it is read on someone else's phone, maybe
+     tomorrow. */
+  const inviteText = `${arcade?.short ?? 'An arcade'}, ${INVITE_DATE.format(when)}, ${gameLabel}.${
+    note.trim() ? ` ${note.trim()}` : ''
+  } Are you in?`
+
+  async function sendInvites() {
     if (!canSend) return
     if (when.getTime() <= Date.now()) {
       setPickerOpen(true)
@@ -122,10 +207,31 @@ export default function PlanSession({
       open,
       note: note.trim(),
     })
-    setSent(true)
+
+    /* Everyone real who was asked gets the plan as a message - only the
+       people added this time, when a session is being changed, so nobody is
+       asked twice for the same evening. Failures are reported per person;
+       the session itself is already planned. */
+    const already = new Set(preset?.invited ?? [])
+    const targets = invited
+      .map((h) => picked.get(h))
+      .filter((p) => p && !already.has(p.handle))
+    const outcomes = []
+    if (onSendInvite && targets.length > 0) {
+      setSending(true)
+      for (const profile of targets) {
+        const result = await onSendInvite(profile, inviteText)
+        outcomes.push({ handle: profile.handle, error: result?.error ?? null })
+      }
+      setSending(false)
+    }
+    setDelivery(outcomes)
   }
 
-  if (sent) {
+  if (delivery) {
+    const reached = delivery.filter((d) => !d.error)
+    const failed = delivery.filter((d) => d.error)
+    const samples = invited.filter((h) => !picked.has(h))
     return (
       <Screen>
         <TopBar
@@ -148,14 +254,35 @@ export default function PlanSession({
                 Anyone on the app can see it on Open and say they&rsquo;re in.{' '}
               </>
             )}
-            {(invited.length > 0 || !open) && (
-              <>
-                {invited.length} {invited.length === 1 ? 'person' : 'people'}{' '}
-                {editing ? 'told' : 'asked'}.{' '}
-              </>
-            )}
             You can change or call it off from Later.
           </p>
+
+          {/* Who it actually reached. A message is the only thing that
+              leaves this phone, so that is what is reported. */}
+          {(reached.length > 0 || failed.length > 0 || samples.length > 0) && (
+            <div className="mt-4 w-full rounded-xl border border-line bg-sunken px-3 py-2.5 text-left text-xs leading-relaxed text-ink-muted">
+              {reached.length > 0 && (
+                <p>
+                  <span className="font-semibold text-ink">
+                    Sent to {reached.map((d) => d.handle).join(', ')}
+                  </span>{' '}
+                  as a message. Anyone who doesn&rsquo;t follow you back gets it as a
+                  request.
+                </p>
+              )}
+              {failed.map((d) => (
+                <p key={d.handle} role="alert" className="mt-1 font-medium text-live">
+                  {d.handle}: {d.error}
+                </p>
+              ))}
+              {samples.length > 0 && (
+                <p className="mt-1">
+                  {samples.join(', ')} {samples.length === 1 ? 'is a sample player' : 'are sample players'} from
+                  the prototype, so nothing was sent there.
+                </p>
+              )}
+            </div>
+          )}
           <div className="mt-6 w-full">
             <PrimaryButton onClick={() => onDone(open)}>Done</PrimaryButton>
           </div>
@@ -279,34 +406,102 @@ export default function PlanSession({
         <Section
           title={open ? `Also ask, ${invited.length} asked` : `Who, ${invited.length} asked`}
           action={
-            <button
-              type="button"
-              onClick={toggleAll}
-              className="rounded-md text-xs font-semibold text-brand-600 transition-colors duration-150 hover:text-brand-700"
-            >
-              {allAsked ? 'Clear' : 'Select all'}
-            </button>
+            following.length > 0 && trimmed === '' ? (
+              <button
+                type="button"
+                onClick={toggleAll}
+                className="min-h-[32px] rounded-md px-1 text-xs font-semibold text-brand-600 transition-colors duration-150 hover:text-brand-700"
+              >
+                {allAsked ? 'Clear' : 'Select all'}
+              </button>
+            ) : null
           }
         >
-          <ul className="-mx-1">
-            {askable.map((f) => {
-              const on = invited.includes(f.handle)
+          {invited.length > 0 && (
+            <ul className="mb-3 flex flex-wrap gap-1.5" aria-label="Asked">
+              {invited.map((h) => (
+                <li key={h}>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-brand-200 bg-brand-50 py-0.5 pl-2 pr-0.5 text-xs font-semibold text-brand-700">
+                    {h}
+                    <button
+                      type="button"
+                      onClick={() => remove(h)}
+                      aria-label={`Remove ${h}`}
+                      className="flex h-6 w-6 items-center justify-center rounded-full text-brand-700 transition-colors duration-150 hover:bg-brand-100"
+                    >
+                      <Close size={13} />
+                    </button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <label htmlFor="plan-search" className="sr-only">
+            Search by username
+          </label>
+          <input
+            id="plan-search"
+            name="username"
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={myId ? 'Search by username…' : 'Sign in to search people'}
+            autoComplete="off"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            disabled={!myId}
+            className="min-h-[44px] w-full rounded-xl border border-line-strong bg-surface px-3 py-2.5 text-sm text-ink outline-none transition-colors duration-150 placeholder:text-ink-subtle focus:border-brand-500 disabled:bg-sunken"
+          />
+
+          {trimmed !== '' && (
+            <p role="status" className="mt-2 text-xs text-ink-muted">
+              {searchError
+                ? searchError
+                : searching
+                  ? 'Searching…'
+                  : results.length === 0
+                    ? `No account matches “${trimmed}”.`
+                    : `${results.length} ${results.length === 1 ? 'account' : 'accounts'} matching “${trimmed}”`}
+            </p>
+          )}
+          {trimmed === '' && myId && following.length === 0 && (
+            <p className="mt-2 text-xs leading-relaxed text-ink-muted">
+              You don&rsquo;t follow anyone yet. Search a username to ask someone.
+            </p>
+          )}
+          {trimmed === '' && !myId && (
+            <p className="mt-2 text-xs leading-relaxed text-ink-muted">
+              Asking people needs an account.
+            </p>
+          )}
+
+          <ul className="-mx-1 mt-1">
+            {shown.map((p) => {
+              const on = invited.includes(p.handle)
+              const rel = follows?.relationship(p.id)
               return (
-                <li key={f.handle}>
+                <li key={p.id}>
                   <button
                     type="button"
-                    onClick={() => toggle(f.handle)}
-                    className={`flex w-full items-center gap-3 rounded-xl px-1 py-2 text-left transition-colors duration-150 ${
+                    onClick={() => toggle(p)}
+                    aria-pressed={on}
+                    className={`flex min-h-[48px] w-full items-center gap-3 rounded-xl px-1 py-2 text-left transition-colors duration-150 ${
                       on ? 'bg-brand-50' : 'hover:bg-sunken'
                     }`}
                   >
-                    <Avatar handle={f.handle} size={32} live={Boolean(f.at)} />
+                    <Avatar handle={p.handle} hue={hueFromProfile(p)} size={32} />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium text-ink">
-                        {f.handle}
+                        {p.handle}
                       </span>
                       <span className="block truncate text-xs text-ink-muted">
-                        {f.games.join(' · ')}
+                        {rel?.mutual
+                          ? 'You follow each other'
+                          : rel?.youFollow
+                            ? 'You follow them · gets a request'
+                            : 'Gets a request'}
                       </span>
                     </span>
                     <span
@@ -334,7 +529,9 @@ export default function PlanSession({
           </p>
         </div>
         <PrimaryButton disabled={!canSend} onClick={sendInvites}>
-          {!canSend
+          {sending
+            ? 'Sending…'
+            : !canSend
             ? 'Pick who to ask'
             : editing
               ? 'Save changes'
@@ -366,6 +563,15 @@ export default function PlanSession({
 
    Real Date objects rather than labels, so a quick pick and a picked time are
    the same kind of thing and one formatter renders both. --------------------- */
+/* Weekday, date and time, in the reader's own locale. */
+const INVITE_DATE = new Intl.DateTimeFormat(undefined, {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+  hour: 'numeric',
+  minute: '2-digit',
+})
+
 const DAY_NAMES = [
   'Sunday',
   'Monday',
