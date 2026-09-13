@@ -10,7 +10,7 @@ import { CheckCircle, Users } from '../components/Icons.jsx'
 
    They are now two different things at two different moments. This sheet is
    the first one: it names the person and the venue before it commits, and then
-   says plainly that they were told. Check In stays on the arcade page, for
+   says plainly that they were told. Join queue stays on the arcade page, for
    when you are standing at the cabinet. */
 export default function JoinFriend({
   handle,
@@ -51,7 +51,8 @@ export default function JoinFriend({
                 than left to be inferred from which screen you are on. */}
             <p className="mt-3 rounded-xl border border-line bg-sunken px-3 py-2.5 text-xs leading-relaxed text-ink-muted">
               You are <span className="font-semibold text-ink">not</span> in the
-              queue yet. Check in at the cabinet when you get to {venueShort}.
+              queue yet. Join the queue at the cabinet when you get to{' '}
+              {venueShort}.
             </p>
 
             <div className="mt-4 space-y-2">
@@ -88,7 +89,7 @@ export default function JoinFriend({
                 <Users size={15} />
               </span>
               <span>
-                {handle} gets told you are coming. You check in yourself once
+                {handle} gets told you are coming. You join the queue yourself once
                 you arrive, so this does not take a queue position.
               </span>
             </p>

@@ -53,7 +53,13 @@ import {
    the venue row with the distance instead of sitting under the wait looking
    like a second measure of it. Other games at the venue are one row until
    asked for. What is left is the wait, how far away it is, the line, who you
-   know there, and Check In. */
+   know there, and Join queue.
+
+   The button says Join queue rather than Check In because that is what it
+   does: it starts the flow that puts you in this game's running order. A
+   person reading "Check In" on an arcade page could take it to mean telling
+   people they are in the building, which is a different act and one this
+   screen does not offer. */
 export default function Detail({
   arcade,
   otherGames,
@@ -179,7 +185,7 @@ export default function Detail({
             once the queue is expanded and the page actually scrolls, so the
             action is never scrolled away. */}
         <div className="sticky bottom-0 border-t border-line bg-surface p-4">
-          <PrimaryButton onClick={onCheckIn}>Check In</PrimaryButton>
+          <PrimaryButton onClick={onCheckIn}>Join queue</PrimaryButton>
         </div>
       </Body>
     </Screen>
