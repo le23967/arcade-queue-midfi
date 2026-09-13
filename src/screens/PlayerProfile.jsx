@@ -42,6 +42,9 @@ export default function PlayerProfile({
   relationship,
   arcade,
   joinedAt,
+  /* The open session of theirs you have joined, as one line, or null. It is
+     the only thing that puts a Message button on a stranger's profile. */
+  openSession = null,
   onBack,
   onOpenArcade,
   onJoin,
@@ -180,7 +183,8 @@ export default function PlayerProfile({
           <Info above>
             Messaging only reaches people you follow both ways. Nothing here
             lets you approach a stranger, which is what the arcade research
-            warned against.
+            warned against. The one exception is someone whose open session
+            you have joined - they asked for anyone, so you can reply.
           </Info>
         </p>
       </Body>
@@ -222,10 +226,25 @@ export default function PlayerProfile({
           </>
         ) : (
           <>
+            {openSession && (
+              <div className="flex items-center gap-2 rounded-xl bg-fresh-bg px-3 py-2">
+                <p className="min-w-0 flex-1 text-xs font-medium text-ink">
+                  You&rsquo;re in {player.handle}&rsquo;s open session at{' '}
+                  {openSession}
+                </p>
+              </div>
+            )}
+            {openSession && (
+              <SecondaryButton onClick={() => onMessage(player.handle)}>
+                Message about the session
+              </SecondaryButton>
+            )}
             <p className="text-xs leading-relaxed text-ink-muted">
               {rel.youFollow
                 ? `${player.handle} has not followed you back, so you cannot message them or see where they are.`
-                : `Follow ${player.handle} back to message them and see where they play.`}
+                : rel.followsYou
+                  ? `Follow ${player.handle} back to message them and see where they play.`
+                  : `Follow ${player.handle}, and if they follow back you can message them and see where they play.`}
             </p>
             {rel.youFollow ? (
               <SecondaryButton onClick={() => onToggleFollow(player.handle)}>

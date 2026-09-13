@@ -39,6 +39,8 @@ import {
   findPerson,
   isMutual,
   relationshipOf,
+  openSessionWith,
+  openSessions,
 } from './lib/social.js'
 
 /* The summary is only interesting if a session has some length to it, and a
@@ -120,6 +122,14 @@ export default function App() {
     ? relationshipOf(playerHandle, followingHandles)
     : null
 
+  /* One line naming the open session that lets you reach its host, for the
+     screens that have to say why a stranger's thread is open. */
+  function viaLabel(session) {
+    if (!session) return null
+    const venue = arcades.find((a) => a.id === session.venue)
+    return `${venue?.short ?? 'an arcade'}, ${session.whenLabel}`
+  }
+
   /* Going somewhere new records where you were; going back unwinds it. */
   function push(next) {
     setHistory((h) => [...h, view])
@@ -170,19 +180,31 @@ export default function App() {
   }
 
   /* Messaging stays mutual-only. Following someone who has not followed back
-     buys you nothing here, which is the rule the research asked for. */
+     buys you nothing here, which is the rule the research asked for.
+
+     The one exception is a host whose open session you have joined. They
+     posted it for anyone, so a reply from anyone is what they asked for -
+     and without a way to say "running ten minutes late" the open session
+     would be a plan you cannot actually keep. */
+  function canReach(handle) {
+    return (
+      isMutual(handle, followingHandles) ||
+      Boolean(openSessionWith(handle, planned, rsvps))
+    )
+  }
+
   function openMessage(handle, opener = '') {
-    const mutual = isMutual(handle, followingHandles)
+    const reachable = canReach(handle)
     const hasHistory = (conversations[handle] ?? []).length > 0
-    /* Mutual-only still governs who you can reach. It does not govern your own
-       past conversations: unfollowing someone must not turn a thread you can
-       see in your inbox into a row that does nothing when tapped. It opens,
-       and it opens read-only. */
-    if (!mutual && !hasHistory) return
+    /* Who you can reach is still governed by the rules above. They do not
+       govern your own past conversations: unfollowing someone must not turn
+       a thread you can see in your inbox into a row that does nothing when
+       tapped. It opens, and it opens read-only. */
+    if (!reachable && !hasHistory) return
     setMessageTo(handle)
     /* A button that offers to ask a particular question opens with that
        question in the box, rather than an empty one. */
-    setMessageOpener(mutual ? opener : '')
+    setMessageOpener(reachable ? opener : '')
     push('chat')
   }
 
@@ -255,6 +277,8 @@ export default function App() {
       gameId: session.gameId,
       invited: session.asked ?? [],
       when: session.when,
+      open: Boolean(session.open),
+      note: session.note ?? '',
       editingId: session.id,
     })
   }
@@ -279,6 +303,15 @@ export default function App() {
   function openHereAt(venueId) {
     setHereVenueId(venueId)
     setFriendsSection('here')
+    setTab('friends')
+    goRoot('friends')
+  }
+
+  /* Same shape for the open sessions at a venue: the arcade page says there
+     are some, and tapping through lands on Open filtered to that arcade. */
+  function openSessionsAt(venueId) {
+    setHereVenueId(venueId)
+    setFriendsSection('open')
     setTab('friends')
     goRoot('friends')
   }
@@ -525,6 +558,7 @@ export default function App() {
               messages={conversations[messageTo] ?? []}
               opener={messageOpener}
               mutual={isMutual(messageTo, followingHandles)}
+              via={viaLabel(openSessionWith(messageTo, planned, rsvps))}
               onSend={(text) => sendMessage(messageTo, text)}
               onOpenProfile={() => openPlayer(messageTo)}
               onBack={goBack}
@@ -557,11 +591,13 @@ export default function App() {
               me={me}
               onPlanned={savePlan}
               onBack={goBack}
-              onDone={() => {
+              onDone={(open) => {
                 /* A new invitation belongs with the other planned ones, not
-                   in the list of who is at an arcade right now. */
+                   in the list of who is at an arcade right now. An open one
+                   lands on Open, where the people it was posted for will
+                   see it. */
                 setHereVenueId(null)
-                setFriendsSection('planned')
+                setFriendsSection(open ? 'open' : 'planned')
                 setTab('friends')
                 goRoot('friends')
               }}
@@ -582,6 +618,7 @@ export default function App() {
               relationship={playerRelationship}
               arcade={arcades.find((a) => a.id === player.at) ?? null}
               joinedAt={joinsSent[player.handle] ?? null}
+              openSession={viaLabel(openSessionWith(player.handle, planned, rsvps))}
               onBack={goBack}
               onOpenArcade={openArcade}
               onJoin={openJoin}
@@ -636,6 +673,10 @@ export default function App() {
               onReport={() => setModal('report')}
               following={followingHandles}
               onFriends={() => openHereAt(arcade.id)}
+              openCount={
+                openSessions(planned).filter((s) => s.venue === arcade.id).length
+              }
+              onOpenSessions={() => openSessionsAt(arcade.id)}
             />
           )}
 

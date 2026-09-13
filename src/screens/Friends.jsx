@@ -14,7 +14,7 @@ import {
 } from '../components/ui.jsx'
 import { Plus, Comment, Qr } from '../components/Icons.jsx'
 import { FRIENDS, SONGS, OLD_SITE_FAVOURITE_CAP, ACTIVITY } from '../social.js'
-import { gameColor, gameLabel } from '../data.js'
+import { GAMES, gameColor, gameLabel } from '../data.js'
 import { resolveVenues } from '../lib/queue.js'
 import {
   leaderboard,
@@ -22,13 +22,15 @@ import {
   presentFriends,
   playerSignal,
   relationshipOf,
+  circleSessions,
+  openSessions,
   gradeOf,
   formatAchievement,
   ago,
 } from '../lib/social.js'
 import FriendsMap from './FriendsMap.jsx'
 
-/* Circle tab. Four views over the same community.
+/* Circle tab. Six views over the same community.
 
    The underlying request was "seeing where your friends are and all of that",
    and the temporal half of it - whether you have just missed someone - is what
@@ -37,7 +39,14 @@ import FriendsMap from './FriendsMap.jsx'
    Consultation feedback drove two changes. First, every row now ends in
    something you can do: knowing where someone is only counts once it lets you
    join them, ask them about the venue, or arrange to meet. Second, the map
-   view exists at all - people were only ever in a list before. */
+   view exists at all - people were only ever in a list before.
+
+   Open is the one view that is not scoped to the people you follow. Every
+   other segment here is empty for a player with no mutuals, and the app was
+   telling that player, in effect, to come back once they had friends - which
+   is backwards, since making them is what they are here for. Open lists the
+   sessions anyone has posted for anyone, so there is always somewhere to
+   start. */
 export default function Friends({
   arcades,
   game,
@@ -103,7 +112,9 @@ export default function Friends({
             </button>
             <Info>
               Presence is venue level and mutual-only: you appear here to people
-              you follow back, and only while checked in and visible.
+              you follow back, and only while checked in and visible. Open
+              sessions are the one exception - anyone on the app can see and
+              join those, because the host chose to post them that way.
             </Info>
           </span>
         }
@@ -118,6 +129,9 @@ export default function Friends({
         </Seg>
         <Seg on={section === 'planned'} onClick={() => onSection('planned')}>
           Later
+        </Seg>
+        <Seg on={section === 'open'} onClick={() => onSection('open')}>
+          Open
         </Seg>
         <Seg on={section === 'activity'} onClick={() => onSection('activity')}>
           Activity
@@ -150,11 +164,12 @@ export default function Friends({
           onOpenArcade={onOpenArcade}
           onJoin={onJoin}
           onUnsendJoin={onUnsendJoin}
+          onSeeOpen={() => onSection('open')}
         />
       )}
       {section === 'planned' && (
         <Planned
-          sessions={planned}
+          sessions={circleSessions(planned, following, rsvps)}
           arcades={venues}
           following={following}
           rsvps={rsvps}
@@ -162,6 +177,26 @@ export default function Friends({
           onEdit={onEditPlan}
           onCancel={onCancelPlan}
           onOpenArcade={onOpenArcade}
+          onOpenPlayer={onOpenPlayer}
+          onMessage={onMessage}
+          onPlan={onPlan}
+          onSeeOpen={() => onSection('open')}
+        />
+      )}
+      {section === 'open' && (
+        <OpenSessions
+          sessions={openSessions(planned)}
+          arcades={venues}
+          following={following}
+          venueId={hereVenueId}
+          onClearVenue={onClearVenue}
+          rsvps={rsvps}
+          onRsvp={onRsvp}
+          onEdit={onEditPlan}
+          onCancel={onCancelPlan}
+          onOpenArcade={onOpenArcade}
+          onOpenPlayer={onOpenPlayer}
+          onMessage={onMessage}
           onPlan={onPlan}
         />
       )}
@@ -210,6 +245,7 @@ function HereNow({
   onOpenArcade,
   onJoin,
   onUnsendJoin,
+  onSeeOpen,
 }) {
   const here = presentFriends(following).filter(
     (p) => !venueId || p.at === venueId
@@ -256,11 +292,18 @@ function HereNow({
         </p>
       </div>
 
+      {/* An empty list is where a new player lands every time, so it has to
+          point somewhere rather than just report the absence. */}
       {venues.length === 0 && (
-        <p className="px-4 py-6 text-center text-sm text-ink-muted">
-          Nobody you follow is {venue ? `at ${venue.short}` : 'at an arcade'}{' '}
-          right now.
-        </p>
+        <div className="px-4 py-6 text-center">
+          <p className="text-sm text-ink-muted">
+            Nobody you follow is {venue ? `at ${venue.short}` : 'at an arcade'}{' '}
+            right now.
+          </p>
+          <QuietAction className="mt-2" onClick={onSeeOpen}>
+            See sessions open to anyone
+          </QuietAction>
+        </div>
       )}
 
       {venues.map(({ arcade, players }) => (
@@ -341,7 +384,11 @@ function HereNow({
    their own, so a host who was not at any arcade looked like somebody standing
    in one - and the row never said how you knew that host either. They are a
    segment of their own now, and every row states what put it in front of you:
-   you arranged it, you were invited, or how you know the host. */
+   you arranged it, you were invited, or how you know the host.
+
+   Later is your circle's sessions. Anything posted open by a stranger lives
+   on Open instead, until you say you are in - then it is yours too, and it
+   shows here as well. */
 function Planned({
   sessions,
   arcades,
@@ -351,13 +398,11 @@ function Planned({
   onEdit,
   onCancel,
   onOpenArcade,
+  onOpenPlayer,
+  onMessage,
   onPlan,
+  onSeeOpen,
 }) {
-  /* Calling a session off tells everyone it is off, so the button asks twice
-     rather than opening a dialog over a row this small. One slot is enough:
-     arming a second row disarms the first. */
-  const [confirming, setConfirming] = useState(null)
-
   return (
     <Body>
       <div className="flex items-center gap-2 border-b border-line px-4 py-3">
@@ -373,124 +418,323 @@ function Planned({
       </div>
 
       {sessions.length === 0 && (
+        <div className="px-4 py-6 text-center">
+          <p className="text-sm text-ink-muted">
+            Nothing planned yet. Pick a venue, a game and a time, and ask
+            whoever you want there - or open it to anyone.
+          </p>
+          <QuietAction className="mt-2" onClick={onSeeOpen}>
+            See sessions open to anyone
+          </QuietAction>
+        </div>
+      )}
+
+      <SessionList
+        sessions={sessions}
+        arcades={arcades}
+        following={following}
+        rsvps={rsvps}
+        onRsvp={onRsvp}
+        onEdit={onEdit}
+        onCancel={onCancel}
+        onOpenArcade={onOpenArcade}
+        onOpenPlayer={onOpenPlayer}
+        onMessage={onMessage}
+      />
+    </Body>
+  )
+}
+
+/* Open sessions.
+
+   The public half of the tab. Everything else on Circle is scoped to the
+   people you follow both ways, which the research asked for and which this
+   does not undo: nobody here is being located, and nobody is being approached.
+   A host posted a time and a place for anyone, and that is all a stranger
+   gets to see - the same thing a note on the arcade's pinboard would say.
+
+   For the player with nobody in their circle yet, this is the whole tab. It
+   is also the only route in the app from a stranger to a conversation:
+   saying you are in opens a thread with the host, because they asked. */
+function OpenSessions({
+  sessions,
+  arcades,
+  following,
+  venueId,
+  onClearVenue,
+  rsvps,
+  onRsvp,
+  onEdit,
+  onCancel,
+  onOpenArcade,
+  onOpenPlayer,
+  onMessage,
+  onPlan,
+}) {
+  const [gameId, setGameId] = useState(null)
+  const venue = venueId ? arcades.find((a) => a.id === venueId) : null
+  /* Only games with something posted get a chip, so the filter row never
+     offers an empty list. */
+  const games = GAMES.filter((g) =>
+    sessions.some((s) => s.gameId === g.id && (!venueId || s.venue === venueId))
+  )
+  const rows = sessions.filter(
+    (s) => (!venueId || s.venue === venueId) && (!gameId || s.gameId === gameId)
+  )
+  const joined = rows.filter((s) => rsvps.includes(s.id)).length
+
+  return (
+    <Body>
+      {venue && (
+        <div className="flex items-center gap-2 border-b border-line bg-brand-50 px-4 py-2.5">
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-display text-sm font-semibold text-ink">
+              {venue.name}
+            </span>
+            <span className="block text-xs text-ink-muted">
+              Sessions open to anyone here
+            </span>
+          </span>
+          <button
+            type="button"
+            onClick={onClearVenue}
+            className="flex-none rounded-full border border-brand-200 bg-surface px-3 py-1.5 text-xs font-semibold text-brand-700 transition-colors duration-150 hover:bg-brand-100"
+          >
+            Show all arcades
+          </button>
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 border-b border-line px-4 py-3">
+        <Chip tone="quiet">
+          {rows.length} open
+        </Chip>
+        <p className="flex-1 text-xs text-ink-muted">
+          {joined > 0
+            ? `Posted for anyone · you\u2019re in ${joined}`
+            : 'Posted for anyone on the app, not just your circle'}
+        </p>
+        <ActionButton
+          icon={<Plus size={13} />}
+          onClick={() => onPlan({ open: true, venue: venueId ?? undefined })}
+        >
+          Post
+        </ActionButton>
+      </div>
+
+      {games.length > 1 && (
+        <div className="no-scrollbar flex gap-1.5 overflow-x-auto border-b border-line px-4 py-2">
+          <Seg on={gameId === null} onClick={() => setGameId(null)}>
+            Any game
+          </Seg>
+          {games.map((g) => (
+            <Seg
+              key={g.id}
+              on={gameId === g.id}
+              accent={g.color}
+              onClick={() => setGameId(g.id)}
+            >
+              {g.label}
+            </Seg>
+          ))}
+        </div>
+      )}
+
+      {rows.length === 0 && (
         <p className="px-4 py-6 text-center text-sm text-ink-muted">
-          Nothing planned yet. Pick a venue, a game and a time, and ask whoever
-          you want there.
+          Nothing open {venue ? `at ${venue.short}` : 'right now'}. Post one,
+          and anyone on the app can say they&rsquo;re in.
         </p>
       )}
 
-      {sessions.map((s) => {
-        const venue = arcades.find((a) => a.id === s.venue)
-        /* Your own sessions have no relationship to state. */
-        const rel = s.mine ? null : relationshipOf(s.host, following)
-        const going = rsvps.includes(s.id)
-        return (
-          <div
-            key={s.id}
-            className="flex items-start gap-3 border-b border-line px-4 py-3"
-          >
-            <span className="mt-0.5 flex -space-x-2">
-              {s.going.slice(0, 3).map((h) => (
-                <Avatar key={h} handle={h} size={26} className="ring-2 ring-surface" />
-              ))}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="flex flex-wrap items-center gap-1.5 text-sm text-ink">
-                <span className="font-semibold">{s.mine ? 'You' : s.host}</span>
-                <Chip tone={s.mine ? 'brand' : 'quiet'}>
-                  {s.mine ? 'You planned this' : s.invitedMe ? 'Invited you' : rel.label}
-                </Chip>
-              </p>
-              {/* A run of text, not a flex row: laying it out with flex let the
-                  venue button be squeezed until its own name broke in half.
-                  Each part is kept whole and the line breaks between them. */}
-              <p className="text-xs leading-snug text-ink-muted">
-                <GameDot
-                  color={gameColor(s.gameId)}
-                  className="mr-1.5 align-middle"
-                />
-                <span className="whitespace-nowrap">
-                  {venue ? (
-                    <button
-                      type="button"
-                      onClick={() => onOpenArcade(s.venue)}
-                      className="font-medium text-brand-600 underline decoration-brand-200 underline-offset-2 hover:decoration-brand-600"
-                    >
-                      {venue.short}
-                    </button>
-                  ) : (
-                    'an arcade'
-                  )}{' '}
-                  &middot;
-                </span>{' '}
-                <span className="whitespace-nowrap">
-                  {gameLabel(s.gameId)} &middot;
-                </span>{' '}
-                <span className="whitespace-nowrap">{s.whenLabel}</span>
-              </p>
-              {s.note && <p className="text-xs text-ink-subtle">{s.note}</p>}
-              {/* Saying yes has to leave a trace, the same way telling someone
-                  you are on your way does. */}
-              {going && (
-                <p className="text-xs font-medium text-fresh">
-                  {s.host} has been told you&rsquo;re coming &middot;{' '}
-                  {s.going.length + 1} going
-                </p>
-              )}
-              {s.mine && (
-                <div className="mt-1.5 flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setConfirming(null)
-                      onEdit(s)
-                    }}
-                    className="rounded-md text-xs font-semibold text-brand-600 transition-colors duration-150 hover:text-brand-700"
-                  >
-                    Change
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (confirming !== s.id) {
-                        setConfirming(s.id)
-                        return
-                      }
-                      setConfirming(null)
-                      onCancel(s.id)
-                    }}
-                    className="rounded-md text-xs font-semibold text-ink-muted transition-colors duration-150 hover:text-live"
-                  >
-                    {confirming === s.id
-                      ? 'Tap again to call it off'
-                      : 'Call it off'}
-                  </button>
-                </div>
-              )}
-            </div>
-            {s.invitedMe ? (
-              <ActionButton
-                onClick={() => onRsvp(s.id)}
-                aria-label={
-                  going
-                    ? `Cancel going to ${s.host}'s session`
-                    : `Tell ${s.host} you are coming`
-                }
-              >
-                {going ? 'Going' : "I'm in"}
-              </ActionButton>
-            ) : s.mine ? (
-              <Chip tone="quiet">
-                {s.asked.length} asked
-              </Chip>
-            ) : (
-              <Chip tone="quiet">{s.going.length} going</Chip>
-            )}
-          </div>
-        )
-      })}
+      <SessionList
+        sessions={rows}
+        arcades={arcades}
+        following={following}
+        rsvps={rsvps}
+        onRsvp={onRsvp}
+        onEdit={onEdit}
+        onCancel={onCancel}
+        onOpenArcade={onOpenArcade}
+        onOpenPlayer={onOpenPlayer}
+        onMessage={onMessage}
+      />
     </Body>
   )
+}
+
+/* One row per session, shared by Later and Open so a session reads the same
+   wherever it turns up. Every row states what put it in front of you: you
+   arranged it, you were invited, how you know the host, or that the host
+   opened it to anyone. */
+function SessionList({
+  sessions,
+  arcades,
+  following,
+  rsvps,
+  onRsvp,
+  onEdit,
+  onCancel,
+  onOpenArcade,
+  onOpenPlayer,
+  onMessage,
+}) {
+  /* Calling a session off tells everyone it is off, so the button asks twice
+     rather than opening a dialog over a row this small. One slot is enough:
+     arming a second row disarms the first. */
+  const [confirming, setConfirming] = useState(null)
+
+  return sessions.map((s) => {
+    const venue = arcades.find((a) => a.id === s.venue)
+    /* Your own sessions have no relationship to state. */
+    const rel = s.mine ? null : relationshipOf(s.host, following)
+    const going = rsvps.includes(s.id)
+    /* The host is a stranger, and the only reason they are on your screen is
+       that they opened the door. Say that, rather than "Not connected". */
+    const stranger = rel && !rel.youFollow && !rel.followsYou
+    const canJoin = s.invitedMe || (s.open && !s.mine)
+    const label = s.mine
+      ? s.open
+        ? 'You posted this'
+        : 'You planned this'
+      : s.invitedMe
+        ? 'Invited you'
+        : stranger
+          ? 'Open to anyone'
+          : rel.label
+    return (
+      <div
+        key={s.id}
+        className="flex items-start gap-3 border-b border-line px-4 py-3"
+      >
+        <span className="mt-0.5 flex -space-x-2">
+          {s.going.slice(0, 3).map((h) => (
+            <Avatar key={h} handle={h} size={26} className="ring-2 ring-surface" />
+          ))}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="flex flex-wrap items-center gap-1.5 text-sm text-ink">
+            {s.mine ? (
+              <span className="font-semibold">You</span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onOpenPlayer(s.host)}
+                className="rounded-md font-semibold text-ink"
+              >
+                {s.host}
+              </button>
+            )}
+            <Chip tone={s.mine ? 'brand' : 'quiet'}>{label}</Chip>
+            {s.open && !s.mine && !stranger && (
+              <Chip tone="quiet">Open</Chip>
+            )}
+          </p>
+          {/* A run of text, not a flex row: laying it out with flex let the
+              venue button be squeezed until its own name broke in half.
+              Each part is kept whole and the line breaks between them. */}
+          <p className="text-xs leading-snug text-ink-muted">
+            <GameDot
+              color={gameColor(s.gameId)}
+              className="mr-1.5 align-middle"
+            />
+            <span className="whitespace-nowrap">
+              {venue ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenArcade(s.venue)}
+                  className="font-medium text-brand-600 underline decoration-brand-200 underline-offset-2 hover:decoration-brand-600"
+                >
+                  {venue.short}
+                </button>
+              ) : (
+                'an arcade'
+              )}{' '}
+              &middot;
+            </span>{' '}
+            <span className="whitespace-nowrap">
+              {gameLabel(s.gameId)} &middot;
+            </span>{' '}
+            <span className="whitespace-nowrap">{s.whenLabel}</span>
+          </p>
+          {s.note && <p className="text-xs text-ink-subtle">{s.note}</p>}
+          {/* Saying yes has to leave a trace, the same way telling someone
+              you are on your way does. On an open session it also opens the
+              thread, since a stranger who said "anyone" has asked to hear
+              from you. */}
+          {going && (
+            <p className="text-xs font-medium text-fresh">
+              {s.host} has been told you&rsquo;re coming &middot;{' '}
+              {s.going.length + 1} going
+              {s.open && !rel?.mutual && (
+                <>
+                  {' '}
+                  &middot;{' '}
+                  <button
+                    type="button"
+                    onClick={() => onMessage(s.host)}
+                    className="rounded-md font-semibold text-brand-600 underline decoration-brand-200 underline-offset-2 hover:decoration-brand-600"
+                  >
+                    Message {s.host}
+                  </button>
+                </>
+              )}
+            </p>
+          )}
+          {s.mine && (
+            <div className="mt-1.5 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirming(null)
+                  onEdit(s)
+                }}
+                className="rounded-md text-xs font-semibold text-brand-600 transition-colors duration-150 hover:text-brand-700"
+              >
+                Change
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirming !== s.id) {
+                    setConfirming(s.id)
+                    return
+                  }
+                  setConfirming(null)
+                  onCancel(s.id)
+                }}
+                className="rounded-md text-xs font-semibold text-ink-muted transition-colors duration-150 hover:text-live"
+              >
+                {confirming === s.id
+                  ? 'Tap again to call it off'
+                  : 'Call it off'}
+              </button>
+            </div>
+          )}
+        </div>
+        {canJoin ? (
+          <ActionButton
+            onClick={() => onRsvp(s.id)}
+            aria-label={
+              going
+                ? `Cancel going to ${s.host}'s session`
+                : `Tell ${s.host} you are coming`
+            }
+          >
+            {going ? 'Going' : "I'm in"}
+          </ActionButton>
+        ) : s.mine ? (
+          <Chip tone="quiet">
+            {s.open
+              ? `${s.going.length} going`
+              : `${s.asked.length} asked`}
+          </Chip>
+        ) : (
+          <Chip tone="quiet">{s.going.length} going</Chip>
+        )}
+      </div>
+    )
+  })
 }
 
 /* Activity. Every line ends in the action it enables, because a feed of facts

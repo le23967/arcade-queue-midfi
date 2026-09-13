@@ -2,9 +2,9 @@ import {
   ACTIVITY,
   FRIENDS,
   FOLLOWERS_ONLY,
+  OPEN_PLAYERS,
   ME,
   OLD_SITE_FAVOURITE_CAP,
-  PLANNED,
 } from '../social.js'
 
 /* maimai grades the achievement percentage, so the leaderboard shows the same
@@ -25,12 +25,13 @@ export function formatAchievement(a) {
 
 /* --- the roster -----------------------------------------------------------
 
-   Two seed lists describe one population: people you already follow, and
-   people who follow you and whom you have not followed back. The second list
-   only ever carried a handle and a game, so anything reading a profile has to
-   treat songs, scores and presence as optional. Normalising both lists into
-   one shape here is what stops an optional field turning into an undefined at
-   the call site. */
+   Three seed lists describe one population: people you already follow,
+   people who follow you and whom you have not followed back, and people with
+   no connection to you at all who have posted a session open to anyone. The
+   last two only ever carried a handle and a game, so anything reading a
+   profile has to treat songs, scores and presence as optional. Normalising
+   every list into one shape here is what stops an optional field turning
+   into an undefined at the call site. */
 function normalise(person, { followsYou }) {
   return {
     handle: person.handle,
@@ -46,6 +47,7 @@ function normalise(person, { followsYou }) {
 const PEOPLE = [
   ...FRIENDS.map((p) => normalise(p, { followsYou: p.followsYou })),
   ...FOLLOWERS_ONLY.map((p) => normalise(p, { followsYou: true })),
+  ...OPEN_PLAYERS.map((p) => normalise(p, { followsYou: false })),
 ]
 
 /* Who you follow when the prototype starts. Follows are App state from here
@@ -206,6 +208,34 @@ export function ago(min) {
   return `${Math.round(h / 24)}d ago`
 }
 
-export function plannedSessions() {
-  return PLANNED
+/* --- sessions ----------------------------------------------------------- */
+
+/* Later is your circle's sessions: the ones you arranged, were asked to, said
+   yes to, or that someone you follow is hosting. */
+export function circleSessions(sessions, following = INITIAL_FOLLOWING, rsvps = []) {
+  return sessions.filter(
+    (s) =>
+      s.mine ||
+      s.invitedMe ||
+      rsvps.includes(s.id) ||
+      following.includes(s.host)
+  )
+}
+
+/* Open is everyone's: any session whose host posted it for anyone on the app,
+   whether or not you have ever heard of them. */
+export function openSessions(sessions) {
+  return sessions.filter((s) => s.open)
+}
+
+/* The one way to reach someone you do not follow both ways: they posted a
+   session open to anyone, and you said you are in. The host opened the door,
+   so replying through it is not approaching a stranger - it is answering
+   them. */
+export function openSessionWith(handle, sessions, rsvps = []) {
+  return (
+    sessions.find(
+      (s) => s.open && s.host === handle && rsvps.includes(s.id)
+    ) ?? null
+  )
 }

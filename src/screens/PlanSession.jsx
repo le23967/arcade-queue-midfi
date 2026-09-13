@@ -27,7 +27,15 @@ import { FRIENDS, ME } from '../social.js'
    Thursday. Choosing a date and time is therefore the main control: the date
    uses the platform's familiar typed/calendar field, while hour and minute can
    be typed or moved with phone-style wheels. Common times remain as clearly
-   labelled shortcuts rather than being mixed with the custom choice. */
+   labelled shortcuts rather than being mixed with the custom choice.
+
+   Who can come is a choice of its own. Asking the people you follow both
+   ways is the default, and it is also useless to somebody whose list of
+   mutuals is empty - which every player is on their first day, and which the
+   interviews suggest the introverted ones stay for a long time. Opening a
+   session to anyone on the app is the way round that: it is posted on Open,
+   where people you have never met can see it and say they are in. The host
+   still decides. Nothing about a closed session changes. */
 
 export default function PlanSession({
   arcades,
@@ -48,6 +56,9 @@ export default function PlanSession({
   const [invited, setInvited] = useState(
     preset?.invited ?? (preset?.invite ? [preset.invite] : [])
   )
+  /* Open to anyone on the app, or only to the people asked. */
+  const [open, setOpen] = useState(Boolean(preset?.open))
+  const [note, setNote] = useState(preset?.note ?? '')
   const [sent, setSent] = useState(false)
 
   /* Reopened on a session that already exists, rather than starting a new one.
@@ -81,7 +92,12 @@ export default function PlanSession({
     window.requestAnimationFrame(() => pickerTriggerRef.current?.focus())
   }
 
+  /* An open session can be posted with nobody asked - that is the point of
+     it. A closed one with nobody asked would reach no one. */
+  const canSend = open || invited.length > 0
+
   function sendInvites() {
+    if (!canSend) return
     if (when.getTime() <= Date.now()) {
       setPickerOpen(true)
       return
@@ -103,6 +119,8 @@ export default function PlanSession({
       going: [me.handle],
       asked: invited,
       invitedMe: false,
+      open,
+      note: note.trim(),
     })
     setSent(true)
   }
@@ -111,26 +129,35 @@ export default function PlanSession({
     return (
       <Screen>
         <TopBar
-          title={editing ? 'Session updated' : 'Session planned'}
-          onBack={onDone}
+          title={editing ? 'Session updated' : open ? 'Session posted' : 'Session planned'}
+          onBack={() => onDone(open)}
         />
         <Body className="flex flex-col items-center justify-center p-6 text-center">
           <span className="flex h-16 w-16 items-center justify-center rounded-full bg-fresh-bg text-fresh">
             <Check size={32} />
           </span>
           <p className="mt-4 font-display text-xl font-semibold text-ink">
-            {editing ? 'Changes sent' : 'Invitation sent'}
+            {editing ? 'Changes sent' : open ? 'Open to anyone' : 'Invitation sent'}
           </p>
           <p className="mt-1 text-sm text-ink-muted">
             {arcade?.short} &middot; {formatWhen(when, now)}
           </p>
           <p className="mt-1 text-xs text-ink-subtle">
-            {invited.length} {invited.length === 1 ? 'person' : 'people'}{' '}
-            {editing ? 'told' : 'asked'}. You can change or call it off from
-            Later.
+            {open && (
+              <>
+                Anyone on the app can see it on Open and say they&rsquo;re in.{' '}
+              </>
+            )}
+            {(invited.length > 0 || !open) && (
+              <>
+                {invited.length} {invited.length === 1 ? 'person' : 'people'}{' '}
+                {editing ? 'told' : 'asked'}.{' '}
+              </>
+            )}
+            You can change or call it off from Later.
           </p>
           <div className="mt-6 w-full">
-            <PrimaryButton onClick={onDone}>Done</PrimaryButton>
+            <PrimaryButton onClick={() => onDone(open)}>Done</PrimaryButton>
           </div>
         </Body>
       </Screen>
@@ -143,7 +170,7 @@ export default function PlanSession({
         title={editing ? 'Change the session' : 'Plan a session'}
         subtitle={
           editing
-            ? 'Move it, or change who you asked'
+            ? 'Move it, or change who can come'
             : "Turn who's around into a time and a place"
         }
         onBack={onBack}
@@ -217,8 +244,40 @@ export default function PlanSession({
           </div>
         </Section>
 
+        <Section title="Who can come">
+          <div className="flex flex-wrap gap-1.5">
+            <Seg on={!open} onClick={() => setOpen(false)}>
+              People I ask
+            </Seg>
+            <Seg on={open} onClick={() => setOpen(true)}>
+              Anyone on the app
+            </Seg>
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-ink-muted">
+            {open
+              ? 'Posted on Open, where anyone can see it and say they\u2019re in, including people you have never met. You can still ask people directly as well.'
+              : 'Only the people you ask below can see it.'}
+          </p>
+        </Section>
+
+        <Section title="Note, optional">
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            maxLength={80}
+            placeholder={
+              open
+                ? 'e.g. Any level welcome, doubles if enough of us'
+                : 'e.g. Doubles for the extra song, then dinner'
+            }
+            aria-label="Note for the session"
+            className="w-full rounded-xl border border-line-strong bg-surface px-3 py-2.5 text-sm text-ink outline-none transition-colors duration-150 placeholder:text-ink-subtle focus:border-brand-500"
+          />
+        </Section>
+
         <Section
-          title={`Who, ${invited.length} asked`}
+          title={open ? `Also ask, ${invited.length} asked` : `Who, ${invited.length} asked`}
           action={
             <button
               type="button"
@@ -274,12 +333,16 @@ export default function PlanSession({
             {arcade?.short} &middot; {formatWhen(when, now)}
           </p>
         </div>
-        <PrimaryButton disabled={invited.length === 0} onClick={sendInvites}>
-          {invited.length === 0
+        <PrimaryButton disabled={!canSend} onClick={sendInvites}>
+          {!canSend
             ? 'Pick who to ask'
             : editing
               ? 'Save changes'
-              : `Send to ${invited.length}`}
+              : open
+                ? invited.length > 0
+                  ? `Post it open and ask ${invited.length}`
+                  : 'Post it open to anyone'
+                : `Send to ${invited.length}`}
         </PrimaryButton>
         <SecondaryButton onClick={onBack}>Cancel</SecondaryButton>
       </div>

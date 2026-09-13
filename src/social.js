@@ -111,6 +111,19 @@ export const FOLLOWERS_ONLY = [
   { handle: 'kumo', games: ['maimai DX'] },
 ]
 
+/* People with no connection to you either way. They are on the app, and the
+   only reason you would ever see one is that they posted a session open to
+   anyone. A new player whose circle is empty is in exactly this position
+   themselves, which is why the roster has to hold people like this at all:
+   without them, every screen on the Circle tab is blank until someone you
+   already know joins. */
+export const OPEN_PLAYERS = [
+  { handle: 'dex', games: ['maimai DX', 'CHUNITHM'], songs: ['Halcyon', 'Oshama Scramble!'] },
+  { handle: 'fern', games: ['maimai DX'], songs: ['Garakuta Doll Play'] },
+  { handle: 'kit', games: ['CHUNITHM', 'maimai DX'], songs: ['PANDORA PARADOXXX'] },
+  { handle: 'tama', games: ['Taiko', 'maimai DX'], songs: ['Valsqotch', 'QZKago Requiem'] },
+]
+
 /* ---------------------------------------------------------------------------
    Clips.
 
@@ -189,6 +202,13 @@ export const CLIP_COMMENTS = {
    engagement on its own, and the example given was that knowing where people
    are only pays off when it lets you arrange to meet them somewhere. So
    presence ends in a plan - a venue, a game, a time, and who is coming.
+
+   `open` marks a session the host posted for anyone on the app, not just the
+   people they asked. Everything else on the Circle tab is mutual-only, and
+   that rule is what leaves a player with no circle looking at empty lists.
+   An open session is the one thing a stranger is allowed to see, because the
+   host chose that: nobody is being approached, they are answering an
+   invitation that was left out for them.
 --------------------------------------------------------------------------- */
 export const PLANNED = [
   {
@@ -212,6 +232,39 @@ export const PLANNED = [
     invitedMe: true,
   },
   {
+    id: 'ps4',
+    host: 'dex',
+    venue: 'koko-town-hall',
+    gameId: 'maimai',
+    whenLabel: 'Tonight, 7:00 PM',
+    note: 'Anyone welcome, any level. Doubles if enough people turn up',
+    going: ['dex', 'fern'],
+    invitedMe: false,
+    open: true,
+  },
+  {
+    id: 'ps5',
+    host: 'kit',
+    venue: 'central-park',
+    gameId: 'chunithm',
+    whenLabel: 'Tomorrow, 2:00 PM',
+    note: 'New to CHUNITHM, looking for people to learn it with',
+    going: ['kit'],
+    invitedMe: false,
+    open: true,
+  },
+  {
+    id: 'ps6',
+    host: 'raven',
+    venue: 'koko-town-hall',
+    gameId: 'sdvx',
+    whenLabel: 'Saturday, 1:00 PM',
+    note: 'Two cabs, so nobody waits on anybody',
+    going: ['raven', 'cyan'],
+    invitedMe: false,
+    open: true,
+  },
+  {
     id: 'ps2',
     host: 'nagi',
     venue: 'central-park',
@@ -220,5 +273,17 @@ export const PLANNED = [
     note: 'Quiet before the weekend rush',
     going: ['nagi', 'sora'],
     invitedMe: false,
+    open: true,
+  },
+  {
+    id: 'ps7',
+    host: 'tama',
+    venue: 'market-city',
+    gameId: 'taiko',
+    whenLabel: 'Sunday, 3:00 PM',
+    note: 'Casual, bring whoever',
+    going: ['tama'],
+    invitedMe: false,
+    open: true,
   },
 ]

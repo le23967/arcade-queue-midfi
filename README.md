@@ -134,6 +134,33 @@ Presence pays off when it turns into a time and a place. Plan a session lets you
 pick a venue, a game and a time, then invite mutuals. It lands as an invitation
 on their Circle tab.
 
+A session can also be opened to anyone on the app. The host picks *Anyone on
+the app* instead of *People I ask*, adds a note if they want one, and it is
+posted on Open as well as sent to whoever they asked. Nothing changes for a
+closed session.
+
+### Open sessions
+
+Everything else on the Circle tab is mutual-only, and that is the right rule
+for presence. It is the wrong rule for a first day. A player with nobody in
+their circle opens Map, Now, Later and Activity and finds them all empty, and
+the app is in effect telling them to come back once they have friends, which is
+what they came here to make. The introverted players we spoke to are the ones
+most likely to stay in that state.
+
+Open is the one segment not scoped to the people you follow. It lists every
+session anyone has posted for anyone, filtered by game, and each row ends in
+*I'm in*. A venue page also says how many open sessions are posted there, next
+to the row that names the people you follow, so a new player sees a reason to
+go even when that second row is missing.
+
+This does not undo the research finding about strangers. Nobody is located and
+nobody is approached. A host who posts an open session has chosen to be found,
+in the same way a note on the arcade's pinboard would, and that is all a
+stranger gets to see. Saying you are in opens a message thread with that host,
+because they asked for anyone to reply. It is the only route in the app from a
+stranger to a conversation, and the host controls it.
+
 ### Profiles and contact
 
 Profiles show which games someone mainly plays and their favourite songs. Both
@@ -205,6 +232,8 @@ Sources: [SEGA maimai DX location finder](https://location.am-all.net/alm/locati
 | --- | --- | --- |
 | Circle, Map | tab | Friends as avatars, venues as pins. Pinch to zoom, drag to pan, tap to act. |
 | Circle, Here now | tab | Who is out, grouped by venue, each row ending in Join. |
+| Circle, Later | tab | Sessions you arranged, were asked to, or that your circle is hosting. |
+| Circle, Open | tab | Sessions anyone posted for anyone, filtered by game, each row ending in I'm in. |
 | Circle, Activity | tab | What people did and when, each line ending in an action. |
 | Circle, Scores | tab | Uncapped leaderboard with the 20 favourite limit drawn on it. |
 | Watch | tab | Clips from people you follow, with your queue position pinned above. |
@@ -216,8 +245,8 @@ Sources: [SEGA maimai DX location finder](https://location.am-all.net/alm/locati
 | Confirm | `confirm` | Pre-filled count to confirm or correct before joining. |
 | Checked In | `checkedin` | Your position and the running order. |
 | Session summary | `summary` | Session time and time queued. |
-| Plan a session | `plan` | Venue, game, time and who to ask. |
-| Message | modal | Mutual only. |
+| Plan a session | `plan` | Venue, game, time, who can come, and who to ask. |
+| Message | `chat` | Mutuals, plus the host of an open session you joined. |
 | Player profile | `player` | Games, songs, scores, and the actions. |
 | Liked clips | `liked` | Clips you saved, reachable from Me. |
 | Followers and Following | `follows` | Who can see you, and who you can see. |

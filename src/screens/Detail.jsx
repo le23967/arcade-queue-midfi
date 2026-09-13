@@ -67,6 +67,8 @@ export default function Detail({
   onToggleQueue,
   mePosition,
   following,
+  openCount = 0,
+  onOpenSessions,
 }) {
   const stale = isStale(arcade)
   const friendsHere = presentAt(arcade.id, following)
@@ -130,6 +132,32 @@ export default function Detail({
               </span>
               <span className="block text-sm font-semibold text-ink">
                 {friendsHere.map((p) => p.handle).join(', ')} here now
+              </span>
+            </span>
+            <Chevron size={16} />
+          </button>
+        )}
+
+        {/* Who you know there is mutual-only, so for a new player the row
+            above never renders. This one does: a session somebody posted
+            for anyone at this venue is a reason to come that needs no
+            circle at all. */}
+        {openCount > 0 && (
+          <button
+            type="button"
+            onClick={onOpenSessions}
+            className="flex w-full items-center gap-3 border-b border-line px-4 py-3 text-left"
+          >
+            <span className="text-ink-muted">
+              <Users size={18} />
+            </span>
+            <span className="flex-1">
+              <span className="block text-xs uppercase tracking-wide text-ink-muted">
+                Open to anyone
+              </span>
+              <span className="block text-sm font-semibold text-ink">
+                {openCount} {openCount === 1 ? 'session' : 'sessions'} posted
+                here
               </span>
             </span>
             <Chevron size={16} />

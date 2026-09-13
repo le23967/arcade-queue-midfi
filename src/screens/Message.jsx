@@ -7,7 +7,9 @@ import { Send, ArrowLeft } from '../components/Icons.jsx'
    An earlier version deliberately had no contact action at all, on the team's
    own finding that "the app can't force our users to just go up to someone
    they haven't met". That was about strangers, and it still holds: nothing
-   here reaches a person you do not already follow both ways.
+   here reaches a person you do not already follow both ways - except a host
+   who posted a session open to anyone and whose session you joined. They
+   went up to you, in effect, and the header says so.
 
    Consultation feedback was that presence has to lead somewhere: reaching out,
    joining them, or asking about the venue they are at. Between mutuals that is
@@ -48,10 +50,14 @@ export default function Message({
   messages = [],
   opener = '',
   mutual = true,
+  /* The open session that lets you reach a host you do not follow both ways,
+     as one line of text, or null. */
+  via = null,
   onSend,
   onOpenProfile,
   onBack,
 }) {
+  const canReply = mutual || Boolean(via)
   const [text, setText] = useState(opener)
   const endRef = useRef(null)
   const canSend = text.trim().length > 0
@@ -95,7 +101,11 @@ export default function Message({
               {handle}
             </span>
             <span className="block truncate text-[11px] leading-tight text-ink-muted">
-              {mutual ? 'You follow each other' : 'You no longer follow each other'}
+              {mutual
+                ? 'You follow each other'
+                : via
+                  ? `Open session at ${via}`
+                  : 'You no longer follow each other'}
             </span>
           </span>
         </button>
@@ -141,7 +151,7 @@ export default function Message({
         <div ref={endRef} />
       </div>
 
-      {mutual ? (
+      {canReply ? (
         <div className="border-t border-line bg-surface px-3 pb-3 pt-2.5">
           {showOpeners && (
             <div className="no-scrollbar -mx-3 mb-2.5 flex gap-1.5 overflow-x-auto px-3">
