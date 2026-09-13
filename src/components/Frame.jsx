@@ -54,6 +54,11 @@ const TABS = [
 
 export const TAB_IDS = TABS.map((t) => t.id)
 
+/* The word on the tab, for screens that name where Back will land. */
+export function tabLabel(id) {
+  return TABS.find((t) => t.id === id)?.label ?? TABS[0].label
+}
+
 export function TabBar({ active, onSelect, banner }) {
   return (
     <div className="border-t border-line bg-surface/95 backdrop-blur">

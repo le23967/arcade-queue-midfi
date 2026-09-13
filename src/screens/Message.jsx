@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Screen, Avatar, PrimaryButton, SecondaryButton, QuietAction } from '../components/ui.jsx'
-import { Send, ArrowLeft } from '../components/Icons.jsx'
+import { Send, ArrowLeft, Close } from '../components/Icons.jsx'
 import { formatMessageTime } from '../lib/time.js'
 
 /* A conversation.
@@ -33,7 +33,14 @@ import { formatMessageTime } from '../lib/time.js'
 
    It is a screen rather than a sheet because a conversation is a place you
    go to, not a panel that covers where you were: it can be long, and the
-   keyboard needs the room. The inbox is the sheet; this is what it opens. */
+   keyboard needs the room. The inbox is the sheet; this is what it opens.
+
+   Two ways out, because they are two different intents. The cross at the
+   right closes this conversation and returns to whatever opened it - the
+   inbox sheet, or a profile. The arrow at the left leaves messaging
+   altogether and lands on the tab: the first version sent it back to the
+   inbox as well, and someone who had finished talking found themselves
+   looking at a list they had not asked for. */
 const OPENERS = [
   'How long is the wait really?',
   'Save me a spot, on my way',
@@ -63,7 +70,12 @@ export default function Message({
   onDecline,
   onBlock,
   onOpenProfile,
+  /* Leaves messaging for the tab it was reached from, which `backLabel`
+     names for assistive technology. */
   onBack,
+  backLabel = 'Back',
+  /* Closes this conversation and returns to what opened it. */
+  onClose,
 }) {
   const [text, setText] = useState(opener)
   const endRef = useRef(null)
@@ -91,7 +103,7 @@ export default function Message({
         <button
           type="button"
           onClick={onBack}
-          aria-label="Back"
+          aria-label={backLabel}
           className="-ml-2 flex h-10 w-10 items-center justify-center rounded-full text-ink transition-colors duration-150 hover:bg-sunken active:bg-line"
         >
           <ArrowLeft size={20} />
@@ -115,6 +127,16 @@ export default function Message({
             </span>
           </span>
         </button>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close conversation"
+            className="-mr-2 flex h-11 w-11 flex-none items-center justify-center rounded-full text-ink-muted transition-colors duration-150 hover:bg-sunken hover:text-ink active:bg-line"
+          >
+            <Close size={20} />
+          </button>
+        )}
       </div>
 
       {/* The conversation sits on its own ground, so it reads as a place

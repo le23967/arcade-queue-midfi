@@ -1,5 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { Close } from './Icons.jsx'
 
 /* Shared primitives.
 
@@ -603,7 +604,7 @@ export function Sheet({
             aria-label={closeLabel}
             className="flex h-11 w-11 flex-none items-center justify-center rounded-full text-ink-muted transition-colors duration-150 hover:bg-sunken hover:text-ink"
           >
-            <CloseGlyph />
+            <Close size={20} />
           </button>
         </div>
         {children}
@@ -619,24 +620,6 @@ export function SheetBody({ children, className = '' }) {
     <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain ${className}`}>
       {children}
     </div>
-  )
-}
-
-function CloseGlyph() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M6 6l12 12M18 6L6 18" />
-    </svg>
   )
 }
 

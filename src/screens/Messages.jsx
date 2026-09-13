@@ -21,7 +21,8 @@ import { formatMessageStamp } from '../lib/time.js'
    takes as much height as the list needs, up to most of the screen, and
    closes back to exactly where you were. A conversation is the opposite: a
    place you go to, with a keyboard in it, so tapping a row still pushes the
-   full thread and Back from there returns to this sheet.
+   full thread; closing that thread returns to this sheet, and its Back
+   arrow leaves for the tab.
 
    Two lists. Chats are conversations you can write in - with people you
    follow both ways, or that either of you accepted - plus any request you

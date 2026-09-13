@@ -6,7 +6,7 @@ import {
   venuesForGame,
   otherGamesAt,
 } from './lib/queue.js'
-import { Frame, TabBar, SessionBanner, TAB_IDS } from './components/Frame.jsx'
+import { Frame, TabBar, SessionBanner, TAB_IDS, tabLabel } from './components/Frame.jsx'
 import { PrimaryButton, SecondaryButton } from './components/ui.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 
@@ -176,9 +176,10 @@ function Prototype({ auth, initialGame }) {
   const [history, setHistory] = useState([])
   /* 'messages' is a step in that history like any other, but it is drawn
      as a sheet over the tab it was opened from rather than as a screen of
-     its own. Opening a thread from it pushes the thread; Back from the
-     thread lands on 'messages' again, so the sheet reappears where it was;
-     closing the sheet is one more step back. */
+     its own. Opening a thread from it pushes the thread. Closing the thread
+     (the cross) lands on 'messages' again, so the sheet reappears where it
+     was, and closing the sheet is one more step back; Back from the thread
+     (the arrow) skips all of that and lands on the tab. */
   const sheetOpen = view === 'messages'
   /* Your identity is your real profile when signed in. Without an account
      (a build with no Supabase configured) the seeded ME stands in, editable
@@ -256,6 +257,12 @@ function Prototype({ auth, initialGame }) {
   function goRoot(next) {
     setHistory([])
     setView(next)
+  }
+
+  /* Out of messaging altogether: the tab this trail started from, with
+     the trail cleared. */
+  function leaveToTab() {
+    goRoot(backTab)
   }
 
   const clip = CLIPS[clipIndex]
@@ -692,7 +699,9 @@ function Prototype({ auth, initialGame }) {
               onChanged={inbox.refresh}
               onBlock={() => askToBlock(chat.profile, 'thread')}
               onOpenProfile={() => openRealProfile(chat.profile)}
-              onBack={goBack}
+              onBack={leaveToTab}
+              backLabel={`Back to ${tabLabel(backTab)}`}
+              onClose={goBack}
             />
           )}
 
@@ -704,7 +713,9 @@ function Prototype({ auth, initialGame }) {
               subtitle="Sample player"
               closedNote={`${chat.handle} is a sample player from the prototype, so there is nobody to write back. Messaging works between real accounts: find people under Add someone.`}
               onOpenProfile={() => openPlayer(chat.handle)}
-              onBack={goBack}
+              onBack={leaveToTab}
+              backLabel={`Back to ${tabLabel(backTab)}`}
+              onClose={goBack}
             />
           )}
 
@@ -1044,6 +1055,8 @@ function RealThread({
   onBlock,
   onOpenProfile,
   onBack,
+  backLabel,
+  onClose,
 }) {
   const thread = useConversation(myId, partner.id, { mutual: relationship.mutual, blocked })
 
@@ -1087,12 +1100,15 @@ function RealThread({
       onAccept={() => answer(thread.accept)}
       onDecline={async () => {
         const result = await answer(thread.decline)
-        /* Declined, the request is no longer yours to look at. */
-        if (!result?.error) onBack()
+        /* Declined, the request is no longer yours to look at: back to
+           the list it came from. */
+        if (!result?.error) onClose()
       }}
       onBlock={onBlock}
       onOpenProfile={onOpenProfile}
       onBack={onBack}
+      backLabel={backLabel}
+      onClose={onClose}
     />
   )
 }
