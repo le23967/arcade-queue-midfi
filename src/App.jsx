@@ -182,10 +182,10 @@ function Prototype({ auth, initialGame }) {
   const [history, setHistory] = useState([])
   /* 'messages' is a step in that history like any other, but it is drawn
      as a sheet over the tab it was opened from rather than as a screen of
-     its own. Opening a thread from it pushes the thread. Closing the thread
-     (the cross) lands on 'messages' again, so the sheet reappears where it
-     was, and closing the sheet is one more step back; Back from the thread
-     (the arrow) skips all of that and lands on the tab. */
+     its own. Opening a thread from it pushes the thread; leaving the
+     thread, by either of its two controls, clears the trail and lands on
+     the tab. Only declining or blocking from inside a thread steps back to
+     the list, because that is where the next request is. */
   const sheetOpen = view === 'messages'
   /* Your identity is your real profile when signed in. Without an account
      (a build with no Supabase configured) the seeded ME stands in, editable
@@ -724,7 +724,8 @@ function Prototype({ auth, initialGame }) {
               onOpenProfile={() => openRealProfile(chat.profile)}
               onBack={leaveToTab}
               backLabel={`Back to ${tabLabel(backTab)}`}
-              onClose={goBack}
+              onClose={leaveToTab}
+              onDeclined={goBack}
             />
           )}
 
@@ -738,7 +739,7 @@ function Prototype({ auth, initialGame }) {
               onOpenProfile={() => openPlayer(chat.handle)}
               onBack={leaveToTab}
               backLabel={`Back to ${tabLabel(backTab)}`}
-              onClose={goBack}
+              onClose={leaveToTab}
             />
           )}
 
@@ -793,7 +794,9 @@ function Prototype({ auth, initialGame }) {
               blocked={follows.isBlocked(realPlayer.id)}
               arcade={null}
               joinedAt={null}
-              onBack={goBack}
+              onBack={leaveToTab}
+              backLabel={`Back to ${tabLabel(backTab)}`}
+              onClose={leaveToTab}
               onOpenArcade={openArcade}
               onJoin={() => {}}
               onUnsendJoin={() => {}}
@@ -812,7 +815,9 @@ function Prototype({ auth, initialGame }) {
               arcade={arcades.find((a) => a.id === player.at) ?? null}
               joinedAt={joinsSent[player.handle] ?? null}
               openSession={viaLabel(openSessionWith(player.handle, planned, rsvps))}
-              onBack={goBack}
+              onBack={leaveToTab}
+              backLabel={`Back to ${tabLabel(backTab)}`}
+              onClose={leaveToTab}
               onOpenArcade={openArcade}
               onJoin={openJoin}
               onUnsendJoin={unsendJoin}
@@ -1083,6 +1088,8 @@ function RealThread({
   onBack,
   backLabel,
   onClose,
+  /* Where a declined request leaves you: the list it came from. */
+  onDeclined,
 }) {
   const thread = useConversation(myId, partner.id, { mutual: relationship.mutual, blocked })
 
@@ -1128,7 +1135,7 @@ function RealThread({
         const result = await answer(thread.decline)
         /* Declined, the request is no longer yours to look at: back to
            the list it came from. */
-        if (!result?.error) onClose()
+        if (!result?.error) onDeclined()
       }}
       onBlock={onBlock}
       onOpenProfile={onOpenProfile}

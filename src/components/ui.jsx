@@ -16,14 +16,25 @@ export function Screen({ children }) {
   return <div className="anim-screen flex h-full flex-col bg-surface">{children}</div>
 }
 
-export function TopBar({ title, subtitle, onBack, right }) {
+/* `backLabel` names where the arrow lands when that is not simply the
+   previous screen; `onClose` adds a cross at the far right with `closeLabel`
+   as its accessible name. */
+export function TopBar({
+  title,
+  subtitle,
+  onBack,
+  backLabel = 'Back',
+  right,
+  onClose,
+  closeLabel = 'Close',
+}) {
   return (
     <div className="flex items-center gap-2 border-b border-line bg-surface/95 px-4 py-3 backdrop-blur">
       {onBack ? (
         <button
           type="button"
           onClick={onBack}
-          aria-label="Back"
+          aria-label={backLabel}
           className="-ml-2 rounded-full p-1.5 text-ink transition-colors duration-150 hover:bg-sunken active:bg-line"
         >
           <BackGlyph />
@@ -40,6 +51,16 @@ export function TopBar({ title, subtitle, onBack, right }) {
         )}
       </div>
       {right}
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={closeLabel}
+          className="-mr-2 flex h-11 w-11 flex-none items-center justify-center rounded-full text-ink-muted transition-colors duration-150 hover:bg-sunken hover:text-ink active:bg-line"
+        >
+          <Close size={20} />
+        </button>
+      )}
     </div>
   )
 }

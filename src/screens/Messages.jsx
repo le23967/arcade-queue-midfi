@@ -20,9 +20,9 @@ import { formatMessageStamp } from '../lib/time.js'
    glance should not take the whole phone and leave only Back. The sheet
    takes as much height as the list needs, up to most of the screen, and
    closes back to exactly where you were. A conversation is the opposite: a
-   place you go to, with a keyboard in it, so tapping a row still pushes the
-   full thread; closing that thread returns to this sheet, and its Back
-   arrow leaves for the tab.
+   place you go to, with a keyboard in it, so tapping a row pushes the full
+   thread, and leaving that thread - by its arrow or its cross - lands on
+   the tab rather than back on this list.
 
    Two lists. Chats are conversations you can write in - with people you
    follow both ways, or that either of you accepted - plus any request you

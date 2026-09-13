@@ -56,7 +56,10 @@ export default function PlayerProfile({
   /* The open session of theirs you have joined, as one line, or null. It is
      the only thing that puts a Message button on a stranger's profile. */
   openSession = null,
+  /* Both leave for the tab this trail started from; the label says which. */
   onBack,
+  backLabel = 'Back',
+  onClose = null,
   onOpenArcade,
   onJoin,
   onUnsendJoin,
@@ -99,6 +102,9 @@ export default function PlayerProfile({
                   : 'Not connected'
         }
         onBack={onBack}
+        backLabel={backLabel}
+        onClose={onClose}
+        closeLabel="Close profile"
       />
 
       <Body>

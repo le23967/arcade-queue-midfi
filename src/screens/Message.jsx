@@ -35,12 +35,11 @@ import { formatMessageTime } from '../lib/time.js'
    go to, not a panel that covers where you were: it can be long, and the
    keyboard needs the room. The inbox is the sheet; this is what it opens.
 
-   Two ways out, because they are two different intents. The cross at the
-   right closes this conversation and returns to whatever opened it - the
-   inbox sheet, or a profile. The arrow at the left leaves messaging
-   altogether and lands on the tab: the first version sent it back to the
-   inbox as well, and someone who had finished talking found themselves
-   looking at a list they had not asked for. */
+   Two controls out, one destination: the tab this trail started from. The
+   arrow is where Back always lives; the cross is there because a
+   conversation is something people reach to close. Earlier versions sent
+   one or both back to the inbox sheet, and someone who had finished
+   talking found themselves looking at a list they had not asked for. */
 const OPENERS = [
   'How long is the wait really?',
   'Save me a spot, on my way',
@@ -70,11 +69,10 @@ export default function Message({
   onDecline,
   onBlock,
   onOpenProfile,
-  /* Leaves messaging for the tab it was reached from, which `backLabel`
-     names for assistive technology. */
+  /* Both leave messaging for the tab it was reached from, which
+     `backLabel` names for assistive technology. */
   onBack,
   backLabel = 'Back',
-  /* Closes this conversation and returns to what opened it. */
   onClose,
 }) {
   const [text, setText] = useState(opener)
