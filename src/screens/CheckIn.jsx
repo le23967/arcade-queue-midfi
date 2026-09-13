@@ -9,12 +9,18 @@ import { Qr, Nfc, Hand, Chevron } from '../components/Icons.jsx'
    out, it's got no ink left". Asked what would work instead: "With a QR code
    or ... tap your phone again - it would be nice." (21 Aug, arcade)
 
-   So the design bet is that check-in has to be one tap or it will not happen. */
+   So the design bet is that check-in has to be one tap or it will not happen.
+
+   It is titled as joining a queue rather than checking in, and it names the
+   game as well as the venue. "Check-In" at an arcade reads as announcing you
+   are in the building; what this actually does is put you in the running
+   order for one game's cabinets, and a first-time reader should not have to
+   guess which of the two it is. */
 export default function CheckIn({ arcade, onBack, onScan, onManual }) {
   return (
     <Screen>
       <TopBar
-        title="Check-In"
+        title="Join queue"
         onBack={onBack}
         right={
           <Info >
@@ -27,9 +33,10 @@ export default function CheckIn({ arcade, onBack, onScan, onManual }) {
 
       <Body>
         <div className="border-b border-line px-4 py-3">
+          <p className="text-sm font-semibold text-ink">{arcade.game}</p>
           <p className="text-sm text-ink">{arcade.name}</p>
-          <p className="text-xs text-ink-muted">
-            Joins the running order everyone can see.
+          <p className="mt-1 text-xs text-ink-muted">
+            Scan at the cabinet to join this game&rsquo;s running order.
           </p>
         </div>
 
@@ -48,7 +55,7 @@ export default function CheckIn({ arcade, onBack, onScan, onManual }) {
         <Option
           Icon={Hand}
           title="Manual"
-          hint="Fallback, type in your position by hand"
+          hint="Fallback, enter the queue details manually"
           muted
           onClick={onManual}
         />

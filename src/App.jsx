@@ -33,6 +33,7 @@ import AddPerson from './screens/AddPerson.jsx'
 import Messages from './screens/Messages.jsx'
 import EditProfile from './screens/EditProfile.jsx'
 import PlayerProfile from './screens/PlayerProfile.jsx'
+import Welcome from './screens/Welcome.jsx'
 import { CLIPS, CLIP_COMMENTS, ME, PLANNED } from './social.js'
 import {
   INITIAL_FOLLOWING,
@@ -54,6 +55,9 @@ const DELIVERY_DELAY_MS = 1200
 
 export default function App() {
   const [arcades, setArcades] = useState(ARCADES)
+  /* Not persisted on purpose: a reload starts every participant at the
+     same first screen. */
+  const [welcomed, setWelcomed] = useState(false)
   const [tab, setTab] = useState(TAB_IDS[0])
   const [view, setView] = useState(TAB_IDS[0])
   const [arcadeView, setArcadeView] = useState('list')
@@ -450,6 +454,14 @@ export default function App() {
       )
     : null
 
+  if (!welcomed) {
+    return (
+      <Frame>
+        <Welcome game={game} onGame={setGame} onContinue={() => setWelcomed(true)} />
+      </Frame>
+    )
+  }
+
   return (
     <Frame>
       <div className="relative flex h-full flex-col">
@@ -525,6 +537,7 @@ export default function App() {
             <Friends
               arcades={arcades}
               game={game}
+              onGame={setGame}
               section={friendsSection}
               onSection={pickFriendsSection}
               hereVenueId={hereVenueId}

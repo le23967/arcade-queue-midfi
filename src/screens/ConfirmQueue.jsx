@@ -48,7 +48,7 @@ export default function ConfirmQueue({ arcade, onBack, onConfirm }) {
   return (
     <Screen>
       <TopBar
-        title="Check-In"
+        title="Confirm queue"
         onBack={onBack}
         right={
           <Info>
@@ -106,7 +106,7 @@ export default function ConfirmQueue({ arcade, onBack, onConfirm }) {
 
       <div className="border-t border-line p-4">
         <PrimaryButton onClick={() => onConfirm({ queue, solo })}>
-          Check in
+          Join queue
         </PrimaryButton>
       </div>
     </Screen>

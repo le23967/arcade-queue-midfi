@@ -56,6 +56,7 @@ import FriendsMap from './FriendsMap.jsx'
 export default function Friends({
   arcades,
   game,
+  onGame,
   section,
   onSection,
   hereVenueId,
@@ -147,6 +148,34 @@ export default function Friends({
         </Seg>
       </div>
 
+      {/* The wait on every pin is for one game's queue, and the map never
+          said which. One compact control names it and changes it; it sits on
+          Now only, since Later, Activity and Scores are not per game. */}
+      {section === 'now' && (
+        <div className="flex items-center gap-2 border-b border-line px-4 py-2">
+          <label
+            htmlFor="circle-game"
+            className="text-xs font-semibold uppercase tracking-wide text-ink-muted"
+          >
+            Queue game
+          </label>
+          <span className="flex min-w-0 flex-1 items-center gap-1.5">
+            <GameDot color={gameColor(game)} />
+            <select
+              id="circle-game"
+              value={game}
+              onChange={(e) => onGame(e.target.value)}
+              className="min-w-0 flex-1 rounded-md border border-line-strong bg-surface px-2 py-1 text-sm font-semibold text-ink outline-none focus:border-brand-500"
+            >
+              {GAMES.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.label}
+                </option>
+              ))}
+            </select>
+          </span>
+        </div>
+      )}
       {section === 'now' && (
         <Now
           arcades={venues}
