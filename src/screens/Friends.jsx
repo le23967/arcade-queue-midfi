@@ -80,7 +80,6 @@ export default function Friends({
   onMessage,
   onOpenMessages,
   onAddPerson,
-  threadCount,
 }) {
   /* Resolved here, once: raw venues carry their queues nested per game, so
      anything reading a wait or a game colour needs the flattened form. */
@@ -108,11 +107,7 @@ export default function Friends({
             <button
               type="button"
               onClick={onOpenMessages}
-              aria-label={
-                threadCount > 0
-                  ? `Messages, ${threadCount} ${threadCount === 1 ? 'conversation' : 'conversations'}`
-                  : 'Messages'
-              }
+              aria-label="Messages"
               className="rounded-full p-1.5 text-ink-muted transition-colors duration-150 hover:bg-sunken hover:text-ink"
             >
               <Comment size={19} />

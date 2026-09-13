@@ -34,6 +34,7 @@ import Messages from './screens/Messages.jsx'
 import EditProfile from './screens/EditProfile.jsx'
 import PlayerProfile from './screens/PlayerProfile.jsx'
 import Welcome from './screens/Welcome.jsx'
+import Auth from './screens/Auth.jsx'
 import { CLIPS, CLIP_COMMENTS, ME, PLANNED } from './social.js'
 import {
   INITIAL_FOLLOWING,
@@ -43,25 +44,86 @@ import {
   openSessionWith,
   openSessions,
 } from './lib/social.js'
+import { useAuth } from './lib/auth.jsx'
+import { useFollows } from './lib/useFollows.js'
+import { useConversation, useInbox } from './lib/useConversation.js'
+import { hueFromProfile } from './lib/accounts.js'
 
 /* The summary is only interesting if a session has some length to it, and a
    reviewer clicks through in seconds. Check-in is therefore backdated by the
    42 minutes the sketch shows, and still counts up in real time from there. */
 const DEMO_SESSION_OFFSET_MIN = 42
 
-/* No backend, so delivery is simulated - but deterministically, and only in
-   the one direction a phone can actually confirm on its own. */
-const DELIVERY_DELAY_MS = 1200
+/* The gate.
 
+   Who you are is decided before anything else renders. While the stored
+   session is being restored there is a one-line screen; with no session the
+   welcome and then sign in; with one, the prototype. The prototype is keyed
+   by user id, so signing out or switching accounts unmounts it and every
+   piece of per-user state - the open thread, the profile being looked at,
+   the navigation trail - goes with it. Nothing of the previous person is
+   left on screen.
+
+   The welcome screen is shown once per page load to people who are not
+   signed in. It is not stored anywhere, so a field-study participant on a
+   fresh reload always starts there; a returning account holder never sees it
+   because their session is restored first. */
 export default function App() {
+  const auth = useAuth()
+  const [entered, setEntered] = useState(false)
+  /* Only offered when Supabase is not configured, so the prototype can still
+     be walked through on a machine without the two env values. */
+  const [guest, setGuest] = useState(false)
+  const [game, setGame] = useState(DEFAULT_GAME)
+
+  if (auth.status === 'checking') {
+    return (
+      <Frame>
+        <Splash text="Checking session…" />
+      </Frame>
+    )
+  }
+
+  if (auth.status !== 'signed-in' && !guest) {
+    if (!entered) {
+      return (
+        <Frame>
+          <Welcome game={game} onGame={setGame} onContinue={() => setEntered(true)} />
+        </Frame>
+      )
+    }
+    return (
+      <Frame>
+        <Auth
+          configured={auth.configured}
+          onSignIn={auth.signIn}
+          onSignUp={auth.signUp}
+          onBack={() => setEntered(false)}
+          onGuest={auth.configured ? null : () => setGuest(true)}
+        />
+      </Frame>
+    )
+  }
+
+  return <Prototype key={auth.user?.id ?? 'guest'} auth={auth} initialGame={game} />
+}
+
+function Splash({ text }) {
+  return (
+    <div className="flex h-full items-center justify-center bg-surface">
+      <p role="status" className="text-xs text-ink-subtle">
+        {text}
+      </p>
+    </div>
+  )
+}
+
+function Prototype({ auth, initialGame }) {
   const [arcades, setArcades] = useState(ARCADES)
-  /* Not persisted on purpose: a reload starts every participant at the
-     same first screen. */
-  const [welcomed, setWelcomed] = useState(false)
   const [tab, setTab] = useState(TAB_IDS[0])
   const [view, setView] = useState(TAB_IDS[0])
   const [arcadeView, setArcadeView] = useState('list')
-  const [game, setGame] = useState(DEFAULT_GAME)
+  const [game, setGame] = useState(initialGame ?? DEFAULT_GAME)
   const [modal, setModal] = useState(null)
   const [activeId, setActiveId] = useState(null)
   const [scanMethod, setScanMethod] = useState('qr')
@@ -81,12 +143,14 @@ export default function App() {
   const [comments, setComments] = useState(CLIP_COMMENTS)
   const [queueOpen, setQueueOpen] = useState(false)
   const [soundOn, setSoundOn] = useState(() => !isMuted())
-  const [messageTo, setMessageTo] = useState(null)
+  /* The open thread: a real account ({ kind: 'real', profile }) or a seeded
+     sample player ({ kind: 'sample', handle }). Real messages live in the
+     database and are loaded by the thread itself; nothing is held here. */
+  const [chat, setChat] = useState(null)
   const [planPreset, setPlanPreset] = useState({})
-  /* Conversations survive closing the sheet, which is the whole point of a
-     thread. Keyed by handle, oldest message first. */
-  const [conversations, setConversations] = useState({})
-  /* Following is state now that it can be changed from the People screen. */
+  /* Who you follow among the SEEDED players. This drives the prototype's
+     presence, scores and planned sessions and is not the real follow graph -
+     that is `follows` below, and the two never mix. */
   const [followingHandles, setFollowingHandles] = useState(INITIAL_FOLLOWING)
   /* The pending "tell them I'm coming", and the ones already sent. */
   const [joinTarget, setJoinTarget] = useState(null)
@@ -99,7 +163,6 @@ export default function App() {
   /* Every session on Later, seeded with the ones you were invited to. Sessions
      you arrange are added here, so the invitation has somewhere to land. */
   const [planned, setPlanned] = useState(PLANNED)
-  const [messageOpener, setMessageOpener] = useState('')
   /* Where back goes. A single "the screen I came from" slot was enough while
      no two screens could open each other - then the conversation header
      started opening the profile, and the profile's Message button opened the
@@ -108,9 +171,19 @@ export default function App() {
      trap the evaluation already caught once. A stack cannot do that: every
      step is recorded, and back unwinds them in order. */
   const [history, setHistory] = useState([])
-  /* Your own handle and avatar colour are the one identity in here you own,
-     so they are state rather than a constant. */
-  const [me, setMe] = useState({ handle: ME.handle, hue: null })
+  /* Your identity is your real profile when signed in. Without an account
+     (a build with no Supabase configured) the seeded ME stands in, editable
+     for the run only. */
+  const profile = auth.profile
+  const myId = auth.user?.id ?? null
+  const [guestMe, setGuestMe] = useState({ handle: ME.handle, hue: null })
+  const me = profile
+    ? { id: profile.id, handle: profile.handle, hue: hueFromProfile(profile) }
+    : guestMe
+  /* The real follow graph: other accounts, both directions. */
+  const follows = useFollows(myId)
+  /* A real account being looked at, as opposed to a seeded player. */
+  const [realPlayer, setRealPlayer] = useState(null)
 
   /* Anything that navigates "back to the tab I came from" goes through this,
      so a renamed tab can never strand the view on an id nothing renders. */
@@ -183,52 +256,27 @@ export default function App() {
     setView('watch')
   }
 
-  /* Messaging stays mutual-only. Following someone who has not followed back
-     buys you nothing here, which is the rule the research asked for.
-
-     The one exception is a host whose open session you have joined. They
-     posted it for anyone, so a reply from anyone is what they asked for -
-     and without a way to say "running ten minutes late" the open session
-     would be a plan you cannot actually keep. */
-  function canReach(handle) {
-    return (
-      isMutual(handle, followingHandles) ||
-      Boolean(openSessionWith(handle, planned, rsvps))
+  /* Messaging is real and mutual-only: a thread with another account you
+     follow both ways, stored in the database. The seeded players have no
+     account behind them, so a Message tap on one of them opens a closed
+     thread that says so rather than a box that goes nowhere. The old
+     prototype exception for open-session hosts is not carried over - it will
+     return when open sessions themselves are stored. */
+  function openMessage(handle) {
+    /* Seeded players: the prototype's own rule still decides whether the
+       tap does anything at all. */
+    if (
+      !isMutual(handle, followingHandles) &&
+      !openSessionWith(handle, planned, rsvps)
     )
-  }
-
-  function openMessage(handle, opener = '') {
-    const reachable = canReach(handle)
-    const hasHistory = (conversations[handle] ?? []).length > 0
-    /* Who you can reach is still governed by the rules above. They do not
-       govern your own past conversations: unfollowing someone must not turn
-       a thread you can see in your inbox into a row that does nothing when
-       tapped. It opens, and it opens read-only. */
-    if (!reachable && !hasHistory) return
-    setMessageTo(handle)
-    /* A button that offers to ask a particular question opens with that
-       question in the box, rather than an empty one. */
-    setMessageOpener(reachable ? opener : '')
+      return
+    setChat({ kind: 'sample', handle })
     push('chat')
   }
 
-  function sendMessage(handle, text) {
-    const id = `m-${Date.now()}`
-    setConversations((all) => ({
-      ...all,
-      [handle]: [
-        ...(all[handle] ?? []),
-        { id, sender: 'me', text, timestamp: Date.now(), status: 'sent' },
-      ],
-    }))
-    window.setTimeout(() => {
-      setConversations((all) => ({
-        ...all,
-        [handle]: (all[handle] ?? []).map((m) =>
-          m.id === id ? { ...m, status: 'delivered' } : m
-        ),
-      }))
-    }, DELIVERY_DELAY_MS)
+  function openRealChat(target) {
+    setChat({ kind: 'real', profile: target })
+    push('chat')
   }
 
   /* "Join them" is about a person, so it asks before it acts and then says
@@ -336,8 +384,31 @@ export default function App() {
      two that are not tabs. Opening someone from People used to return you to
      the Me tab, which reads as a failed back. */
   function openPlayer(handle) {
+    setRealPlayer(null)
     setPlayerHandle(handle)
     push('player')
+  }
+
+  function openRealProfile(target) {
+    setPlayerHandle(null)
+    setRealPlayer(target)
+    push('player')
+  }
+
+  /* Edits go to the real profile when there is one. The screen shows the
+     server's answer - a taken username, most likely - under the field. */
+  async function saveProfile({ handle, hue }) {
+    if (profile) {
+      const result = await auth.updateProfile({
+        handle,
+        avatar_hue: hue === null || hue === undefined ? null : String(hue),
+      })
+      if (!result.error) goBack()
+      return result
+    }
+    setGuestMe({ handle, hue })
+    goBack()
+    return { error: null }
   }
 
   function patchVenueGame(id, gameId, patch) {
@@ -454,14 +525,6 @@ export default function App() {
       )
     : null
 
-  if (!welcomed) {
-    return (
-      <Frame>
-        <Welcome game={game} onGame={setGame} onContinue={() => setWelcomed(true)} />
-      </Frame>
-    )
-  }
-
   return (
     <Frame>
       <div className="relative flex h-full flex-col">
@@ -526,9 +589,10 @@ export default function App() {
               tabName={followsTab}
               onTab={setFollowsTab}
               onBack={goBack}
-              onOpenPlayer={openPlayer}
-              following={followingHandles}
-              onToggleFollow={toggleFollow}
+              myId={myId}
+              configured={auth.configured}
+              follows={follows}
+              onOpenProfile={openRealProfile}
               onAddPerson={() => push('addperson')}
             />
           )}
@@ -561,40 +625,37 @@ export default function App() {
               onMessage={openMessage}
               onOpenMessages={() => push('messages')}
               onAddPerson={() => push('addperson')}
-              threadCount={Object.keys(conversations).length}
             />
           )}
 
-          {view === 'chat' && messageTo && (
+          {view === 'chat' && chat?.kind === 'real' && (
+            <RealThread
+              myId={myId}
+              partner={chat.profile}
+              mutual={follows.relationship(chat.profile.id).mutual}
+              onOpenProfile={() => openRealProfile(chat.profile)}
+              onBack={goBack}
+            />
+          )}
+
+          {view === 'chat' && chat?.kind === 'sample' && (
             <Message
-              handle={messageTo}
-              messages={conversations[messageTo] ?? []}
-              opener={messageOpener}
-              mutual={isMutual(messageTo, followingHandles)}
-              via={viaLabel(openSessionWith(messageTo, planned, rsvps))}
-              onSend={(text) => sendMessage(messageTo, text)}
-              onOpenProfile={() => openPlayer(messageTo)}
+              handle={chat.handle}
+              messages={[]}
+              canReply={false}
+              subtitle="Sample player"
+              blockedNote={`${chat.handle} is a sample player from the prototype, so there is nobody to write back. Messaging works between real accounts: find people under Me, then People.`}
+              onOpenProfile={() => openPlayer(chat.handle)}
               onBack={goBack}
             />
           )}
 
           {view === 'editprofile' && (
-            <EditProfile
-              me={me}
-              onSave={(next) => {
-                setMe(next)
-                goBack()
-              }}
-              onBack={goBack}
-            />
+            <EditProfile me={me} onSave={saveProfile} onBack={goBack} />
           )}
 
           {view === 'messages' && (
-            <Messages
-              conversations={conversations}
-              onOpen={openMessage}
-              onBack={goBack}
-            />
+            <Inbox myId={myId} onOpen={openRealChat} onBack={goBack} />
           )}
 
           {view === 'plan' && (
@@ -625,7 +686,32 @@ export default function App() {
             />
           )}
 
-          {view === 'player' && player && (
+          {view === 'player' && realPlayer && (
+            <PlayerProfile
+              player={{
+                id: realPlayer.id,
+                handle: realPlayer.handle,
+                hue: hueFromProfile(realPlayer),
+                games: [],
+                songs: [],
+                scores: null,
+                at: null,
+                real: true,
+              }}
+              relationship={follows.relationship(realPlayer.id)}
+              arcade={null}
+              joinedAt={null}
+              onBack={goBack}
+              onOpenArcade={openArcade}
+              onJoin={() => {}}
+              onUnsendJoin={() => {}}
+              onMessage={() => openRealChat(realPlayer)}
+              onToggleFollow={() => follows.toggle(realPlayer.id)}
+              onPlan={() => {}}
+            />
+          )}
+
+          {view === 'player' && !realPlayer && player && (
             <PlayerProfile
               player={player}
               relationship={playerRelationship}
@@ -645,7 +731,9 @@ export default function App() {
           {view === 'me' && (
             <MeTab
               me={me}
+              account={auth.user}
               onEditProfile={() => push('editprofile')}
+              onSignOut={auth.signOut}
               reports={reports}
               sessions={3}
               visible={visible}
@@ -654,7 +742,8 @@ export default function App() {
                 setFollowsTab(t)
                 push('follows')
               }}
-              following={followingHandles}
+              followers={follows.followers.length}
+              following={follows.following.length}
               likedCount={likedIds.length}
               onOpenLiked={() => push('liked')}
               soundOn={soundOn}
@@ -843,6 +932,48 @@ export default function App() {
         )}
       </div>
     </Frame>
+  )
+}
+
+/* A live thread with another account.
+
+   The conversation hook lives in this component rather than in the shell so
+   its realtime channel opens when the thread is on screen and closes when it
+   is not - going back, opening a different person, or signing out all
+   unmount it. A thread with someone you no longer follow both ways is closed
+   for replies and says why. */
+function RealThread({ myId, partner, mutual, onOpenProfile, onBack }) {
+  const thread = useConversation(myId, partner.id, mutual)
+  return (
+    <Message
+      handle={partner.handle}
+      hue={hueFromProfile(partner)}
+      messages={thread.messages}
+      canReply={mutual}
+      subtitle={mutual ? 'You follow each other' : 'You don\u2019t follow each other'}
+      blockedNote={`You and ${partner.handle} don\u2019t follow each other, so you can\u2019t send messages. Follow each other to talk.`}
+      loading={thread.loading}
+      error={thread.error}
+      sending={thread.sending}
+      sendError={thread.sendError}
+      onSend={thread.send}
+      onOpenProfile={onOpenProfile}
+      onBack={onBack}
+    />
+  )
+}
+
+function Inbox({ myId, onOpen, onBack }) {
+  const inbox = useInbox(myId)
+  return (
+    <Messages
+      threads={inbox.threads}
+      loading={inbox.loading}
+      error={inbox.error}
+      signedIn={Boolean(myId)}
+      onOpen={onOpen}
+      onBack={onBack}
+    />
   )
 }
 

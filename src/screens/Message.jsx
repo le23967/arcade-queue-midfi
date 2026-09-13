@@ -7,9 +7,14 @@ import { Send, ArrowLeft } from '../components/Icons.jsx'
    An earlier version deliberately had no contact action at all, on the team's
    own finding that "the app can't force our users to just go up to someone
    they haven't met". That was about strangers, and it still holds: nothing
-   here reaches a person you do not already follow both ways - except a host
-   who posted a session open to anyone and whose session you joined. They
-   went up to you, in effect, and the header says so.
+   here reaches a person you do not already follow both ways.
+
+   The messages are real now. This screen does not know or care where they
+   come from - it is handed a list, a flag for whether replying is allowed,
+   and a line to show under the name - so the same screen can show a live
+   thread with another account and a closed one with a seeded sample player.
+   The old prototype used a timer to turn Sent into Delivered; nothing here
+   claims a status the database has not recorded.
 
    Consultation feedback was that presence has to lead somewhere: reaching out,
    joining them, or asking about the venue they are at. Between mutuals that is
@@ -47,20 +52,25 @@ function timeOf(timestamp) {
 
 export default function Message({
   handle,
+  hue = null,
   messages = [],
   opener = '',
-  mutual = true,
-  /* The open session that lets you reach a host you do not follow both ways,
-     as one line of text, or null. */
-  via = null,
+  /* Whether the composer is offered at all. */
+  canReply = true,
+  /* One line under the name: the relationship, or why replying is off. */
+  subtitle = '',
+  blockedNote = '',
+  loading = false,
+  error = null,
+  sending = false,
+  sendError = null,
   onSend,
   onOpenProfile,
   onBack,
 }) {
-  const canReply = mutual || Boolean(via)
   const [text, setText] = useState(opener)
   const endRef = useRef(null)
-  const canSend = text.trim().length > 0
+  const canSend = text.trim().length > 0 && !sending && !loading
   /* Openers are for opening. Once there is a conversation, or once you have
      started typing, they are just clutter above the field. */
   const showOpeners = messages.length === 0 && text === ''
@@ -69,10 +79,12 @@ export default function Message({
     endRef.current?.scrollIntoView({ block: 'end' })
   }, [messages.length])
 
-  function send() {
+  /* The box only clears once the send actually went through, so a failed
+     send leaves the words where they were typed. */
+  async function send() {
     if (!canSend) return
-    onSend(text.trim())
-    setText('')
+    const result = await onSend(text.trim())
+    if (!result || !result.error) setText('')
   }
 
   return (
@@ -95,17 +107,13 @@ export default function Message({
           aria-label={`Open ${handle}'s profile`}
           className="-mx-1.5 flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-1.5 py-1 text-left transition-colors duration-150 hover:bg-sunken"
         >
-          <Avatar handle={handle} size={36} />
+          <Avatar handle={handle} hue={hue} size={36} />
           <span className="min-w-0 flex-1">
             <span className="block truncate font-display text-[15px] font-semibold leading-tight text-ink">
               {handle}
             </span>
             <span className="block truncate text-[11px] leading-tight text-ink-muted">
-              {mutual
-                ? 'You follow each other'
-                : via
-                  ? `Open session at ${via}`
-                  : 'You no longer follow each other'}
+              {subtitle}
             </span>
           </span>
         </button>
@@ -114,7 +122,15 @@ export default function Message({
       {/* The conversation sits on its own ground, so it reads as a place
           rather than as the middle of a form. */}
       <div className="flex-1 overflow-y-auto bg-sunken px-4 py-3">
-        {messages.length === 0 ? (
+        {error ? (
+          <p role="alert" className="py-6 text-center text-xs font-medium text-live">
+            {error}
+          </p>
+        ) : loading ? (
+          <p role="status" className="py-6 text-center text-xs text-ink-subtle">
+            Loading messages…
+          </p>
+        ) : messages.length === 0 ? (
           <p className="py-6 text-center text-xs text-ink-subtle">
             No messages yet. Anything you send stays here.
           </p>
@@ -153,6 +169,11 @@ export default function Message({
 
       {canReply ? (
         <div className="border-t border-line bg-surface px-3 pb-3 pt-2.5">
+          {sendError && (
+            <p role="alert" className="mb-2 text-xs font-medium text-live">
+              {sendError}
+            </p>
+          )}
           {showOpeners && (
             <div className="no-scrollbar -mx-3 mb-2.5 flex gap-1.5 overflow-x-auto px-3">
               {OPENERS.map((o) => (
@@ -175,7 +196,8 @@ export default function Message({
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && send()}
-              placeholder="Message"
+              placeholder={sending ? 'Sending…' : 'Message'}
+              disabled={loading || Boolean(error)}
               aria-label={`Message ${handle}`}
               className="min-w-0 flex-1 rounded-full border border-line-strong bg-surface px-4 py-2.5 text-sm text-ink outline-none transition-colors duration-150 placeholder:text-ink-subtle focus:border-brand-500"
             />
@@ -195,11 +217,11 @@ export default function Message({
           </div>
         </div>
       ) : (
-        /* The rule holds - you cannot reach someone you no longer follow both
-           ways - but your own history stays readable, and says why. */
+        /* The rule holds - you cannot reach someone you do not follow both
+           ways - and the screen says why rather than hiding the box. */
         <p className="border-t border-line bg-surface px-4 py-4 text-center text-xs leading-relaxed text-ink-muted">
-          You and {handle} no longer follow each other, so you can&rsquo;t send
-          messages. Follow them back to carry on.
+          {blockedNote ||
+            `You and ${handle} don\u2019t follow each other, so you can\u2019t send messages.`}
         </p>
       )}
     </Screen>

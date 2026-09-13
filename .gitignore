@@ -10,3 +10,13 @@ dist
 
 # Course material belongs to the unit, not in a public repo.
 *.pdf
+
+# Supabase credentials live in local env files only. The example file with
+# empty placeholders is the one that ships.
+.env
+.env.*
+!.env.example
+
+# Supabase CLI local state, if the CLI is ever used here.
+supabase/.temp
+supabase/.branches

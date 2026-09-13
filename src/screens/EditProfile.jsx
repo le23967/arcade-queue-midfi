@@ -9,7 +9,7 @@ import {
   AVATAR_HUE_COUNT,
 } from '../components/ui.jsx'
 import { Check } from '../components/Icons.jsx'
-import { allPeople } from '../lib/social.js'
+import { validateHandle, HANDLE_MAX } from '../lib/accounts.js'
 
 /* Editing your own profile.
 
@@ -21,29 +21,34 @@ import { allPeople } from '../lib/social.js'
    the prototype already follows: no image files ship with it, and avatars are
    drawn from initials and a hue. A picker over that palette is the honest
    version of "change your avatar" here, and it still does the job a picture
-   does - it makes you findable at a glance in a list of thirty people. */
-const MAX_HANDLE = 16
+   does - it makes you findable at a glance in a list of thirty people.
+
+   Saving writes to your real profile. Whether a username is taken is the
+   database's call - it is unique there, case-insensitively - so the answer
+   comes back from the save rather than from a list held on the phone. */
+const MAX_HANDLE = HANDLE_MAX
 
 export default function EditProfile({ me, onSave, onBack }) {
   const [handle, setHandle] = useState(me.handle)
   const [hue, setHue] = useState(me.hue)
+  const [saving, setSaving] = useState(false)
+  const [serverError, setServerError] = useState(null)
 
-  const trimmed = handle.trim()
-  const taken = allPeople().some(
-    (p) => p.handle.toLowerCase() === trimmed.toLowerCase()
-  )
-  const badCharacters = /[^A-Za-z0-9_]/.test(trimmed)
-
-  const problem =
-    trimmed === ''
-      ? 'Pick a username.'
-      : badCharacters
-        ? 'Letters, numbers and underscores only.'
-        : taken
-          ? `${trimmed} is already taken.`
-          : null
+  const check = validateHandle(handle)
+  const trimmed = check.handle
+  const problem = check.ok ? serverError : check.problem
 
   const changed = trimmed !== me.handle || hue !== me.hue
+
+  /* onSave may be asynchronous and may come back with a reason it failed,
+     which belongs under the field the person can fix. */
+  async function save() {
+    setSaving(true)
+    setServerError(null)
+    const result = await onSave({ handle: trimmed, hue })
+    setSaving(false)
+    if (result?.error) setServerError(result.error)
+  }
 
   return (
     <Screen>
@@ -69,7 +74,10 @@ export default function EditProfile({ me, onSave, onBack }) {
             type="text"
             value={handle}
             maxLength={MAX_HANDLE}
-            onChange={(e) => setHandle(e.target.value)}
+            onChange={(e) => {
+              setHandle(e.target.value)
+              setServerError(null)
+            }}
             autoComplete="off"
             spellCheck={false}
             className={`w-full rounded-xl border px-3 py-2.5 text-sm text-ink outline-none transition-colors duration-150 placeholder:text-ink-subtle ${
@@ -117,11 +125,8 @@ export default function EditProfile({ me, onSave, onBack }) {
       </Body>
 
       <div className="space-y-2 border-t border-line p-4">
-        <PrimaryButton
-          disabled={Boolean(problem) || !changed}
-          onClick={() => onSave({ handle: trimmed, hue })}
-        >
-          {changed ? 'Save' : 'Nothing to save'}
+        <PrimaryButton disabled={Boolean(problem) || !changed || saving} onClick={save}>
+          {saving ? 'Saving…' : changed ? 'Save' : 'Nothing to save'}
         </PrimaryButton>
         <SecondaryButton onClick={onBack}>Cancel</SecondaryButton>
       </div>

@@ -1,5 +1,6 @@
 import { Screen, TopBar, Body, Avatar } from '../components/ui.jsx'
 import { Chevron } from '../components/Icons.jsx'
+import { hueFromProfile } from '../lib/accounts.js'
 
 /* Conversations.
 
@@ -11,8 +12,13 @@ import { Chevron } from '../components/Icons.jsx'
    going to look for them in your follows, which is recall, not recognition.
 
    This is the list that was missing. Every conversation is here, newest first,
-   whether or not the person is at an arcade right now. */
-const STATUS_MARK = { sent: '✓', delivered: '✓✓', read: '✓✓' }
+   whether or not the person is at an arcade right now.
+
+   Threads come from the database now: each one is a real conversation with
+   another account, carrying the other person's profile and the last message.
+   Seeded sample players never appear here, because there is nobody behind
+   them to have written back. */
+const STATUS_MARK = { sent: '✓', read: '✓✓' }
 
 function timeOf(timestamp) {
   const then = new Date(timestamp)
@@ -22,67 +28,78 @@ function timeOf(timestamp) {
     : then.toLocaleDateString([], { day: 'numeric', month: 'short' })
 }
 
-export default function Messages({ conversations, onOpen, onBack }) {
-  const threads = Object.entries(conversations)
-    .map(([handle, messages]) => ({
-      handle,
-      last: messages[messages.length - 1],
-      count: messages.length,
-    }))
-    .filter((t) => t.last)
-    .sort((a, b) => b.last.timestamp - a.last.timestamp)
-
+export default function Messages({
+  threads = [],
+  loading = false,
+  error = null,
+  signedIn = true,
+  onOpen,
+  onBack,
+}) {
   return (
     <Screen>
       <TopBar title="Messages" onBack={onBack} />
 
       <Body>
-        {threads.length === 0 ? (
+        {!signedIn ? (
+          <div className="px-6 py-10 text-center">
+            <p className="font-display text-sm font-semibold text-ink">Sign in to message</p>
+            <p className="mt-1 text-xs leading-relaxed text-ink-muted">
+              Messages are between real accounts that follow each other.
+            </p>
+          </div>
+        ) : error ? (
+          <p role="alert" className="px-6 py-10 text-center text-xs font-medium text-live">
+            {error}
+          </p>
+        ) : loading ? (
+          <p role="status" className="px-6 py-10 text-center text-xs text-ink-subtle">
+            Loading messages…
+          </p>
+        ) : threads.length === 0 ? (
           <div className="px-6 py-10 text-center">
             <p className="font-display text-sm font-semibold text-ink">
               No conversations yet
             </p>
             <p className="mt-1 text-xs leading-relaxed text-ink-muted">
-              Open someone you follow both ways &mdash; from the map, from Now,
-              or from their profile &mdash; and tap Message. Whatever you send
-              stays here.
+              Open someone you follow both ways from People or their profile
+              and tap Message. Whatever you send stays here.
             </p>
           </div>
         ) : (
           <ul>
-            {threads.map(({ handle, last, count }) => (
-              <li key={handle}>
+            {threads.map(({ id, partner, last }) => (
+              <li key={id}>
                 <button
                   type="button"
-                  onClick={() => onOpen(handle)}
+                  onClick={() => onOpen(partner)}
                   className="flex w-full items-center gap-3 border-b border-line px-4 py-3 text-left transition-colors duration-150 hover:bg-sunken"
                 >
-                  <Avatar handle={handle} size={44} />
+                  <Avatar handle={partner.handle} hue={hueFromProfile(partner)} size={44} />
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline gap-2">
                       <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold text-ink">
-                        {handle}
+                        {partner.handle}
                       </span>
-                      <span className="flex-none text-[11px] tabular-nums text-ink-subtle">
-                        {timeOf(last.timestamp)}
-                      </span>
+                      {last && (
+                        <span className="flex-none text-[11px] tabular-nums text-ink-subtle">
+                          {timeOf(last.timestamp)}
+                        </span>
+                      )}
                     </span>
                     <span className="mt-0.5 flex items-center gap-1 text-xs text-ink-muted">
-                      {last.sender === 'me' && (
+                      {last?.sender === 'me' && (
                         <span
                           className={`flex-none tabular-nums ${
-                            last.status === 'sent' ? 'text-ink-subtle' : 'text-brand-600'
+                            last.status === 'read' ? 'text-brand-600' : 'text-ink-subtle'
                           }`}
                         >
                           {STATUS_MARK[last.status] ?? ''}
                         </span>
                       )}
-                      <span className="min-w-0 flex-1 truncate">{last.text}</span>
-                      {count > 1 && (
-                        <span className="flex-none tabular-nums text-ink-subtle">
-                          {count}
-                        </span>
-                      )}
+                      <span className="min-w-0 flex-1 truncate">
+                        {last ? last.text : 'No messages yet'}
+                      </span>
                     </span>
                   </span>
                   <Chevron size={16} />

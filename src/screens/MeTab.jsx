@@ -17,13 +17,20 @@ import {
   Users,
 } from '../components/Icons.jsx'
 import { ME } from '../social.js'
-import { followCounts } from '../lib/social.js'
 
 const WEEKLY_GOAL = 4
 
+/* The Me tab.
+
+   `me` is the signed-in account's real profile - handle and colour from the
+   database - and the two counts are real follow edges. The games, songs and
+   the weekly goal below are still prototype data: the app does not record
+   play yet, so they are labelled as sample rather than shown as yours. */
 export default function MeTab({
   me,
+  account = null,
   onEditProfile,
+  onSignOut,
   reports,
   sessions,
   visible,
@@ -31,11 +38,11 @@ export default function MeTab({
   soundOn,
   onSound,
   onOpenFollows,
-  following: followingHandles,
+  followers = 0,
+  following = 0,
   likedCount,
   onOpenLiked,
 }) {
-  const { followers, following } = followCounts(followingHandles)
   const safeSessions = Math.max(0, Number(sessions) || 0)
   const safeReports = Math.max(0, Number(reports) || 0)
   const safeLikedCount = Math.max(0, Number(likedCount) || 0)
@@ -65,7 +72,7 @@ export default function MeTab({
                   <Chip tone="brand">Sydney</Chip>
                 </span>
                 <span className="mt-0.5 block truncate text-xs text-ink-muted">
-                  {ME.games.join(' · ')}
+                  {account?.email ?? 'Not signed in'}
                 </span>
               </span>
               <span className="flex flex-none items-center gap-1 text-xs font-semibold text-brand-700">
@@ -130,11 +137,12 @@ export default function MeTab({
 
           <Disclosure
             title="Your player card"
-            hint={`${ME.games.join(', ')} · shared with friends`}
+            hint={`${ME.games.join(', ')} · sample data`}
             icon={<Bars size={17} />}
           >
             <p className="mb-3 text-xs leading-relaxed text-ink-muted">
               Friends can use these picks to find a game or song you both enjoy.
+              These are sample picks for now; choosing your own comes later.
             </p>
             <div className="grid grid-cols-2 gap-2">
               <Preference title="Main games" Icon={Bars} items={ME.games} />
@@ -198,6 +206,18 @@ export default function MeTab({
               </p>
             </div>
           </Disclosure>
+
+          {/* Signing out is the one action here that is not a setting, so it
+              sits on its own at the end rather than inside a disclosure. */}
+          {account && (
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm font-semibold text-live transition-colors duration-150 hover:bg-live-bg"
+            >
+              Sign out
+            </button>
+          )}
         </div>
       </Body>
     </Screen>

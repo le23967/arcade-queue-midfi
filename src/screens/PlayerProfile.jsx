@@ -36,7 +36,13 @@ import {
    you have not followed back is on record as a handle and a game and nothing
    else, so this screen has to render that person as readily as a mutual whose
    scores it has had for months. It reads the relationship from explicit state
-   rather than inferring it from which fields happen to be missing. */
+   rather than inferring it from which fields happen to be missing.
+
+   A real account arrives here as `player.real`. It has a handle, a colour
+   and a relationship and nothing else yet - no games, songs, scores or
+   presence, because none of that is stored for accounts. For a real mutual
+   the only action is Message, since joining them at an arcade and planning a
+   session still run on prototype data. */
 export default function PlayerProfile({
   player,
   relationship,
@@ -83,13 +89,17 @@ export default function PlayerProfile({
 
       <Body>
         <div className="flex items-center gap-3 border-b border-line px-4 py-4">
-          <Avatar handle={player.handle} size={56} live={Boolean(arcade)} />
+          <Avatar handle={player.handle} hue={player.hue ?? null} size={56} live={Boolean(arcade)} />
           <div className="min-w-0">
             <p className="font-display text-lg font-semibold text-ink">
               {player.handle}
             </p>
             <p className="truncate text-xs text-ink-muted">
-              {playerGames.length > 0 ? playerGames.join(' · ') : 'No games listed'}
+              {player.real
+                ? 'Account'
+                : playerGames.length > 0
+                  ? playerGames.join(' · ')
+                  : 'No games listed'}
             </p>
           </div>
           <Chip className="ml-auto" tone={rel.mutual ? 'brand' : 'default'}>
@@ -211,18 +221,26 @@ export default function PlayerProfile({
                 </button>
               </div>
             )}
-            {arcade ? (
-              <PrimaryButton onClick={() => onJoin(player.handle, arcade.id)}>
-                Join them at {arcade.short}
+            {player.real ? (
+              <PrimaryButton onClick={() => onMessage(player.handle)}>
+                Message
               </PrimaryButton>
             ) : (
-              <PrimaryButton onClick={() => onPlan({ invite: player.handle })}>
-                Plan a session together
-              </PrimaryButton>
+              <>
+                {arcade ? (
+                  <PrimaryButton onClick={() => onJoin(player.handle, arcade.id)}>
+                    Join them at {arcade.short}
+                  </PrimaryButton>
+                ) : (
+                  <PrimaryButton onClick={() => onPlan({ invite: player.handle })}>
+                    Plan a session together
+                  </PrimaryButton>
+                )}
+                <SecondaryButton onClick={() => onMessage(player.handle)}>
+                  Message
+                </SecondaryButton>
+              </>
             )}
-            <SecondaryButton onClick={() => onMessage(player.handle)}>
-              Message
-            </SecondaryButton>
           </>
         ) : (
           <>
