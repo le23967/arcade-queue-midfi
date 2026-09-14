@@ -141,10 +141,14 @@ profile opens - a request if they do not follow you back - so nothing here
 claims to have told someone without having done it.
 
 Checking in works the same way. Joining a queue puts you on the map for the
-people you follow both ways, live, and comes back after a reload; *Join them*
-sends the person a message that you are on your way; checking out takes you
-off their map. Without an account, the map and Later show the prototype's
-sample players instead.
+people you follow both ways, live, with your queue position, and comes back
+after a reload; *Join them* sends the person a message that you are on your
+way, which lands as a banner on whatever screen they are looking at; checking
+out takes you off their map. Who may see your arcade is your own choice under
+Me: the people you follow back, or anyone who follows you. The default stays
+mutual, which is what the research asked for; opening it wider is a decision
+the person being seen makes, never the person looking. Without an account,
+the map and Later show the prototype's sample players instead.
 
 A session can also be opened to anyone on the app. The host picks *Anyone on
 the app* instead of *People I ask*, adds a note if they want one, and it is

@@ -68,11 +68,15 @@ filename order:
    hidden reaches mutuals live. A closed session is visible to its host and
    the people on it; an open one to anyone signed in; presence only to
    people you follow both ways, while you are checked in and visible.
+5. `20260914062751_presence_audience.sql` — a per-person choice of who may
+   see their arcade: the people they follow back (the default) or anyone
+   who follows them. Stored on the profile; the presence policy and the
+   notice trigger read it.
 
 Either:
 
 - **SQL editor** — open **SQL Editor** in the dashboard, paste each file in
-  turn, and run it. All four are safe to run more than once.
+  turn, and run it. All five are safe to run more than once.
 - **Supabase CLI** — with the CLI installed and logged in,
   `supabase link --project-ref <your ref>` then `supabase db push`.
 
@@ -141,9 +145,12 @@ function is not reachable and nothing is deleted.
 6. Reload either window and everything is still there.
 7. Once A and B follow each other: in A, **Arcades → a venue → Join queue →
    Manual → Join queue**. B's Circle map now shows A at that venue without a
-   reload, and the list has **Join** on A's row; **Notify them** sends A a
-   message. Reload A and the queue banner is still there. **Check Out** in A
-   takes A off B's map.
+   reload, with A's queue position, and the list has **Join** on A's row;
+   **Notify them** sends A a message, which A sees as a banner at the top of
+   whatever screen A is on. Reload A and the queue banner is still there.
+   **Check Out** in A takes A off B's map. If B follows A but A does not
+   follow B back, B sees nothing until A picks **Anyone who follows me**
+   under **Me → Privacy and sound → Who can see where you are**.
 8. In A, **Circle → Later → Plan**, pick B, **Send to 1**. B's Later shows the
    session as **Invited you** at once; **I'm in** on it tells A and A's card
    counts B as going. **Change** the time in A and B's card changes, with a

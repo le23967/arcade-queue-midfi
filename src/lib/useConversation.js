@@ -231,6 +231,9 @@ export function useInbox(myId) {
   const [threads, setThreads] = useState([])
   const [loading, setLoading] = useState(Boolean(myId))
   const [error, setError] = useState(null)
+  /* The last message someone else sent you while this was mounted, so the
+     shell can say so wherever you are. Cleared by whoever shows it. */
+  const [incoming, setIncoming] = useState(null)
   const refreshRef = useRef(null)
 
   useEffect(() => {
@@ -252,8 +255,18 @@ export function useInbox(myId) {
     refreshRef.current = refresh
 
     refresh()
-    const unsubscribe = subscribeToInboxChanges(myId, () => {
-      if (active) refresh()
+    const unsubscribe = subscribeToInboxChanges(myId, (change) => {
+      if (!active) return
+      if (change?.table === 'messages' && change.event === 'INSERT' && change.row?.sender_id !== myId) {
+        setIncoming({
+          id: change.row.id,
+          conversationId: change.row.conversation_id,
+          senderId: change.row.sender_id,
+          text: change.row.text,
+          at: Date.parse(change.row.created_at),
+        })
+      }
+      refresh()
     })
 
     return () => {
@@ -267,5 +280,7 @@ export function useInbox(myId) {
     await refreshRef.current?.()
   }, [])
 
-  return { threads, loading, error, refresh }
+  const clearIncoming = useCallback(() => setIncoming(null), [])
+
+  return { threads, loading, error, refresh, incoming, clearIncoming }
 }

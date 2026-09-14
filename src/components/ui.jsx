@@ -644,6 +644,43 @@ export function SheetBody({ children, className = '' }) {
   )
 }
 
+/* A line at the top of the screen about something that just happened
+   somewhere else in the app - a message arriving while you are on the
+   map. It is a status for assistive technology, a button for everyone
+   else, and it goes away on its own so it never has to be managed. */
+export function AlertBanner({ avatar, title, text, onOpen, onClose, openLabel }) {
+  return (
+    <div className="anim-row pointer-events-none absolute inset-x-0 top-0 z-40 flex justify-center px-3 pt-2">
+      <div
+        role="status"
+        aria-live="polite"
+        className="pointer-events-auto flex w-full max-w-[360px] items-center gap-2 rounded-2xl border border-line bg-surface/95 p-2 pl-3 shadow-2xl backdrop-blur"
+      >
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={openLabel}
+          className="flex min-h-[44px] min-w-0 flex-1 items-center gap-2.5 rounded-xl text-left"
+        >
+          {avatar}
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold text-ink">{title}</span>
+            <span className="block truncate text-xs text-ink-muted">{text}</span>
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Dismiss"
+          className="flex h-11 w-11 flex-none items-center justify-center rounded-full text-ink-muted transition-colors duration-150 hover:bg-sunken hover:text-ink"
+        >
+          <Close size={18} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export function Modal({ title, children }) {
   return (
     <div className="anim-scrim absolute inset-0 z-20 flex items-end bg-ink/40">

@@ -3,6 +3,7 @@ import {
   Body,
   Chip,
   Screen,
+  Seg,
   Toggle,
   Disclosure,
   TopBar,
@@ -36,6 +37,16 @@ export default function MeTab({
   sessions,
   visible,
   onVisible,
+  /* Who may see your arcade: 'mutuals' or 'followers'. Null without an
+     account, when there is nobody to share it with anyway. */
+  audience = null,
+  onAudience,
+  /* System notifications for messages that arrive while the app is in
+     the background. Only offered where the browser can do it. */
+  alerts = false,
+  alertsSupported = false,
+  alertsBlocked = false,
+  onAlerts,
   soundOn,
   onSound,
   onOpenFollows,
@@ -180,17 +191,64 @@ export default function MeTab({
 
           <Disclosure
             title="Privacy and sound"
-            hint={`${visible ? 'Visible to mutuals' : 'Hidden'} · sound ${soundOn ? 'on' : 'off'}`}
+            hint={`${visible ? (audience === 'followers' ? 'Seen by followers' : 'Seen by mutuals') : 'Hidden'} · sound ${soundOn ? 'on' : 'off'}`}
             icon={<Shield size={17} />}
           >
             <Toggle
               checked={visible}
               onChange={onVisible}
-              label={visible ? 'Visible to mutuals' : 'Hidden from mutuals'}
+              label={visible ? 'Sharing your arcade' : 'Hidden'}
               hint={
-                visible ? 'Your current arcade can be seen.' : 'Your arcade stays private.'
+                visible ? 'People below can see where you are checked in.' : 'Nobody can see where you are.'
               }
             />
+
+            {/* Presence was always for people who follow each other, and
+                that is still the default. Opening it to everyone who
+                follows you is the person's own call - it is their arcade
+                being shared - which is what keeps the research finding
+                about strangers intact. */}
+            {audience && (
+              <div className="mt-2 rounded-xl border border-line bg-surface p-3">
+                <p className="text-sm font-medium text-ink">Who can see where you are</p>
+                <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Who can see where you are">
+                  <Seg
+                    on={audience === 'mutuals'}
+                    aria-pressed={audience === 'mutuals'}
+                    onClick={() => onAudience?.('mutuals')}
+                  >
+                    People I follow back
+                  </Seg>
+                  <Seg
+                    on={audience === 'followers'}
+                    aria-pressed={audience === 'followers'}
+                    onClick={() => onAudience?.('followers')}
+                  >
+                    Anyone who follows me
+                  </Seg>
+                </div>
+                <p className="mt-2 text-xs leading-relaxed text-ink-muted">
+                  {audience === 'followers'
+                    ? 'Everyone who follows you can see which arcade you are at, whether or not you follow them back.'
+                    : 'Only people you follow, who follow you too, can see which arcade you are at.'}
+                </p>
+              </div>
+            )}
+
+            {alertsSupported && (
+              <div className="mt-2">
+                <Toggle
+                  checked={alerts}
+                  onChange={onAlerts}
+                  label={alerts ? 'Background alerts on' : 'Background alerts off'}
+                  hint={
+                    alertsBlocked
+                      ? 'Blocked in your browser settings. Allow notifications for this site to turn them on.'
+                      : 'A notification when a message arrives while the app is not on screen. The browser asks you first.'
+                  }
+                />
+              </div>
+            )}
 
             {/* Sound is on by default, but an arcade is loud and a lecture
                 theatre is not, so it has to be one tap away. */}
@@ -199,7 +257,7 @@ export default function MeTab({
                 checked={soundOn}
                 onChange={onSound}
                 label={soundOn ? 'Sound on' : 'Sound off'}
-                hint="Short cues when you check in, when you are up, and when you like a clip."
+                hint="Short cues when you check in, when you are up, when a message arrives, and when you like a clip."
               />
             </div>
 

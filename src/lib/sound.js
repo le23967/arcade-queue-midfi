@@ -80,6 +80,8 @@ const CUES = {
   success: [[523, 0, 0.11, 0.22], [659, 0.085, 0.11, 0.22], [988, 0.17, 0.26, 0.24]],
   /* Your turn, and you are probably looking at something else. */
   alert: [[880, 0, 0.14, 0.26], [660, 0.16, 0.14, 0.24], [880, 0.32, 0.28, 0.26]],
+  /* Someone wrote to you. Two notes, quieter than being called up. */
+  message: [[659, 0, 0.09, 0.16], [988, 0.09, 0.16, 0.16]],
 }
 
 export function playSound(name) {

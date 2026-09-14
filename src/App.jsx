@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ARCADES, QUEUE_AHEAD, DEFAULT_GAME } from './data.js'
 import {
   estimateWaitMin,
@@ -7,7 +7,7 @@ import {
   otherGamesAt,
 } from './lib/queue.js'
 import { Frame, TabBar, SessionBanner, TAB_IDS, tabLabel } from './components/Frame.jsx'
-import { PrimaryButton, SecondaryButton } from './components/ui.jsx'
+import { PrimaryButton, SecondaryButton, AlertBanner, Avatar } from './components/ui.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 
 import Arcades from './screens/Arcades.jsx'
@@ -245,6 +245,47 @@ function Prototype({ auth, initialGame }) {
     () => (myId ? presence.present : presentFriends(followingHandles)),
     [myId, presence.present, followingHandles]
   )
+  /* Why the map may be empty, said once, where the emptiness is. */
+  const mutualCount = useMemo(() => {
+    const followerIds = new Set(follows.followers.map((p) => p.id))
+    return follows.following.filter((p) => followerIds.has(p.id)).length
+  }, [follows.following, follows.followers])
+  const presenceHint = !myId
+    ? null
+    : mutualCount === 0
+      ? 'Arcades are shared between people who follow each other, or by anyone who has opened theirs to all followers. Follow someone who follows you to start.'
+      : null
+  /* Whether to raise a system notification for a message that arrives
+     while the app is in the background. Off until the person turns it on,
+     which is when the browser asks them. */
+  const [alertsOn, setAlertsOn] = useState(() => {
+    try {
+      return window.localStorage.getItem('arcade-circle:alerts') === 'on'
+    } catch {
+      return false
+    }
+  })
+  async function setAlerts(on) {
+    if (!on) {
+      setAlertsOn(false)
+      try {
+        window.localStorage.setItem('arcade-circle:alerts', 'off')
+      } catch {
+        /* Nothing to remember it in; the toggle still works this run. */
+      }
+      return
+    }
+    if (typeof Notification === 'undefined') return
+    const permission =
+      Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission()
+    const granted = permission === 'granted'
+    setAlertsOn(granted)
+    try {
+      window.localStorage.setItem('arcade-circle:alerts', granted ? 'on' : 'off')
+    } catch {
+      /* As above. */
+    }
+  }
   /* A real account by handle, from anything already loaded: follows, who
      is out, and the sessions on Later. Rows in those lists carry handles,
      the way the sample data does, so a tap has to find the account again. */
@@ -824,6 +865,7 @@ function Prototype({ auth, initialGame }) {
               me={me}
               following={followingHandles}
               present={present}
+              presenceHint={presenceHint}
               joinsSent={joinsSent}
               planned={planned}
               rsvps={rsvps}
@@ -975,6 +1017,12 @@ function Prototype({ auth, initialGame }) {
                 setVisible(on)
                 presence.setVisible(on)
               }}
+              audience={profile ? (profile.presence_audience ?? 'mutuals') : null}
+              onAudience={(next) => auth.updateProfile({ presence_audience: next })}
+              alerts={alertsOn}
+              alertsSupported={typeof Notification !== 'undefined'}
+              alertsBlocked={typeof Notification !== 'undefined' && Notification.permission === 'denied'}
+              onAlerts={setAlerts}
               onOpenFollows={(t) => {
                 setFollowsTab(t)
                 push('follows')
@@ -1108,6 +1156,23 @@ function Prototype({ auth, initialGame }) {
                 />
               ) : null
             }
+          />
+        )}
+
+        {myId && (
+          <IncomingAlert
+            incoming={inbox.incoming}
+            threads={inbox.threads}
+            suppressed={sheetOpen || (screen === 'chat' && chat?.kind === 'real')}
+            viewingPartnerId={screen === 'chat' && chat?.kind === 'real' ? chat.profile.id : null}
+            alertsOn={alertsOn}
+            soundOn={soundOn}
+            onOpen={(partner) => {
+              inbox.clearIncoming()
+              setModal(null)
+              openRealChat(partner)
+            }}
+            onClear={inbox.clearIncoming}
           />
         )}
 
@@ -1289,6 +1354,67 @@ function RealThread({
       onBack={onBack}
       backLabel={backLabel}
       onClose={onClose}
+    />
+  )
+}
+
+/* A message arriving while you are somewhere else in the app.
+
+   The inbox already counts it on the way in; this says it where you are,
+   for a few seconds, with the way to it one tap away. It stays quiet when
+   you are already looking at that conversation or at the list. With the
+   app in the background and alerts turned on, the same line goes out as a
+   system notification, which is the only way a phone in a pocket hears
+   anything. */
+function IncomingAlert({ incoming, threads, suppressed, viewingPartnerId, alertsOn, soundOn, onOpen, onClear }) {
+  const thread = incoming ? threads.find((t) => t.id === incoming.conversationId) : null
+  const partner = thread?.partner ?? null
+  const show = Boolean(incoming && partner) && !suppressed && partner?.id !== viewingPartnerId
+
+  /* One cue and, if the app is not on screen, one notification, per
+     message. */
+  useEffect(() => {
+    if (!incoming || !partner) return undefined
+    if (partner.id === viewingPartnerId) return undefined
+    if (soundOn) playSound('message')
+    if (
+      alertsOn &&
+      typeof document !== 'undefined' &&
+      document.hidden &&
+      typeof Notification !== 'undefined' &&
+      Notification.permission === 'granted'
+    ) {
+      try {
+        const note = new Notification(partner.handle, { body: incoming.text, tag: incoming.conversationId })
+        note.onclick = () => {
+          window.focus()
+          onOpen(partner)
+        }
+      } catch {
+        /* Some browsers only allow this from a service worker; the line
+           on screen still happens. */
+      }
+    }
+    return undefined
+    /* Keyed on the message: a change of screen must not replay it. */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incoming?.id])
+
+  useEffect(() => {
+    if (!show) return undefined
+    const timer = window.setTimeout(onClear, 7000)
+    return () => window.clearTimeout(timer)
+  }, [show, incoming?.id, onClear])
+
+  if (!show) return null
+  return (
+    <AlertBanner
+      avatar={<Avatar handle={partner.handle} hue={hueFromProfile(partner)} size={36} />}
+      title={partner.handle}
+      text={incoming.text}
+      openLabel={`Open your conversation with ${partner.handle}`}
+      onOpen={() => onOpen(partner)}
+      onClose={onClear}
     />
   )
 }

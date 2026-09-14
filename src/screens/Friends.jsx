@@ -64,9 +64,12 @@ export default function Friends({
   onSong,
   me,
   following,
-  /* Who is at an arcade right now - real mutuals when signed in, sample
-     players when not. Everything here that draws people reads this. */
+  /* Who is at an arcade right now - real accounts allowed to be seen by
+     you when signed in, sample players when not. Everything here that
+     draws people reads this. */
   present = [],
+  /* Why the map might be empty, in one line, or null. */
+  presenceHint = null,
   joinsSent,
   planned,
   rsvps,
@@ -195,6 +198,7 @@ export default function Friends({
           arcades={venues}
           following={following}
           present={present}
+          presenceHint={presenceHint}
           venueId={hereVenueId}
           joinsSent={joinsSent}
           onClearVenue={onClearVenue}
@@ -253,7 +257,7 @@ export default function Friends({
    sheet is already up and filtered to that arcade, because a person who
    tapped "People you follow" on KOKO was asking about KOKO, not about the
    city. Anything that brings you here on its own terms starts on the map. */
-function Now({ venueId, onClearVenue, onSeeOpen, ...rest }) {
+function Now({ venueId, onClearVenue, onSeeOpen, presenceHint, ...rest }) {
   /* Null until the person has opened or closed the sheet themselves; until
      then a venue filter is what decides, so arriving from an arcade page
      lands on the list. */
@@ -265,6 +269,7 @@ function Now({ venueId, onClearVenue, onSeeOpen, ...rest }) {
   return (
     <FriendsMap
       {...rest}
+      emptyHint={presenceHint}
       listOpen={listOpen}
       listTitle={
         venue
@@ -279,6 +284,7 @@ function Now({ venueId, onClearVenue, onSeeOpen, ...rest }) {
       list={
         <HereNow
           {...rest}
+          presenceHint={presenceHint}
           venueId={venueId}
           /* Widening the list from one arcade to all of them is still the
              list, so the sheet stays up once the filter it was opened on is
@@ -310,6 +316,7 @@ function Now({ venueId, onClearVenue, onSeeOpen, ...rest }) {
 function HereNow({
   arcades,
   present,
+  presenceHint = null,
   venueId,
   joinsSent,
   onClearVenue,
@@ -353,9 +360,12 @@ function HereNow({
       {venues.length === 0 && (
         <div className="px-4 py-6 text-center">
           <p className="text-sm text-ink-muted">
-            Nobody you follow is {venue ? `at ${venue.short}` : 'at an arcade'}{' '}
-            right now.
+            Nobody who shares their arcade with you is{' '}
+            {venue ? `at ${venue.short}` : 'at an arcade'} right now.
           </p>
+          {presenceHint && (
+            <p className="mt-1 text-xs leading-relaxed text-ink-subtle">{presenceHint}</p>
+          )}
           <QuietAction className="mt-2" onClick={onSeeOpen}>
             See sessions open to anyone
           </QuietAction>
@@ -404,6 +414,7 @@ function HereNow({
                     </span>
                     <span className="block truncate text-xs text-ink-muted">
                       {p.games.join(' · ')} &middot; {p.sinceMin}m
+                      {p.position ? ` · #${p.position} in the queue` : ''}
                     </span>
                     {signal && (
                       <span className="block truncate text-[11px] text-ink-subtle">

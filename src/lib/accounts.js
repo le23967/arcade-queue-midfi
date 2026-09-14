@@ -28,7 +28,7 @@ export {
 
 /* --- profiles ------------------------------------------------------------ */
 
-const PROFILE_COLUMNS = 'id, handle, avatar_hue, created_at, updated_at'
+const PROFILE_COLUMNS = 'id, handle, avatar_hue, presence_audience, created_at, updated_at'
 
 export async function fetchProfile(id) {
   const { data, error } = await supabase
@@ -340,7 +340,9 @@ export function subscribeToInboxChanges(myId, onChange) {
   const channel = supabase.channel(`inbox:${myId}`)
   for (const table of ['messages', 'conversations']) {
     for (const event of ['INSERT', 'UPDATE']) {
-      channel.on('postgres_changes', { event, schema: 'public', table }, () => onChange?.())
+      channel.on('postgres_changes', { event, schema: 'public', table }, (payload) =>
+        onChange?.({ table, event, row: payload.new })
+      )
     }
   }
   channel.subscribe()

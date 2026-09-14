@@ -202,8 +202,12 @@ const YOU_ICON = L.divIcon({
    one "see the list" target replaces the five chips. */
 export default function FriendsMap({
   arcades,
-  /* Who is out, already scoped to people you follow both ways. */
+  /* Who is out, already scoped to the people allowed to see you and whom
+     you are allowed to see. */
   present = [],
+  /* One line for the card when nobody is out, when there is something
+     worth saying about why. */
+  emptyHint = null,
   joinsSent,
   listOpen = false,
   listTitle = null,
@@ -432,7 +436,7 @@ export default function FriendsMap({
             onClose={() => setSelected(null)}
           />
         ) : (
-          <SummaryCard friends={here} arcades={arcades} onOpenList={onOpenList} />
+          <SummaryCard friends={here} arcades={arcades} onOpenList={onOpenList} emptyHint={emptyHint} />
         )}
       </div>
       )}
@@ -500,7 +504,7 @@ function Card({ children }) {
   )
 }
 
-function SummaryCard({ friends, arcades, onOpenList }) {
+function SummaryCard({ friends, arcades, onOpenList, emptyHint = null }) {
   /* Which venues, in the order the map shows them, so the line under the
      count says where without listing anyone twice. */
   const venues = arcades.filter((a) => friends.some((p) => p.at === a.id))
@@ -523,7 +527,7 @@ function SummaryCard({ friends, arcades, onOpenList }) {
           <span className="block truncate text-[11px] text-ink-muted">
             {venues.length > 0
               ? venues.map((a) => a.short).join(' · ')
-              : 'Nobody you follow is at an arcade right now'}
+              : emptyHint || 'Nobody you follow both ways is out right now'}
           </span>
         </span>
         <span className="text-xs font-semibold text-brand-600">List</span>
@@ -614,6 +618,7 @@ function FriendCard({
           </p>
           <p className="truncate text-xs text-ink-muted">
             At {arcade?.short} for {player.sinceMin} min
+            {player.position ? ` · #${player.position} in the queue` : ''}
           </p>
           <div className="mt-1 flex flex-wrap gap-1">
             {player.games.slice(0, 2).map((game) => (
